@@ -11,7 +11,9 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
-    "openapi:generate": "tsx scripts/generate-openapi.ts"
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "db:schema": "tsx scripts/generate-db-schema.ts",
+    "contracts:generate": "pnpm openapi:generate && pnpm db:schema"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
