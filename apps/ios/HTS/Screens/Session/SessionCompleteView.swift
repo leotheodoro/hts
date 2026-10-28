@@ -45,6 +45,16 @@ struct SessionCompleteView: View {
                 xp
                 stats
                 if !completion.recordNames.isEmpty { records }
+                if !completion.newTitles.isEmpty {
+                    VStack(alignment: .leading, spacing: HTSSpacing.space2) {
+                        Text("TÍTULO DESBLOQUEADO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                        ForEach(completion.newTitles, id: \.self) { title in
+                            Text(title.name).htsTextStyle(.bodyStrong).foregroundStyle(Color.hts.oliveInk)
+                                .padding(.horizontal, HTSSpacing.space3).padding(.vertical, HTSSpacing.space2)
+                                .background(Color.hts.olive)
+                        }
+                    }
+                }
                 if let promotedArc { arcCard(promotedArc) }
                 if let nextWorkout {
                     VStack(alignment: .leading, spacing: HTSSpacing.space2) {
