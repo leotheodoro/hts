@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import HTSDomain
 
 /// The local SQLite database. The schema mirrors Postgres (apps/api/src/db/schema.ts):
 /// same table and column names.
@@ -47,6 +48,96 @@ public final class AppDatabase: Sendable {
                 t.column("deleted_at", .text)
             }
         }
+        migrator.registerMigration("v2_create_plan", migrate: createPlan)
         return migrator
+    }
+
+    /// Mirrors apps/api/drizzle/0001_create_plan.sql. Postgres enums become TEXT with CHECK, jsonb becomes JSON
+    /// TEXT, date becomes "YYYY-MM-DD" TEXT.
+    private static func createPlan(_ db: Database) throws {
+        func owned(_ t: TableDefinition) {
+            t.primaryKey("id", .text)
+            t.column("athlete_id", .text).notNull().references("athlete")
+        }
+        func timestamps(_ t: TableDefinition) {
+            t.column("created_at", .text).notNull()
+            t.column("updated_at", .text).notNull()
+            t.column("deleted_at", .text)
+        }
+        func oneOf<E: RawRepresentable & CaseIterable>(_: E.Type) -> String where E.RawValue == String {
+            E.allCases.map { "'\($0.rawValue)'" }.joined(separator: ", ")
+        }
+
+        try db.create(table: "saga") { t in
+            owned(t)
+            t.column("year", .integer).notNull()
+            t.column("name", .text).notNull()
+            timestamps(t)
+        }
+        try db.create(table: "arc") { t in
+            owned(t)
+            t.column("saga_id", .text).notNull().references("saga")
+            t.column("name", .text).notNull()
+            t.column("kanji", .text)
+            t.column("program", .text)
+            t.column("kind", .text).notNull().defaults(to: ArcKind.normal.rawValue)
+                .check(sql: "kind IN (\(oneOf(ArcKind.self)))")
+            t.column("weeks", .integer)
+            t.column("start_date", .text)
+            t.column("status", .text).notNull().defaults(to: ArcStatus.queued.rawValue)
+                .check(sql: "status IN (\(oneOf(ArcStatus.self)))")
+            t.column("position", .integer).notNull()
+            t.column("count_reset_at", .text)
+            timestamps(t)
+        }
+        try db.execute(
+            sql:
+                "CREATE UNIQUE INDEX arc_one_current_idx ON arc(athlete_id) WHERE status = 'current' AND deleted_at IS NULL"
+        )
+        try db.create(table: "workout_template") { t in
+            owned(t)
+            t.column("arc_id", .text).notNull().references("arc")
+            t.column("source_template_id", .text)
+            t.column("letter", .text).notNull()
+            t.column("name", .text).notNull()
+            t.column("focus", .text)
+            t.column("position", .integer).notNull()
+            timestamps(t)
+        }
+        try db.create(table: "block") { t in
+            owned(t)
+            t.column("workout_template_id", .text).notNull().references("workout_template")
+            t.column("kind", .text).notNull().check(sql: "kind IN (\(oneOf(BlockKind.self)))")
+            t.column("attributes", .jsonText).notNull()
+            t.column("duration_minutes", .integer)
+            t.column("position", .integer).notNull()
+            timestamps(t)
+        }
+        try db.create(table: "exercise") { t in
+            owned(t)
+            t.column("name", .text).notNull()
+            t.column("normalized_name", .text).notNull()
+            t.column("default_attribute", .text).check(sql: "default_attribute IN (\(oneOf(Attribute.self)))")
+            t.column("unit", .text).notNull().defaults(to: ExerciseUnit.reps.rawValue)
+                .check(sql: "unit IN (\(oneOf(ExerciseUnit.self)))")
+            t.column("per_side", .boolean).notNull().defaults(to: false)
+            timestamps(t)
+        }
+        try db.execute(
+            sql: """
+                CREATE UNIQUE INDEX exercise_athlete_normalized_name_idx
+                ON exercise(athlete_id, normalized_name) WHERE deleted_at IS NULL
+                """)
+        try db.create(table: "prescribed_exercise") { t in
+            owned(t)
+            t.column("block_id", .text).notNull().references("block")
+            t.column("exercise_id", .text).notNull().references("exercise")
+            t.column("sets_min", .integer).notNull()
+            t.column("sets_max", .integer).notNull()
+            t.column("targets", .jsonText).notNull()
+            t.column("rest_seconds", .integer)
+            t.column("position", .integer).notNull()
+            timestamps(t)
+        }
     }
 }

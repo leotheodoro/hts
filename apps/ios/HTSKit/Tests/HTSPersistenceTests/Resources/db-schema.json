@@ -1,0 +1,323 @@
+{
+  "tables": [
+    {
+      "name": "arc",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "saga_id",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "notNull": true
+        },
+        {
+          "name": "kanji",
+          "notNull": false
+        },
+        {
+          "name": "program",
+          "notNull": false
+        },
+        {
+          "name": "kind",
+          "notNull": true
+        },
+        {
+          "name": "weeks",
+          "notNull": false
+        },
+        {
+          "name": "start_date",
+          "notNull": false
+        },
+        {
+          "name": "status",
+          "notNull": true
+        },
+        {
+          "name": "position",
+          "notNull": true
+        },
+        {
+          "name": "count_reset_at",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "athlete",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "display_name",
+          "notNull": true
+        },
+        {
+          "name": "default_rest_seconds",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "block",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "workout_template_id",
+          "notNull": true
+        },
+        {
+          "name": "kind",
+          "notNull": true
+        },
+        {
+          "name": "attributes",
+          "notNull": true
+        },
+        {
+          "name": "duration_minutes",
+          "notNull": false
+        },
+        {
+          "name": "position",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "exercise",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "notNull": true
+        },
+        {
+          "name": "normalized_name",
+          "notNull": true
+        },
+        {
+          "name": "default_attribute",
+          "notNull": false
+        },
+        {
+          "name": "unit",
+          "notNull": true
+        },
+        {
+          "name": "per_side",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "prescribed_exercise",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "block_id",
+          "notNull": true
+        },
+        {
+          "name": "exercise_id",
+          "notNull": true
+        },
+        {
+          "name": "sets_min",
+          "notNull": true
+        },
+        {
+          "name": "sets_max",
+          "notNull": true
+        },
+        {
+          "name": "targets",
+          "notNull": true
+        },
+        {
+          "name": "rest_seconds",
+          "notNull": false
+        },
+        {
+          "name": "position",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "saga",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "year",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "workout_template",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "arc_id",
+          "notNull": true
+        },
+        {
+          "name": "source_template_id",
+          "notNull": false
+        },
+        {
+          "name": "letter",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "notNull": true
+        },
+        {
+          "name": "focus",
+          "notNull": false
+        },
+        {
+          "name": "position",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    }
+  ]
+}

@@ -54,6 +54,6 @@ struct RankOutput: Decodable, Sendable { let id: String, name: String }
     @Test func everyFixtureFileIsCovered() throws {
         let urls = Bundle.module.urls(forResourcesWithExtension: "json", subdirectory: "Fixtures") ?? []
         let names = Set(urls.map { $0.deletingPathExtension().lastPathComponent })
-        #expect(names == ["level-for-xp", "rank-for-level", "xp-for-session"])
+        #expect(names == ["level-for-xp", "normalize-exercise-name", "rank-for-level", "xp-for-session"])
     }
 }

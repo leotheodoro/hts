@@ -26,11 +26,11 @@ public struct AthleteRepository: Sendable {
 
     public func athlete(id: UUID) async throws -> Athlete? {
         try await database.writer.read { db in
-            try Athlete.filter(key: id).filter(Athlete.Columns.deletedAt == nil).fetchOne(db)
+            try Athlete.filter(key: id).filter(Columns.deletedAt == nil).fetchOne(db)
         }
     }
 
     private static var localAthleteRequest: QueryInterfaceRequest<Athlete> {
-        Athlete.filter(Athlete.Columns.deletedAt == nil).order(Athlete.Columns.createdAt)
+        Athlete.filter(Columns.deletedAt == nil).order(Columns.createdAt)
     }
 }

@@ -36,9 +36,13 @@ let package = Package(
         ),
         .target(
             name: "HTSPersistence",
-            dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
+            dependencies: ["HTSDomain", .product(name: "GRDB", package: "GRDB.swift")]
         ),
-        .testTarget(name: "HTSPersistenceTests", dependencies: ["HTSPersistence"]),
+        .testTarget(
+            name: "HTSPersistenceTests",
+            dependencies: ["HTSPersistence"],
+            resources: [.copy("Resources")]
+        ),
         .target(
             name: "HTSAPI",
             dependencies: [

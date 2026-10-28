@@ -1,0 +1,10 @@
+import GRDB
+import HTSDomain
+
+// Plan entities are plain HTSDomain types; storage is added here so the domain stays free of GRDB.
+extension Saga: HTSRecord { public static let databaseTableName = "saga" }
+extension Arc: HTSRecord { public static let databaseTableName = "arc" }
+extension WorkoutTemplate: HTSRecord { public static let databaseTableName = "workout_template" }
+extension Block: HTSRecord { public static let databaseTableName = "block" }
+extension Exercise: HTSRecord { public static let databaseTableName = "exercise" }
+extension PrescribedExercise: HTSRecord { public static let databaseTableName = "prescribed_exercise" }
