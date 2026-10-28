@@ -8,7 +8,6 @@ struct HTSApp: App {
 
     init() {
         HTSFonts.register()
-        TabBarAppearance.apply()
         UNUserNotificationCenter.current().delegate = ForegroundNotificationDelegate.shared
     }
 

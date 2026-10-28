@@ -54,7 +54,8 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIUserInterfaceStyle: Dark
-        # Classic opaque tab bar: Liquid Glass ignores the brand tab colors and adds blur.
+        # Keeps navigation bars and sheets without Liquid Glass where the system honors it. The tab bar is drawn by
+        # the app (docs/decisions/0022).
         UIDesignRequiresCompatibility: true
         ITSAppUsesNonExemptEncryption: false
         HTSAPIBaseURL: $(HTS_API_BASE_URL)

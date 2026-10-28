@@ -2,8 +2,27 @@ import HTSDesign
 import SwiftUI
 import UIKit
 
-enum AppTab: String, Hashable {
+enum AppTab: String, Hashable, CaseIterable {
     case status, arcs, journal, profile
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .status: "Status"
+        case .arcs: "Arcos"
+        case .journal: "Diário"
+        case .profile: "Perfil"
+        }
+    }
+
+    /// Stroke icon until the brand icon set exists: SF Symbol at light weight.
+    var symbol: String {
+        switch self {
+        case .status: "shield"
+        case .arcs: "line.3.horizontal"
+        case .journal: "calendar"
+        case .profile: "person"
+        }
+    }
 }
 
 struct RootView: View {
@@ -13,29 +32,15 @@ struct RootView: View {
         UserDefaults.standard.string(forKey: "HTSInitialTab").flatMap(AppTab.init(rawValue:)) ?? .status
 
     var body: some View {
+        // The system tab bar is hidden: Liquid Glass ignores the brand colors and adds blur, and the compatibility
+        // key does not hold on every iOS version (docs/decisions/0022). TabView still keeps each tab's state.
         TabView(selection: $selection) {
-            Tab(value: AppTab.status) {
-                StatusScreen()
-            } label: {
-                TabLabel(title: "Status", symbol: "shield")
-            }
-            Tab(value: AppTab.arcs) {
-                ArcsScreen()
-            } label: {
-                TabLabel(title: "Arcos", symbol: "line.3.horizontal")
-            }
-            Tab(value: AppTab.journal) {
-                JournalScreen()
-            } label: {
-                TabLabel(title: "Diário", symbol: "calendar")
-            }
-            Tab(value: AppTab.profile) {
-                ProfileScreen()
-            } label: {
-                TabLabel(title: "Perfil", symbol: "person")
-            }
+            Tab(value: AppTab.status) { StatusScreen().toolbar(.hidden, for: .tabBar) }
+            Tab(value: AppTab.arcs) { ArcsScreen().toolbar(.hidden, for: .tabBar) }
+            Tab(value: AppTab.journal) { JournalScreen().toolbar(.hidden, for: .tabBar) }
+            Tab(value: AppTab.profile) { ProfileScreen().toolbar(.hidden, for: .tabBar) }
         }
-        .tint(Color.hts.bone)
+        .safeAreaInset(edge: .bottom, spacing: 0) { BrandTabBar(selection: $selection) }
         .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: Bindable(app).showsActiveSession) {
             if let database = app.database, let session = app.activeSession {
@@ -49,46 +54,32 @@ struct RootView: View {
     }
 }
 
-/// Stroke icon until the brand icon set exists: SF Symbol at light weight.
-private struct TabLabel: View {
-    let title: LocalizedStringKey
-    let symbol: String
+/// Opaque `black` bar with a `line` divider: `tab-idle` for inactive tabs and `bone` for the selected one.
+private struct BrandTabBar: View {
+    @Binding var selection: AppTab
 
     var body: some View {
-        Label {
-            Text(title)
-        } icon: {
-            Image(uiImage: TabBarAppearance.icon(symbol))
+        HStack(spacing: 0) {
+            ForEach(AppTab.allCases, id: \.self) { tab in
+                let selected = tab == selection
+                Button {
+                    selection = tab
+                } label: {
+                    VStack(spacing: HTSSpacing.space1) {
+                        Image(systemName: tab.symbol).font(.title3).fontWeight(.light).frame(height: 24)
+                        Text(tab.title).font(.custom(HTSFontFamily.body.postScriptName(weight: 500), size: 11))
+                    }
+                    .foregroundStyle(selected ? Color.hts.bone : Color.hts.tabIdle)
+                    .frame(maxWidth: .infinity, minHeight: 49)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+            }
         }
-    }
-}
-
-enum TabBarAppearance {
-    static func icon(_ name: String) -> UIImage {
-        let config = UIImage.SymbolConfiguration(weight: .light)
-        return UIImage(systemName: name, withConfiguration: config) ?? UIImage()
-    }
-
-    /// Opaque black bar, `tab-idle` for inactive items and `bone` for the selected one. No blur, no shadow.
-    @MainActor static func apply() {
-        let idle = UIColor(Color.hts.tabIdle)
-        let selected = UIColor(Color.hts.bone)
-        let font =
-            UIFont(name: HTSFontFamily.body.postScriptName(weight: 500), size: 11)
-            ?? .systemFont(ofSize: 11, weight: .medium)
-
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(Color.hts.black)
-        appearance.shadowColor = UIColor(Color.hts.line)
-        for layout in [appearance.stackedLayoutAppearance, appearance.inlineLayoutAppearance] {
-            layout.normal.iconColor = idle
-            layout.normal.titleTextAttributes = [.foregroundColor: idle, .font: font]
-            layout.selected.iconColor = selected
-            layout.selected.titleTextAttributes = [.foregroundColor: selected, .font: font]
-        }
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
+        .padding(.top, HTSSpacing.space1)
+        .background(Color.hts.black.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) { Rectangle().fill(Color.hts.line).frame(height: HTSStroke.hair) }
     }
 }
 
