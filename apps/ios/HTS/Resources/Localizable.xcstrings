@@ -1,36 +1,51 @@
 {
-  "sourceLanguage": "pt-BR",
-  "strings": {
-    "API · GET /health": {},
-    "ATLETA LOCAL": {},
-    "ATRIBUTOS": {},
-    "Arcos": {},
-    "Atleta": {},
-    "Atributos, títulos e ajustes chegam nos próximos tickets.": {},
-    "Carregando": {},
-    "Crie o primeiro arco para começar a temporada.": {},
-    "Descanso padrão": {},
-    "Diagnóstico": {},
-    "Diário": {},
-    "Estado": {},
-    "Hard To Submit": {},
-    "ID": {},
-    "Iniciar treino": {},
-    "Nenhum arco criado ainda.": {},
-    "Nome": {},
-    "Offline": {},
-    "Online · versão %@": {},
-    "Os treinos registrados aparecem aqui.": {},
-    "PRÓXIMO TREINO": {},
-    "Perfil": {},
-    "SAGA": {},
-    "Status": {},
-    "TREINOS": {},
-    "URL": {},
-    "URL da API não configurada": {},
-    "Ver treino": {},
-    "Verificando": {},
-    "Verificar de novo": {}
+  "sourceLanguage" : "pt-BR",
+  "strings" : {
+    "Arcos" : {
+
+    },
+    "Atleta" : {
+
+    },
+    "ATRIBUTOS" : {
+
+    },
+    "Atributos, títulos e ajustes chegam nos próximos tickets." : {
+
+    },
+    "Crie o primeiro arco para começar a temporada." : {
+
+    },
+    "Diário" : {
+
+    },
+    "Hard To Submit" : {
+
+    },
+    "Nenhum arco criado ainda." : {
+
+    },
+    "Os treinos registrados aparecem aqui." : {
+
+    },
+    "Perfil" : {
+
+    },
+    "PRÓXIMO TREINO" : {
+
+    },
+    "SAGA" : {
+
+    },
+    "Status" : {
+
+    },
+    "TREINOS" : {
+
+    },
+    "URL da API não configurada" : {
+
+    }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
