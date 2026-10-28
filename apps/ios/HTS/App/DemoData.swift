@@ -26,6 +26,30 @@
             for draft in arcs {
                 try await service.save(draft, athleteId: athleteId, sagaId: saga.id)
             }
+            guard let first = try await service.summaries(athleteId: athleteId, sagaId: saga.id).first,
+                let plan = try await PlanRepository(database).plan(arcId: first.arc.id),
+                var template = try await TemplateService(database).draft(templateId: plan.templates[0].template.id)
+            else { return }
+            template.focus = "Força e explosão"
+            template.blocks = [
+                .init(
+                    kind: .activation, attributes: [.mobility],
+                    exercises: [
+                        .init(name: "Prancha", unit: .seconds, setsText: "3", targetText: "30-45 s")
+                    ]),
+                .init(
+                    kind: .strength, attributes: [.strength],
+                    exercises: [
+                        .init(name: "Zercher Squat", setsText: "4", targetText: "6-6-3-3", restSeconds: 150),
+                        .init(name: "Afundo Búlgaro", setsText: "3 a 4", targetText: "10/10"),
+                    ]),
+                .init(
+                    kind: .fightRound, attributes: [.conditioning, .power], durationMinutes: 8,
+                    exercises: [
+                        .init(name: "Swing Russo", setsText: "1", targetText: "máx", restSeconds: 30)
+                    ]),
+            ]
+            try await TemplateService(database).save(template)
         }
     }
 #endif

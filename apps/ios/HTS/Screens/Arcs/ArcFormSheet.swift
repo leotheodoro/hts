@@ -13,6 +13,8 @@ struct ArcFormSheet: View {
     @State private var reusable: [(arc: Arc, template: WorkoutTemplate)] = []
     @State private var confirmRestart = false
     @State private var saving = false
+    @State private var editingTemplate: UUID?
+    @Environment(AppModel.self) private var app
 
     var body: some View {
         NavigationStack {
@@ -38,14 +40,29 @@ struct ArcFormSheet: View {
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(item: Binding(get: { editingTemplate.map(TemplateID.init) }, set: { editingTemplate = $0?.id })) {
+            if let database = app.database, let athlete = app.athlete {
+                TemplateEditorSheet(database: database, athleteId: athlete.id, templateId: $0.id)
+            }
+        }
         .task {
             switch target {
             case .new: draft = model.newDraft()
             case .arc(let id): draft = await model.draft(for: id)
             }
             reusable = await model.reusableTemplates(excluding: draft?.arcId)
+            #if DEBUG
+                // `-HTSOpenTemplateEditor YES` with `-HTSOpenArcForm first` opens template A (screenshots).
+                if UserDefaults.standard.bool(forKey: "HTSOpenTemplateEditor"),
+                    case .existing(let id)? = draft?.templates.first?.origin
+                {
+                    editingTemplate = id
+                }
+            #endif
         }
     }
+
+    private struct TemplateID: Identifiable { let id: UUID }
 
     private var isNew: Bool {
         if case .new = target { true } else { false }
@@ -126,6 +143,11 @@ struct ArcFormSheet: View {
                     .frame(minHeight: 44)
                     .background(Color.hts.surface)
                     .overlay(Rectangle().strokeBorder(Color.hts.line, lineWidth: HTSStroke.hair))
+                    if case .existing(let templateId) = item.origin {
+                        IconButton(symbol: "slider.horizontal.3", label: "Editar blocos de \(item.name)") {
+                            editingTemplate = templateId
+                        }
+                    }
                     Button {
                         draft.wrappedValue.templates.swapAt(index, index - 1)
                     } label: {
