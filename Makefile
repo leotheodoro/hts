@@ -7,13 +7,19 @@ DESTINATION = platform=iOS Simulator,id=$(SIMULATOR_ID)
 XCODEBUILD_FLAGS = -project $(PROJECT) -scheme HTS -destination "$(DESTINATION)" \
 	-skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO
 
-.PHONY: ios-generate ios-test ios-kit-test ios-app-test ios-build ios-format ios-lint ios-device ios-team-id ios-mac-host
+.PHONY: ios-generate ios-test ios-kit-test ios-kit-test-sim ios-app-test ios-build ios-format ios-lint ios-device ios-team-id ios-mac-host
 
 ios-generate:
 	cd $(IOS_DIR) && xcodegen generate
 
 ios-kit-test:
 	cd $(KIT_DIR) && swift test
+
+# HTSKit tests on the iOS simulator instead of the host Mac: CI runners may have an older macOS than the
+# package's minimum (macOS 26).
+ios-kit-test-sim:
+	cd $(KIT_DIR) && xcodebuild test -scheme HTSKit-Package -destination "$(DESTINATION)" \
+		-skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO -quiet
 
 ios-app-test: ios-generate
 	xcodebuild test $(XCODEBUILD_FLAGS)
