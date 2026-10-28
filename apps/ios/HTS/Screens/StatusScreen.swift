@@ -94,6 +94,17 @@ struct StatusScreen: View {
                     Spacer()
                     Text(verbatim: String(format: "%02d/%02d", model.weekDone, model.weekGoal)).htsTextStyle(.data)
                 }
+                if let streak = model.streak, streak.current > 0 || streak.best > 0 {
+                    HStack {
+                        Text("SEQUÊNCIA").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                        Spacer()
+                        Text(streak.current == 1 ? "1 semana" : "\(streak.current) semanas").htsTextStyle(.dataSm)
+                        if streak.best > streak.current {
+                            Text(verbatim: "· melhor \(streak.best)").htsTextStyle(.dataSm)
+                                .foregroundStyle(Color.hts.greyApp)
+                        }
+                    }
+                }
                 if model.weekGoal > 0 {
                     HStack(spacing: HTSSpacing.space2) {
                         ForEach(0..<model.weekGoal, id: \.self) { index in

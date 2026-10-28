@@ -143,3 +143,61 @@ export function progressHistory(
   const level = levelForXp(totalXp, r);
   return { sessions: result, totalXp, level, rank: rankForLevel(level, r).id };
 }
+
+export interface StreakSession {
+  /** Athlete's calendar day, "YYYY-MM-DD". */
+  localDate: string;
+  /** Sessions per week of the session's arc; null for filler (Manutenção) arcs. */
+  weeklyGoal: number | null;
+}
+
+export interface Streak {
+  /** Consecutive weeks with the goal met, up to now. The week in progress only adds once met. */
+  current: number;
+  best: number;
+  thisWeek: { done: number; goal: number };
+}
+
+const DAY_MS = 86_400_000;
+const dayNumber = (date: string) => Date.parse(`${date}T00:00:00Z`) / DAY_MS;
+/** Monday of the week, as a day number (1970-01-05 was a Monday). */
+const weekStart = (day: number) => day - ((((day - 4) % 7) + 7) % 7);
+
+/**
+ * Weekly streak (docs/decisions/0020): weeks run Monday to Sunday; the goal is the weekly goal of the
+ * week's arc; filler sessions count and a filler-only week uses the last known goal.
+ */
+export function streak(sessions: StreakSession[], today: string): Streak {
+  const weeks = new Map<number, { done: number; goal: number | null }>();
+  for (const s of sessions) {
+    const week = weekStart(dayNumber(s.localDate));
+    const entry = weeks.get(week) ?? { done: 0, goal: null };
+    entry.done += 1;
+    if (s.weeklyGoal !== null) entry.goal = Math.max(entry.goal ?? 0, s.weeklyGoal);
+    weeks.set(week, entry);
+  }
+  const current = weekStart(dayNumber(today));
+  const first = Math.min(...weeks.keys(), current);
+  let lastGoal = 0;
+  let run = 0;
+  let best = 0;
+  let streakBeforeCurrent = 0;
+  let thisWeek = { done: 0, goal: 0 };
+  for (let week = first; week <= current; week += 7) {
+    const entry = weeks.get(week);
+    if (entry?.goal != null) lastGoal = entry.goal;
+    const goal = entry?.goal ?? lastGoal;
+    const done = entry?.done ?? 0;
+    const met = done > 0 && done >= goal;
+    if (week === current) {
+      streakBeforeCurrent = run;
+      thisWeek = { done, goal };
+      if (met) run += 1;
+    } else {
+      run = met ? run + 1 : 0;
+    }
+    best = Math.max(best, run);
+  }
+  const met = thisWeek.done > 0 && thisWeek.done >= thisWeek.goal;
+  return { current: met ? streakBeforeCurrent + 1 : streakBeforeCurrent, best, thisWeek };
+}

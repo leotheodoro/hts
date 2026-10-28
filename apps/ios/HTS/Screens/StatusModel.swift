@@ -16,7 +16,8 @@ final class StatusModel {
 
     private(set) var history: ProgressHistory?
     private(set) var next: NextWorkout?
-    private(set) var weekDone = 0
+    private(set) var streak: Streak?
+    var weekDone: Int { streak?.thisWeek.done ?? 0 }
     private(set) var weekGoal = 0
 
     private let database: AppDatabase
@@ -33,15 +34,13 @@ final class StatusModel {
 
     func load(today: LocalDate = .today) async {
         history = try? await ProgressService(database).history(athleteId: athleteId).history
-        weekDone =
-            (try? await SessionRepository(database).completedCount(
-                athleteId: athleteId, from: today.weekStart, to: today.weekEnd)) ?? 0
+        streak = try? await ProgressService(database).streak(athleteId: athleteId, today: today)
         let plans = PlanRepository(database)
         guard let arc = try? await plans.currentArc(athleteId: athleteId),
             let plan = try? await plans.plan(arcId: arc.id)
         else {
             next = nil
-            weekGoal = 0
+            weekGoal = streak?.thisWeek.goal ?? 0
             return
         }
         let schedule = ArcSchedule(plan)

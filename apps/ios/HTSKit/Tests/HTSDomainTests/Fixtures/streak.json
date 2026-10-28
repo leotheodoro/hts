@@ -1,0 +1,67 @@
+{
+  "function": "streak",
+  "cases": [
+    {
+      "name": "no sessions, no streak",
+      "input": { "today": "2026-11-04", "sessions": [] },
+      "expected": { "current": 0, "best": 0, "thisWeek": { "done": 0, "goal": 0 } }
+    },
+    {
+      "name": "two full weeks; the week in progress does not break it",
+      "input": {
+        "today": "2026-11-18",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 3 },
+          { "localDate": "2026-11-04", "weeklyGoal": 3 },
+          { "localDate": "2026-11-06", "weeklyGoal": 3 },
+          { "localDate": "2026-11-09", "weeklyGoal": 3 },
+          { "localDate": "2026-11-11", "weeklyGoal": 3 },
+          { "localDate": "2026-11-15", "weeklyGoal": 3 },
+          { "localDate": "2026-11-16", "weeklyGoal": 3 }
+        ]
+      },
+      "expected": { "current": 2, "best": 2, "thisWeek": { "done": 1, "goal": 3 } }
+    },
+    {
+      "name": "the current week counts once the goal is met",
+      "input": {
+        "today": "2026-11-12",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-05", "weeklyGoal": 2 },
+          { "localDate": "2026-11-09", "weeklyGoal": 2 },
+          { "localDate": "2026-11-12", "weeklyGoal": 2 }
+        ]
+      },
+      "expected": { "current": 2, "best": 2, "thisWeek": { "done": 2, "goal": 2 } }
+    },
+    {
+      "name": "a filler-only week keeps the streak with the last arc goal",
+      "input": {
+        "today": "2026-11-18",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-03", "weeklyGoal": 2 },
+          { "localDate": "2026-11-10", "weeklyGoal": null },
+          { "localDate": "2026-11-12", "weeklyGoal": null }
+        ]
+      },
+      "expected": { "current": 2, "best": 2, "thisWeek": { "done": 0, "goal": 2 } }
+    },
+    {
+      "name": "a missed week breaks it; best keeps the longer run; across the new year",
+      "input": {
+        "today": "2027-01-06",
+        "sessions": [
+          { "localDate": "2026-12-07", "weeklyGoal": 1 },
+          { "localDate": "2026-12-14", "weeklyGoal": 1 },
+          { "localDate": "2026-12-21", "weeklyGoal": 1 },
+          { "localDate": "2026-12-28", "weeklyGoal": 2 },
+          { "localDate": "2027-01-04", "weeklyGoal": 2 },
+          { "localDate": "2027-01-05", "weeklyGoal": 2 }
+        ]
+      },
+      "expected": { "current": 1, "best": 3, "thisWeek": { "done": 2, "goal": 2 } }
+    }
+  ]
+}

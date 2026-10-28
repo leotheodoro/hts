@@ -7,6 +7,9 @@ import {
   progressHistory,
   rankForLevel,
   type SessionXpInput,
+  type Streak,
+  type StreakSession,
+  streak,
   xpForSession,
 } from "../src/index.js";
 
@@ -48,5 +51,12 @@ describe("progressHistory", () => {
   );
   it.each(fixture.cases)("$name", ({ input, expected }) => {
     expect(progressHistory(input.sessions)).toEqual(expected);
+  });
+});
+
+describe("streak", () => {
+  const fixture = load<{ today: string; sessions: StreakSession[] }, Streak>("streak.json");
+  it.each(fixture.cases)("$name", ({ input, expected }) => {
+    expect(streak(input.sessions, input.today)).toEqual(expected);
   });
 });

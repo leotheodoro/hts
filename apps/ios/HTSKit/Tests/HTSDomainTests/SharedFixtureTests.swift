@@ -56,7 +56,8 @@ struct RankOutput: Decodable, Sendable { let id: String, name: String }
         let names = Set(urls.map { $0.deletingPathExtension().lastPathComponent })
         #expect(
             names == [
-                "level-for-xp", "normalize-exercise-name", "progress-history", "rank-for-level", "xp-for-session",
+                "level-for-xp", "normalize-exercise-name", "progress-history", "rank-for-level", "streak",
+                "xp-for-session",
             ])
     }
 }
@@ -92,5 +93,26 @@ struct HistoryOutput: Decodable, Sendable {
         #expect(
             history.sessions.map { NSDecimalNumber(decimal: $0.volumeKg).stringValue }
                 == c.expected.sessions.map(\.volumeKg))
+    }
+}
+
+struct StreakInput: Decodable, Sendable {
+    let today: LocalDate
+    let sessions: [StreakSession]
+}
+
+struct StreakOutput: Decodable, Sendable {
+    let current: Int
+    let best: Int
+    let thisWeek: Streak.Week
+}
+
+@Suite struct StreakFixtureTests {
+    @Test(arguments: Fixture<StreakInput, StreakOutput>.load("streak"))
+    func streak(_ c: Fixture<StreakInput, StreakOutput>.Case) {
+        let streak = Progression().streak(c.input.sessions, today: c.input.today)
+        #expect(streak.current == c.expected.current)
+        #expect(streak.best == c.expected.best)
+        #expect(streak.thisWeek == c.expected.thisWeek)
     }
 }
