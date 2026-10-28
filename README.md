@@ -66,6 +66,16 @@ Funciona com um Apple ID gratuito (Personal Team). Nesse caso o app expira em 7 
 
 O simulador continua usando `localhost`; só builds para o aparelho usam `HTS_DEVICE_API_BASE_URL`. Configurações de build ficam em `apps/ios/Config/*.xcconfig`.
 
+## Deploy da API (Render + Neon)
+
+O deploy é automático a cada push na `main` (`render.yaml`, ADR 0025). Para criar do zero:
+
+1. **Neon**: em https://console.neon.tech crie um projeto (região AWS US East, perto do Render Virginia) e copie a connection string (`postgresql://…?sslmode=require`).
+2. **Token**: gere com `openssl rand -hex 32`.
+3. **Render**: em https://dashboard.render.com entre com o GitHub, vá em **Blueprints → New Blueprint Instance**, autorize o app do Render no repositório `hts` e escolha-o. O Render lê o `render.yaml` e pede `DATABASE_URL` (passo 1) e `API_TOKEN` (passo 2). Clique em **Apply**.
+4. Quando o deploy terminar, abra `https://<serviço>.onrender.com/health`.
+5. No app, ponha o mesmo token em `apps/ios/Local.xcconfig` (`HTS_API_TOKEN`) e a URL do Render em `apps/ios/Config/Release.xcconfig`.
+
 ## Notas
 
 - O Postgres do docker-compose escuta na porta **5442** do host, para não conflitar com outro Postgres local. Os testes da API usam o banco `hts_test`, criado pelo script em `docker/postgres/init`.

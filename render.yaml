@@ -1,0 +1,26 @@
+# Render Blueprint (docs/decisions/0025). Create it at https://dashboard.render.com/blueprints → New Blueprint
+# Instance, pointing to this repository. Secrets are filled in the dashboard, never here.
+services:
+  - type: web
+    name: hts-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    # free: $0, sleeps after 15 min idle (first request ~1 min). starter: $7/month, always on.
+    plan: free
+    region: virginia
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - apps/api/**
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tsconfig.base.json
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: API_TOKEN
+        sync: false

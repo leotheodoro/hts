@@ -45,3 +45,5 @@ jobs:
           git status --porcelain
           test -z "$(git status --porcelain)"
       - run: pnpm test
+      - name: API image builds
+        run: docker build -f apps/api/Dockerfile -t hts-api .
