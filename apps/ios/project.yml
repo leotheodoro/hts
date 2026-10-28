@@ -1,0 +1,97 @@
+name: HTS
+options:
+  bundleIdPrefix: com.hardtosubmit
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: pt-BR
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  HTSKit:
+    path: HTSKit
+
+targets:
+  HTS:
+    type: application
+    platform: iOS
+    sources:
+      - path: HTS
+    dependencies:
+      - package: HTSKit
+        product: HTSDesign
+    info:
+      path: HTS/Info.plist
+      properties:
+        CFBundleDisplayName: HTS
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: pt-BR
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIUserInterfaceStyle: Dark
+        ITSAppUsesNonExemptEncryption: false
+        HTSAPIBaseURL: $(HTS_API_BASE_URL)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hardtosubmit.app
+        PRODUCT_NAME: HTS
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+      configs:
+        Debug:
+          HTS_API_BASE_URL: http://localhost:8787
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+        Release:
+          # TODO(deploy ticket): point to the Cloud Run URL.
+          HTS_API_BASE_URL: https://api.hardtosubmit.com
+
+  HTSTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: HTSTests
+    dependencies:
+      - target: HTS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hardtosubmit.app.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
+
+schemes:
+  HTS:
+    build:
+      targets:
+        HTS: all
+        HTSTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - HTSTests
+    archive:
+      config: Release
