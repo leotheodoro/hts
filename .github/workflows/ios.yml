@@ -23,7 +23,9 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: macos-latest
+    # macos-latest (arm64) often gets no runner on GitHub's free tier; the Intel image has more capacity (#33).
+    runs-on: macos-15-intel
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
