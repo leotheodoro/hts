@@ -114,3 +114,21 @@ import Testing
         #expect(records[0].weightKg == 65)
     }
 }
+
+@Suite struct TitlesServiceTests {
+    @Test func firstSessionAndArcCompletionUnlockTitles() async throws {
+        let base = ProgressServiceTests()
+        let (database, athlete, arc, plans) = try await base.setUp()
+        let first = try await base.workout(database, plans[0], kg: 60, day: 0)
+        var completion = try #require(try await ProgressService(database).completion(sessionId: first.id))
+        #expect(completion.newTitles == [.firstSession])
+
+        let second = try await base.workout(database, plans[1], kg: 60, day: 1)
+        try await ArcService(database).completeIfDone(arcId: arc.id)
+        completion = try #require(try await ProgressService(database).completion(sessionId: second.id))
+        #expect(completion.newTitles == [.recruitmentComplete, .perfectWeek])
+
+        let all = try await ProgressService(database).titles(athleteId: athlete.id)
+        #expect(all.map(\.id) == [.firstSession, .recruitmentComplete, .perfectWeek])
+    }
+}

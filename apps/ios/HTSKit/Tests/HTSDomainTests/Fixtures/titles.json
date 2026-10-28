@@ -1,0 +1,149 @@
+{
+  "function": "titles",
+  "cases": [
+    {
+      "name": "first session unlocks only Primeiro Treino",
+      "input": {
+        "sessions": [
+          {
+            "localDate": "2026-11-02",
+            "weeklyGoal": 3,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          }
+        ]
+      },
+      "expected": { "titles": [{ "id": "first-session", "unlockedOn": "2026-11-02" }] }
+    },
+    {
+      "name": "perfect week, four-week streak and a filler week that keeps it",
+      "input": {
+        "sessions": [
+          {
+            "localDate": "2026-11-02",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-09",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-16",
+            "weeklyGoal": null,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-23",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          }
+        ]
+      },
+      "expected": {
+        "titles": [
+          { "id": "first-session", "unlockedOn": "2026-11-02" },
+          { "id": "perfect-week", "unlockedOn": "2026-11-02" },
+          { "id": "filler-survivor", "unlockedOn": "2026-11-16" },
+          { "id": "streak-lit", "unlockedOn": "2026-11-23" }
+        ]
+      }
+    },
+    {
+      "name": "a gap week resets the run before the streak title",
+      "input": {
+        "sessions": [
+          {
+            "localDate": "2026-11-02",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-09",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-23",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-30",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-12-07",
+            "weeklyGoal": 1,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          }
+        ]
+      },
+      "expected": {
+        "titles": [
+          { "id": "first-session", "unlockedOn": "2026-11-02" },
+          { "id": "perfect-week", "unlockedOn": "2026-11-02" }
+        ]
+      }
+    },
+    {
+      "name": "cumulative records, pull-up sets and arc completions",
+      "input": {
+        "sessions": [
+          {
+            "localDate": "2026-11-02",
+            "weeklyGoal": 3,
+            "records": 4,
+            "pullUpSets": 60,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-03",
+            "weeklyGoal": 3,
+            "records": 6,
+            "pullUpSets": 30,
+            "completedArc": "first"
+          },
+          {
+            "localDate": "2026-11-04",
+            "weeklyGoal": 3,
+            "records": 0,
+            "pullUpSets": 10,
+            "completedArc": "special"
+          }
+        ]
+      },
+      "expected": {
+        "titles": [
+          { "id": "first-session", "unlockedOn": "2026-11-02" },
+          { "id": "recruitment-complete", "unlockedOn": "2026-11-03" },
+          { "id": "limit-broken-10", "unlockedOn": "2026-11-03" },
+          { "id": "perfect-week", "unlockedOn": "2026-11-04" },
+          { "id": "hundred-bars", "unlockedOn": "2026-11-04" },
+          { "id": "ready-for-battle", "unlockedOn": "2026-11-04" }
+        ]
+      }
+    }
+  ]
+}

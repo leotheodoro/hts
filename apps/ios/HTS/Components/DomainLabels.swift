@@ -52,3 +52,31 @@ extension ExerciseUnit {
         }
     }
 }
+
+extension TitleID {
+    var name: LocalizedStringKey {
+        switch self {
+        case .firstSession: "Primeiro Treino"
+        case .recruitmentComplete: "Recrutamento Concluído"
+        case .perfectWeek: "Semana Perfeita"
+        case .streakLit: "Sequência Acesa"
+        case .limitBroken10: "Limite Quebrado x10"
+        case .fillerSurvivor: "Sobrevivente do Filler"
+        case .hundredBars: "Cem Barras"
+        case .readyForBattle: "Pronto para a Batalha"
+        }
+    }
+
+    var condition: LocalizedStringKey {
+        switch self {
+        case .firstSession: "Conclua o primeiro treino."
+        case .recruitmentComplete: "Feche o primeiro arco."
+        case .perfectWeek: "Bata a meta de uma semana."
+        case .streakLit: "Bata a meta 4 semanas seguidas."
+        case .limitBroken10: "Quebre 10 limites."
+        case .fillerSurvivor: "Mantenha a sequência numa semana só de Manutenção."
+        case .hundredBars: "Faça 100 séries de barra fixa."
+        case .readyForBattle: "Conclua os treinos da Véspera."
+        }
+    }
+}

@@ -57,7 +57,7 @@ struct RankOutput: Decodable, Sendable { let id: String, name: String }
         #expect(
             names == [
                 "level-for-xp", "normalize-exercise-name", "progress-history", "rank-for-level", "streak",
-                "xp-for-session",
+                "titles", "xp-for-session",
             ])
     }
 }
@@ -114,5 +114,15 @@ struct StreakOutput: Decodable, Sendable {
         #expect(streak.current == c.expected.current)
         #expect(streak.best == c.expected.best)
         #expect(streak.thisWeek == c.expected.thisWeek)
+    }
+}
+
+struct TitlesInput: Decodable, Sendable { let sessions: [TitleSession] }
+struct TitlesOutput: Decodable, Sendable { let titles: [UnlockedTitle] }
+
+@Suite struct TitlesFixtureTests {
+    @Test(arguments: Fixture<TitlesInput, TitlesOutput>.load("titles"))
+    func titles(_ c: Fixture<TitlesInput, TitlesOutput>.Case) {
+        #expect(Progression().titles(c.input.sessions) == c.expected.titles)
     }
 }

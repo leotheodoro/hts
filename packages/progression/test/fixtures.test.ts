@@ -10,6 +10,9 @@ import {
   type Streak,
   type StreakSession,
   streak,
+  type TitleSession,
+  titles,
+  type UnlockedTitle,
   xpForSession,
 } from "../src/index.js";
 
@@ -58,5 +61,12 @@ describe("streak", () => {
   const fixture = load<{ today: string; sessions: StreakSession[] }, Streak>("streak.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
     expect(streak(input.sessions, input.today)).toEqual(expected);
+  });
+});
+
+describe("titles", () => {
+  const fixture = load<{ sessions: TitleSession[] }, { titles: UnlockedTitle[] }>("titles.json");
+  it.each(fixture.cases)("$name", ({ input, expected }) => {
+    expect(titles(input.sessions)).toEqual(expected.titles);
   });
 });

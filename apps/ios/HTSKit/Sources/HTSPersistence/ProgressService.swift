@@ -14,6 +14,9 @@ public struct ProgressService: Sendable {
         /// Names of the exercises with a new limit, in order.
         public let recordNames: [String]
 
+        /// Titles unlocked by this session.
+        public let newTitles: [TitleID]
+
         public var leveledUp: Bool { after.level > before.level }
         public var rankedUp: Bool { after.rank.id != before.rank.id }
     }
@@ -46,9 +49,62 @@ public struct ProgressService: Sendable {
             let names = Dictionary(
                 session.planSnapshot.blocks.flatMap(\.exercises).map { ($0.exerciseId.sql, $0.name) },
                 uniquingKeysWith: { first, _ in first })
+            let facts = try Self.titleSessions(sessions, history: after, db)
+            let titlesBefore = Set(progression.titles(Array(facts[..<index])).map(\.id))
+            let newTitles = progression.titles(Array(facts[...index])).map(\.id).filter { !titlesBefore.contains($0) }
             return Completion(
                 session: session, progress: progress, before: before, after: after,
-                recordNames: progress.records.compactMap { names[$0] })
+                recordNames: progress.records.compactMap { names[$0] }, newTitles: newTitles)
+        }
+    }
+
+    /// Unlocked titles with their date, in unlock order.
+    public func titles(athleteId: UUID) async throws -> [UnlockedTitle] {
+        try await database.writer.read { db in
+            let sessions = try Self.completedSessions(athleteId: athleteId, db)
+            let history = progression.history(try sessions.map { try Self.historySets($0, db) })
+            return progression.titles(try Self.titleSessions(sessions, history: history, db))
+        }
+    }
+
+    /// What each completed session contributes to the titles (docs/decisions/0021).
+    private static func titleSessions(
+        _ sessions: [Session], history: ProgressHistory, _ db: Database
+    ) throws -> [TitleSession] {
+        // The session that closed each completed arc is the last completed one in it.
+        guard let athleteId = sessions.first?.athleteId else { return [] }
+        let completedArcs = try Arc.filter(Columns.athleteId == athleteId.sql)
+            .filter(Column("status") == ArcStatus.completed.rawValue)
+            .filter(Columns.deletedAt == nil).fetchAll(db)
+        var closing: [UUID: Arc] = [:]
+        for arc in completedArcs {
+            if let last = sessions.last(where: { $0.arcId == arc.id }) { closing[last.id] = arc }
+        }
+        let firstClosing = sessions.first { closing[$0.id] != nil }?.id
+        var arcs: [UUID: Arc] = [:]
+        for id in Set(sessions.map(\.arcId)) { arcs[id] = try Arc.filter(key: id).fetchOne(db) }
+        var goals: [UUID: Int] = [:]
+        for id in arcs.keys {
+            goals[id] = try Int.fetchOne(
+                db, sql: "SELECT COUNT(*) FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL",
+                arguments: [id.sql])
+        }
+        return try sessions.enumerated().map { index, session in
+            let names = Dictionary(
+                session.planSnapshot.blocks.flatMap(\.exercises).map { ($0.exerciseId, $0.name) },
+                uniquingKeysWith: { first, _ in first })
+            let pullUps = try LoggedSet.filter(Column("session_id") == session.id.sql)
+                .filter(Column("completed") == true).filter(Columns.deletedAt == nil).fetchAll(db)
+                .filter { names[$0.exerciseId].map { PullUp.names.contains(ExerciseName.normalize($0)) } ?? false }
+                .count
+            let filler = arcs[session.arcId]?.kind == .filler
+            var completedArc: TitleSession.CompletedArc?
+            if let arc = closing[session.id] {
+                completedArc = session.id == firstClosing ? .first : (arc.kind == .special ? .special : nil)
+            }
+            return TitleSession(
+                localDate: session.localDate, weeklyGoal: filler ? nil : goals[session.arcId],
+                records: history.sessions[index].records.count, pullUpSets: pullUps, completedArc: completedArc)
         }
     }
 

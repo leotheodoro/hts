@@ -7,20 +7,25 @@ struct ProfileScreen: View {
     @Environment(AppModel.self) private var app
     @State private var name = ""
     @State private var rest = Athlete.defaultRestSeconds
+    @State private var titles: [UnlockedTitle] = []
 
     var body: some View {
         ScreenScaffold(title: "Perfil") {
             settings
             loadGuide
-            PlaceholderCard(label: "ATRIBUTOS E TÍTULOS", text: "Chegam quando a escala dos atributos for definida.")
+            titlesSection
+            PlaceholderCard(label: "ATRIBUTOS", text: "Chegam quando a escala dos atributos for definida.")
             #if DEBUG
                 DiagnosticsSection()
             #endif
         }
-        .task(id: app.athlete?.id) {
+        .task(id: "\(app.athlete?.id.uuidString ?? "")-\(app.activeSession?.id.uuidString ?? "none")") {
             guard let athlete = app.athlete else { return }
             name = athlete.displayName
             rest = athlete.defaultRestSeconds
+            if let database = app.database {
+                titles = (try? await ProgressService(database).titles(athleteId: athlete.id)) ?? []
+            }
         }
     }
 
@@ -41,6 +46,37 @@ struct ProfileScreen: View {
                 .foregroundStyle(Color.hts.greyApp)
             if name.trimmingCharacters(in: .whitespaces) != app.athlete?.displayName {
                 HTSButton("Salvar nome", kind: .ghost) { save() }
+            }
+        }
+    }
+
+    private var titlesSection: some View {
+        VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+            HStack {
+                Text("Títulos").htsTextStyle(.uiSection)
+                Spacer()
+                Text(verbatim: "\(titles.count)/\(TitleID.allCases.count)").htsTextStyle(.dataSm)
+            }
+            ForEach(TitleID.allCases, id: \.self) { id in
+                let unlocked = titles.first { $0.id == id }
+                HStack(alignment: .top, spacing: HTSSpacing.space3) {
+                    VStack(alignment: .leading, spacing: HTSSpacing.space1) {
+                        Text(id.name).htsTextStyle(.bodyStrong)
+                            .foregroundStyle(unlocked != nil ? Color.hts.oliveInk : Color.hts.greyApp)
+                        Text(id.condition).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                    }
+                    Spacer()
+                    if let unlocked {
+                        Text(verbatim: unlocked.unlockedOn.short).htsTextStyle(.dataSm)
+                            .foregroundStyle(Color.hts.oliveInk)
+                    }
+                }
+                .padding(HTSSpacing.space3)
+                .background(unlocked != nil ? Color.hts.olive : Color.clear)
+                .overlay(
+                    Rectangle().strokeBorder(unlocked != nil ? Color.clear : Color.hts.line, lineWidth: HTSStroke.hair)
+                )
+                .accessibilityElement(children: .combine)
             }
         }
     }
