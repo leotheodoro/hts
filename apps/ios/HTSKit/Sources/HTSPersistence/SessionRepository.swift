@@ -140,6 +140,22 @@ public struct SessionRepository: Sendable {
         }
     }
 
+    /// The fight round record of a block, created empty on first use.
+    public func round(for session: Session, block: PlanSnapshot.Block, now: Date = .now) async throws -> LoggedRound {
+        try await database.writer.write { db in
+            if let existing = try LoggedRound.filter(Column("session_id") == session.id.sql)
+                .filter(Column("block_id") == block.blockId.sql).filter(Columns.deletedAt == nil).fetchOne(db)
+            {
+                return existing
+            }
+            let round = LoggedRound(
+                id: UUIDv7.make(at: now), athleteId: session.athleteId, sessionId: session.id, blockId: block.blockId,
+                createdAt: now)
+            try round.insert(db)
+            return round
+        }
+    }
+
     public func rounds(sessionId: UUID) async throws -> [LoggedRound] {
         try await database.writer.read { db in
             try LoggedRound.filter(Column("session_id") == sessionId.sql && Columns.deletedAt == nil).fetchAll(db)

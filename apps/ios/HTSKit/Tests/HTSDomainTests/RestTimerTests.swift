@@ -34,3 +34,18 @@ import Testing
         #expect(RestTimer.format(125) == "2:05")
     }
 }
+
+@Suite struct RestPolicyTests {
+    @Test func comboRestsOnlyAfterTheLastExercise() {
+        #expect(!RestPolicy.startsRest(blockKind: .combo, exerciseIndex: 0, exerciseCount: 2))
+        #expect(RestPolicy.startsRest(blockKind: .combo, exerciseIndex: 1, exerciseCount: 2))
+        #expect(!RestPolicy.startsRest(blockKind: .chainedCombo, exerciseIndex: 1, exerciseCount: 3))
+        #expect(RestPolicy.startsRest(blockKind: .chainedCombo, exerciseIndex: 2, exerciseCount: 3))
+    }
+
+    @Test func otherBlocksRestAfterEverySetAndRoundsNever() {
+        #expect(RestPolicy.startsRest(blockKind: .strength, exerciseIndex: 0, exerciseCount: 3))
+        #expect(RestPolicy.startsRest(blockKind: .activation, exerciseIndex: 0, exerciseCount: 1))
+        #expect(!RestPolicy.startsRest(blockKind: .fightRound, exerciseIndex: 0, exerciseCount: 1))
+    }
+}

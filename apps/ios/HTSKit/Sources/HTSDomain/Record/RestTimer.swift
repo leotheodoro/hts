@@ -42,3 +42,15 @@ public struct RestTimer: Hashable, Sendable, Codable {
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
+
+/// When a checked set starts the rest (docs/product/handoff-produto.md, Combo).
+public enum RestPolicy {
+    /// In a combo the exercises go in sequence and the rest comes after the last one; elsewhere every set rests.
+    public static func startsRest(blockKind: BlockKind, exerciseIndex: Int, exerciseCount: Int) -> Bool {
+        switch blockKind {
+        case .combo, .chainedCombo: exerciseIndex == exerciseCount - 1
+        case .fightRound: false
+        default: true
+        }
+    }
+}
