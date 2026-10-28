@@ -85,6 +85,19 @@ public struct SessionRepository: Sendable {
         }
     }
 
+    /// Completed live sessions whose local date falls between `from` and `to`, inclusive.
+    public func completedCount(athleteId: UUID, from: LocalDate, to: LocalDate) async throws -> Int {
+        try await database.writer.read { db in
+            try Int.fetchOne(
+                db,
+                sql: """
+                    SELECT COUNT(*) FROM session
+                    WHERE athlete_id = ? AND status = 'completed' AND deleted_at IS NULL
+                    AND local_date BETWEEN ? AND ?
+                    """, arguments: [athleteId.sql, from.description, to.description]) ?? 0
+        }
+    }
+
     /// Letter of the last completed session in the arc since its last count reset, for the A, B, C rotation.
     public func lastLetter(arcId: UUID) async throws -> String? {
         try await database.writer.read { db in

@@ -49,3 +49,13 @@ import Testing
         #expect(start.days(to: LocalDate("2026-11-15")!) == 13)
     }
 }
+
+@Suite struct WeekTests {
+    @Test func weeksRunMondayToSunday() {
+        #expect(LocalDate("2026-11-04")!.weekStart == LocalDate("2026-11-02"))  // Wednesday
+        #expect(LocalDate("2026-11-02")!.weekStart == LocalDate("2026-11-02"))  // Monday
+        #expect(LocalDate("2026-11-08")!.weekStart == LocalDate("2026-11-02"))  // Sunday
+        #expect(LocalDate("2027-01-01")!.weekStart == LocalDate("2026-12-28"))  // across the year
+        #expect(LocalDate("2026-11-04")!.weekEnd == LocalDate("2026-11-08"))
+    }
+}
