@@ -1,5 +1,6 @@
 import Foundation
 import HTSAPI
+import HTSDomain
 import HTSPersistence
 import Observation
 
@@ -19,7 +20,7 @@ final class AppModel {
     private(set) var health: HealthState = .unknown
 
     let apiConfiguration: APIConfiguration?
-    private let database: AppDatabase?
+    let database: AppDatabase?
     private let api: APIClient?
 
     init(database: AppDatabase?, apiConfiguration: APIConfiguration?, databaseError: String? = nil) {
@@ -48,8 +49,12 @@ final class AppModel {
     func loadLocalAthlete() async {
         guard let database else { return }
         do {
-            athlete = try await AthleteRepository(database).ensureLocalAthlete(
+            let athlete = try await AthleteRepository(database).ensureLocalAthlete(
                 displayName: String(localized: "Atleta"))
+            #if DEBUG
+                if DemoData.isRequested { try await DemoData.seed(database, athleteId: athlete.id) }
+            #endif
+            self.athlete = athlete
         } catch {
             databaseError = String(describing: error)
         }
