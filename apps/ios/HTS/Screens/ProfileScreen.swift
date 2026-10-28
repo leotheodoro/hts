@@ -14,6 +14,7 @@ struct ProfileScreen: View {
         ScreenScaffold(title: "Perfil") {
             settings
             loadGuide
+            syncSection
             BattleSettings()
             titlesSection
             attributesSection
@@ -100,6 +101,33 @@ struct ProfileScreen: View {
                     Rectangle().strokeBorder(unlocked != nil ? Color.clear : Color.hts.line, lineWidth: HTSStroke.hair)
                 )
                 .accessibilityElement(children: .combine)
+            }
+        }
+    }
+
+    private var syncSection: some View {
+        NotchCard {
+            VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                Text("SINCRONIZAÇÃO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                Group {
+                    switch app.syncState {
+                    case .idle:
+                        Text(
+                            app.apiConfiguration?.token == nil
+                                ? "Token da API não configurado. Os dados ficam no aparelho."
+                                : "Ainda não sincronizado.")
+                    case .syncing:
+                        Text("Sincronizando…")
+                    case .synced(let date):
+                        Text("Sincronizado às \(date.formatted(date: .omitted, time: .shortened)).")
+                    case .failed(let message):
+                        Text(verbatim: message).foregroundStyle(Color.hts.redText)
+                    }
+                }
+                .htsTextStyle(.caption)
+                .foregroundStyle(Color.hts.greyApp)
+                HTSButton("Sincronizar agora", kind: .ghost) { Task { await app.sync() } }
+                    .disabled(app.syncState == .syncing || app.apiConfiguration?.token == nil)
             }
         }
     }

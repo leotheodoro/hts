@@ -25,6 +25,13 @@ const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  /**
+   * Server-only: when the server last wrote the row, the cursor of sync pulls (docs/decisions/0026).
+   * Not mirrored in SQLite; the schema export skips `server_` columns.
+   */
+  serverUpdatedAt: timestamp("server_updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`date_trunc('milliseconds', now())`),
 };
 
 // Root of all user data, so it has no athlete_id of its own.

@@ -29,6 +29,13 @@
       "when": 1793211177050,
       "tag": "0003_create_battle",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793212739476,
+      "tag": "0004_add_server_updated_at",
+      "breakpoints": true
     }
   ]
 }

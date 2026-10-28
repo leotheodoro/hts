@@ -62,6 +62,13 @@ public final class AppDatabase: Sendable {
             }
             try db.execute(sql: "CREATE INDEX battle_athlete_date_idx ON battle(athlete_id, date)")
         }
+        migrator.registerMigration("v5_create_local_sync_state") { db in
+            // Device-only (docs/decisions/0026): `local_` tables are not mirrored in Postgres.
+            try db.create(table: "local_sync_state") { t in
+                t.primaryKey("key", .text)
+                t.column("value", .text).notNull()
+            }
+        }
         return migrator
     }
 

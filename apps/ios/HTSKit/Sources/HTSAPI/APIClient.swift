@@ -1,4 +1,5 @@
 import Foundation
+import HTSDomain
 import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
@@ -96,8 +97,10 @@ public struct APIClient: Sendable {
     }
 
     init(configuration: APIConfiguration, transport: some ClientTransport) {
+        // The API writes dates with milliseconds ("2026-11-02T12:00:00.123Z"), like the database.
         client = Client(
-            serverURL: configuration.baseURL, transport: transport,
+            serverURL: configuration.baseURL, configuration: .init(dateTranscoder: .iso8601WithFractionalSeconds),
+            transport: transport,
             middlewares: configuration.token.map { [BearerTokenMiddleware(token: $0)] } ?? [])
     }
 
@@ -127,5 +130,37 @@ public struct APIClient: Sendable {
         case .undocumented(let status, _):
             throw APIError.unexpectedStatus(status)
         }
+    }
+
+    // MARK: Sync (docs/decisions/0026)
+
+    /// Sends rows changed on the device. Returns how many the server applied.
+    public func push(_ changes: SyncChanges) async throws -> Int {
+        let body = Operations.SyncPush.Input.Body.JsonPayload(changes: try Self.convert(changes))
+        switch try await client.syncPush(body: .json(body)) {
+        case .ok(let ok): return try ok.body.json.applied
+        case .badRequest: throw APIError.unexpectedStatus(400)
+        case .unauthorized: throw APIError.unexpectedStatus(401)
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    /// Rows the server wrote after `since`, and the cursor for the next pull.
+    public func pull(since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
+        let sinceDate = try since.map {
+            try Date($0, strategy: .iso8601.year().month().day().time(includingFractionalSeconds: true))
+        }
+        switch try await client.syncPull(query: .init(since: sinceDate)) {
+        case .ok(let ok):
+            let body = try ok.body.json
+            return (body.cursor, try Self.convert(body.changes))
+        case .unauthorized: throw APIError.unexpectedStatus(401)
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    /// The generated free-form containers and `SyncChanges` share the same JSON, so convert through it.
+    private static func convert<From: Encodable, To: Decodable>(_ value: From) throws -> To {
+        try JSONDecoder().decode(To.self, from: JSONEncoder().encode(value))
     }
 }

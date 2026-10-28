@@ -3,6 +3,7 @@ import { bearerAuth } from "./auth.js";
 import type { Db } from "./db/client.js";
 import { athleteRoutes } from "./routes/athletes.js";
 import { healthRoutes } from "./routes/health.js";
+import { syncRoutes } from "./routes/sync.js";
 import { version } from "./version.js";
 
 export function createApp({ db, apiToken }: { db: Db; apiToken: string }) {
@@ -14,6 +15,7 @@ export function createApp({ db, apiToken }: { db: Db; apiToken: string }) {
   app.route("/", healthRoutes);
   app.use("/v1/*", bearerAuth(apiToken));
   app.route("/", athleteRoutes(db));
+  app.route("/", syncRoutes(db));
   return app;
 }
 
