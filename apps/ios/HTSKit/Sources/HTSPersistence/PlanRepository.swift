@@ -98,7 +98,7 @@ public struct PlanRepository: Sendable {
         return copy
     }
 
-    private static func templatePlan(_ template: WorkoutTemplate, _ db: Database) throws -> TemplatePlan {
+    static func templatePlan(_ template: WorkoutTemplate, _ db: Database) throws -> TemplatePlan {
         let blocks = try live(Block.self).filter(Column("workout_template_id") == template.id.sql).fetchAll(db)
         return TemplatePlan(
             template: template,
