@@ -9,10 +9,14 @@ import Testing
 struct StubTransport: ClientTransport {
     let status: HTTPResponse.Status
     let json: String
+    var expectedAuthorization: String?
 
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (
         HTTPResponse, HTTPBody?
     ) {
+        if let expectedAuthorization, request.headerFields[.authorization] != expectedAuthorization {
+            return (HTTPResponse(status: .unauthorized), HTTPBody(#"{"error":"unauthorized"}"#))
+        }
         var response = HTTPResponse(status: status)
         response.headerFields[.contentType] = "application/json"
         return (response, HTTPBody(json))
@@ -40,5 +44,15 @@ let configuration = APIConfiguration(baseURL: URL(string: "http://localhost:8787
         #expect(APIFailure(URLError(.timedOut)) == .timedOut)
         #expect(APIFailure(URLError(.cannotConnectToHost)) == .unreachable)
         #expect(APIFailure(APIError.invalidResponse) != .timedOut)
+    }
+
+    @Test func sendsTheBearerToken() async throws {
+        let transport = StubTransport(
+            status: .notFound, json: #"{"error":"athlete_not_found"}"#, expectedAuthorization: "Bearer secret")
+        let authorized = APIClient(
+            configuration: APIConfiguration(baseURL: configuration.baseURL, token: "secret"), transport: transport)
+        #expect(try await authorized.athlete(id: UUID()) == nil)
+        let anonymous = APIClient(configuration: configuration, transport: transport)
+        await #expect(throws: APIError.self) { try await anonymous.athlete(id: UUID()) }
     }
 }

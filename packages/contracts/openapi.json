@@ -11,6 +11,12 @@
     }
   ],
   "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
     "schemas": {
       "Health": {
         "type": "object",
@@ -106,6 +112,11 @@
           "athletes"
         ],
         "summary": "Get an athlete by id",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "parameters": [
           {
             "schema": {
@@ -124,6 +135,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Athlete"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

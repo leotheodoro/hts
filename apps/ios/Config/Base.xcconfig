@@ -8,3 +8,6 @@ HTS_DEVELOPMENT_TEAM =
 // address on the local network: set HTS_DEVICE_API_BASE_URL in Local.xcconfig.
 HTS_LOCAL_API_BASE_URL = http:/$()/localhost:8787
 HTS_DEVICE_API_BASE_URL = $(HTS_LOCAL_API_BASE_URL)
+
+// Fixed bearer token for the API (docs/decisions/0024). Set it in Local.xcconfig, never here.
+HTS_API_TOKEN =

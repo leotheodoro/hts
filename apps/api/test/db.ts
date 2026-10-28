@@ -6,3 +6,5 @@ export const testDatabaseUrl =
 export function createTestDb() {
   return createDb(testDatabaseUrl);
 }
+
+export const testApiToken = "test-token-0123456789abcdef0123456789abcdef";
