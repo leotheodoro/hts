@@ -58,37 +58,44 @@ public struct PlanRepository: Sendable {
         async throws -> WorkoutTemplate
     {
         try await database.writer.write { db in
-            guard let source = try WorkoutTemplate.filter(key: id).fetchOne(db) else {
-                throw PersistenceError.notFound("workout_template", id)
-            }
-            let plan = try Self.templatePlan(source, db)
-            var copy = source
-            copy.id = UUIDv7.make(at: now)
-            copy.arcId = arcId
-            copy.sourceTemplateId = source.id
-            copy.letter = letter
-            copy.position = position
-            copy.createdAt = now.roundedToMilliseconds
-            copy.updatedAt = copy.createdAt
-            try copy.insert(db)
-            for blockPlan in plan.blocks {
-                var block = blockPlan.block
-                block.id = UUIDv7.make(at: now)
-                block.workoutTemplateId = copy.id
-                block.createdAt = copy.createdAt
-                block.updatedAt = copy.createdAt
-                try block.insert(db)
-                for planned in blockPlan.exercises {
-                    var prescription = planned.prescription
-                    prescription.id = UUIDv7.make(at: now)
-                    prescription.blockId = block.id
-                    prescription.createdAt = copy.createdAt
-                    prescription.updatedAt = copy.createdAt
-                    try prescription.insert(db)
-                }
-            }
-            return copy
+            try Self.copyTemplate(id: id, toArc: arcId, letter: letter, position: position, now: now, db)
         }
+    }
+
+    static func copyTemplate(
+        id: UUID, toArc arcId: UUID, letter: String, position: Int, now: Date, _ db: Database
+    ) throws -> WorkoutTemplate {
+        guard let source = try WorkoutTemplate.filter(key: id).fetchOne(db) else {
+            throw PersistenceError.notFound("workout_template", id)
+        }
+        let plan = try templatePlan(source, db)
+        let stamp = now.roundedToMilliseconds
+        var copy = source
+        copy.id = UUIDv7.make(at: now)
+        copy.arcId = arcId
+        copy.sourceTemplateId = source.id
+        copy.letter = letter
+        copy.position = position
+        copy.createdAt = stamp
+        copy.updatedAt = stamp
+        try copy.insert(db)
+        for blockPlan in plan.blocks {
+            var block = blockPlan.block
+            block.id = UUIDv7.make(at: now)
+            block.workoutTemplateId = copy.id
+            block.createdAt = stamp
+            block.updatedAt = stamp
+            try block.insert(db)
+            for planned in blockPlan.exercises {
+                var prescription = planned.prescription
+                prescription.id = UUIDv7.make(at: now)
+                prescription.blockId = block.id
+                prescription.createdAt = stamp
+                prescription.updatedAt = stamp
+                try prescription.insert(db)
+            }
+        }
+        return copy
     }
 
     private static func templatePlan(_ template: WorkoutTemplate, _ db: Database) throws -> TemplatePlan {

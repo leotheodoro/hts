@@ -34,6 +34,19 @@ public struct LocalDate: Hashable, Comparable, Sendable, Codable, CustomStringCo
         self.day = c.day!
     }
 
+    /// The date `days` later (or earlier, when negative).
+    public func adding(days: Int) -> LocalDate {
+        let start = Self.calendar.date(from: DateComponents(year: year, month: month, day: day))!
+        return LocalDate(Self.calendar.date(byAdding: .day, value: days, to: start)!, in: Self.calendar.timeZone)
+    }
+
+    /// Whole days from `self` to `other`.
+    public func days(to other: LocalDate) -> Int {
+        let from = Self.calendar.date(from: DateComponents(year: year, month: month, day: day))!
+        let to = Self.calendar.date(from: DateComponents(year: other.year, month: other.month, day: other.day))!
+        return Self.calendar.dateComponents([.day], from: from, to: to).day!
+    }
+
     public var description: String {
         String(format: "%04d-%02d-%02d", year, month, day)
     }
