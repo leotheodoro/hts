@@ -13,6 +13,7 @@ struct ProfileScreen: View {
         ScreenScaffold(title: "Perfil") {
             settings
             loadGuide
+            BattleSettings()
             titlesSection
             PlaceholderCard(label: "ATRIBUTOS", text: "Chegam quando a escala dos atributos for definida.")
             #if DEBUG
@@ -165,3 +166,60 @@ struct ProfileScreen: View {
         }
     }
 #endif
+
+/// Name, date and result of A Batalha.
+private struct BattleSettings: View {
+    @Environment(AppModel.self) private var app
+    @State private var battle: Battle?
+    @State private var name = ""
+    @State private var date = Date.now
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: HTSSpacing.space4) {
+            Text("A Batalha").htsTextStyle(.uiSection)
+            HTSTextField(label: "COMPETIÇÃO", text: $name, prompt: "Copa Hard To Submit")
+            DatePicker(selection: $date, displayedComponents: .date) { FieldLabel(text: "DATA") }
+            if let battle, battle.daysUntil(.today) <= 0 {
+                VStack(alignment: .leading, spacing: HTSSpacing.space2) {
+                    FieldLabel(text: "RESULTADO")
+                    Picker("Resultado", selection: Binding(get: { battle.result }, set: { save(result: $0) })) {
+                        Text("Sem resultado").tag(BattleResult?.none)
+                        ForEach(BattleResult.allCases, id: \.self) { Text($0.label).tag(BattleResult?.some($0)) }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Color.hts.bone)
+                }
+            }
+            HTSButton(battle == nil ? "Cadastrar Batalha" : "Salvar Batalha", kind: .ghost) {
+                save(result: battle?.result)
+            }
+            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .task(id: app.athlete?.id) {
+            guard let database = app.database, let athlete = app.athlete else { return }
+            battle = try? await BattleRepository(database).current(athleteId: athlete.id, today: .today)
+            if let battle {
+                name = battle.name
+                date = battle.date.date
+            }
+        }
+    }
+
+    private func save(result: BattleResult?) {
+        guard let database = app.database, let athlete = app.athlete else { return }
+        Task {
+            let localDate = LocalDate(date, in: .current)
+            let saga = try await ArcService(database).saga(athleteId: athlete.id, year: localDate.year)
+            var updated =
+                battle
+                ?? Battle(
+                    id: UUIDv7.make(), athleteId: athlete.id, sagaId: saga.id, name: name, date: localDate,
+                    createdAt: .now)
+            updated.name = name.trimmingCharacters(in: .whitespaces)
+            updated.date = localDate
+            updated.result = result
+            try await BattleRepository(database).save(updated)
+            battle = updated
+        }
+    }
+}

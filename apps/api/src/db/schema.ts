@@ -275,5 +275,25 @@ export const loggedRound = pgTable(
   (t) => [index("logged_round_session_id_idx").on(t.sessionId)],
 );
 
+export const battleResult = pgEnum("battle_result", ["gold", "silver", "bronze", "participation"]);
+
+/** A Batalha: the competition that closes the season. */
+export const battle = pgTable(
+  "battle",
+  {
+    ...owned(),
+    sagaId: uuid("saga_id")
+      .notNull()
+      .references(() => saga.id),
+    name: text("name").notNull(),
+    /** Local calendar date of the competition. */
+    date: date("date").notNull(),
+    /** Set after the competition. */
+    result: battleResult("result"),
+    ...timestamps,
+  },
+  (t) => [index("battle_athlete_date_idx").on(t.athleteId, t.date)],
+);
+
 export type Athlete = typeof athlete.$inferSelect;
 export type NewAthlete = typeof athlete.$inferInsert;

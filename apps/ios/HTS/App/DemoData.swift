@@ -24,10 +24,17 @@
                 ArcDraft(
                     name: "Manutenção", kind: .filler, startDate: today,
                     templates: ["Patrulha", "Sentinela"].map { .init(origin: .new, name: $0) }),
+                ArcDraft(
+                    name: "A Véspera", kanji: "前", kind: .special, weeks: 1, startDate: today.adding(days: 1),
+                    templates: [.init(origin: .new, name: "Fio da Navalha")]),
             ]
             for draft in arcs {
                 try await service.save(draft, athleteId: athleteId, sagaId: saga.id)
             }
+            try await BattleRepository(database).save(
+                Battle(
+                    id: UUIDv7.make(), athleteId: athleteId, sagaId: saga.id, name: "Copa Hard To Submit",
+                    date: today.adding(days: 5), createdAt: .now))
             guard let first = try await service.summaries(athleteId: athleteId, sagaId: saga.id).first,
                 let plan = try await PlanRepository(database).plan(arcId: first.arc.id),
                 var template = try await TemplateService(database).draft(templateId: plan.templates[0].template.id)

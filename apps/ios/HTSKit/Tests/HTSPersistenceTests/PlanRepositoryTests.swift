@@ -202,3 +202,28 @@ struct PlanFixture {
         #expect(names == ["Barra Fixa", "Agachamento com Barra"])
     }
 }
+
+@Suite struct BattleRepositoryTests {
+    @Test func currentIsTheNextOneOrTheLastWithoutResult() async throws {
+        let fixture = try await PlanFixture()
+        let repository = BattleRepository(fixture.database)
+        let past = Battle(
+            id: UUIDv7.make(), athleteId: fixture.athlete.id, sagaId: fixture.saga.id, name: "Copa A",
+            date: LocalDate("2026-10-10")!, createdAt: fixture.now)
+        try await repository.save(past)
+        #expect(
+            try await repository.current(athleteId: fixture.athlete.id, today: LocalDate("2026-11-01")!)?.id == past.id)
+
+        var withResult = past
+        withResult.result = .gold
+        try await repository.save(withResult)
+        #expect(try await repository.current(athleteId: fixture.athlete.id, today: LocalDate("2026-11-01")!) == nil)
+
+        let next = Battle(
+            id: UUIDv7.make(), athleteId: fixture.athlete.id, sagaId: fixture.saga.id, name: "Copa B",
+            date: LocalDate("2026-12-12")!, createdAt: fixture.now)
+        try await repository.save(next)
+        #expect(
+            try await repository.current(athleteId: fixture.athlete.id, today: LocalDate("2026-11-01")!)?.id == next.id)
+    }
+}

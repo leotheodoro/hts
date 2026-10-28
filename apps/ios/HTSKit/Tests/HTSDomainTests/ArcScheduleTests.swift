@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import HTSDomain
@@ -57,5 +58,18 @@ import Testing
         #expect(LocalDate("2026-11-08")!.weekStart == LocalDate("2026-11-02"))  // Sunday
         #expect(LocalDate("2027-01-01")!.weekStart == LocalDate("2026-12-28"))  // across the year
         #expect(LocalDate("2026-11-04")!.weekEnd == LocalDate("2026-11-08"))
+    }
+}
+
+@Suite struct BattleTests {
+    @Test func countsDaysAndFlagsTheEve() {
+        let battle = Battle(
+            id: UUID(), athleteId: UUID(), sagaId: UUID(), name: "Copa", date: LocalDate("2026-12-12")!,
+            createdAt: .now)
+        #expect(battle.daysUntil(LocalDate("2026-12-01")!) == 11)
+        #expect(!battle.isEve(LocalDate("2026-12-05")!))
+        #expect(battle.isEve(LocalDate("2026-12-06")!))
+        #expect(battle.isEve(LocalDate("2026-12-12")!))
+        #expect(!battle.isEve(LocalDate("2026-12-13")!))
     }
 }
