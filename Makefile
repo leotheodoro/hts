@@ -2,8 +2,9 @@ IOS_DIR := apps/ios
 KIT_DIR := $(IOS_DIR)/HTSKit
 PROJECT := $(IOS_DIR)/HTS.xcodeproj
 SIMULATOR ?= iPhone 17 Pro Max
-DESTINATION := platform=iOS Simulator,name=$(SIMULATOR)
-XCODEBUILD_FLAGS := -project $(PROJECT) -scheme HTS -destination "$(DESTINATION)" \
+SIMULATOR_ID = $(shell scripts/ios-simulator-id.sh "$(SIMULATOR)")
+DESTINATION = platform=iOS Simulator,id=$(SIMULATOR_ID)
+XCODEBUILD_FLAGS = -project $(PROJECT) -scheme HTS -destination "$(DESTINATION)" \
 	-skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO
 
 .PHONY: ios-generate ios-test ios-kit-test ios-app-test ios-build ios-format ios-lint

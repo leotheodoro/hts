@@ -31,6 +31,12 @@ targets:
     dependencies:
       - package: HTSKit
         product: HTSDesign
+      - package: HTSKit
+        product: HTSDomain
+      - package: HTSKit
+        product: HTSPersistence
+      - package: HTSKit
+        product: HTSAPI
     info:
       path: HTS/Info.plist
       properties:
@@ -45,6 +51,8 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIUserInterfaceStyle: Dark
+        # Classic opaque tab bar: Liquid Glass ignores the brand tab colors and adds blur.
+        UIDesignRequiresCompatibility: true
         ITSAppUsesNonExemptEncryption: false
         HTSAPIBaseURL: $(HTS_API_BASE_URL)
         NSAppTransportSecurity:
