@@ -25,8 +25,77 @@ public struct SessionRepository: Sendable {
         let session = Session(
             id: UUIDv7.make(at: now), athleteId: plan.template.athleteId, arcId: plan.template.arcId,
             planSnapshot: PlanSnapshot(plan), startedAt: now, timeZone: timeZone)
-        try await database.writer.write { db in try session.insert(db) }
+        try await database.writer.write { db in
+            try session.insert(db)
+            // One row per minimum set, so every field edit is an update of a row that already exists.
+            for block in session.planSnapshot.blocks where block.kind != .fightRound {
+                for exercise in block.exercises {
+                    for number in 1...max(exercise.setsMin, 1) {
+                        try LoggedSet(
+                            id: UUIDv7.make(at: now), athleteId: session.athleteId, sessionId: session.id,
+                            prescribedExerciseId: exercise.prescribedExerciseId, exerciseId: exercise.exerciseId,
+                            setNumber: number, createdAt: now
+                        ).insert(db)
+                    }
+                }
+            }
+        }
         return session
+    }
+
+    /// Adds a set after the last one of that exercise, for this session only.
+    public func addSet(
+        to session: Session, exercise: PlanSnapshot.Exercise, now: Date = .now
+    ) async throws -> LoggedSet {
+        try await database.writer.write { db in
+            let last =
+                try Int.fetchOne(
+                    db,
+                    sql: """
+                        SELECT MAX(set_number) FROM logged_set
+                        WHERE session_id = ? AND prescribed_exercise_id = ? AND deleted_at IS NULL
+                        """, arguments: [session.id.sql, exercise.prescribedExerciseId.sql]) ?? 0
+            let set = LoggedSet(
+                id: UUIDv7.make(at: now), athleteId: session.athleteId, sessionId: session.id,
+                prescribedExerciseId: exercise.prescribedExerciseId, exerciseId: exercise.exerciseId,
+                setNumber: last + 1, createdAt: now)
+            try set.insert(db)
+            return set
+        }
+    }
+
+    /// "Anterior": completed sets of the last completed session of the same workout template, by catalog exercise
+    /// and set number.
+    public func previousSets(for session: Session) async throws -> [UUID: [Int: LoggedSet]] {
+        try await database.writer.read { db in
+            let sameTemplate = Column("workout_template_id") == session.workoutTemplateId.sql
+            let completed = Column("status") == SessionStatus.completed.rawValue
+            let earlier = Column("started_at") < ISO8601Millis.format(session.startedAt)
+            guard
+                let previous = try Session.filter(sameTemplate).filter(completed).filter(earlier)
+                    .filter(Columns.deletedAt == nil)
+                    .order(Column("started_at").desc).fetchOne(db)
+            else { return [:] }
+            let sets = try LoggedSet.filter(Column("session_id") == previous.id.sql)
+                .filter(Column("completed") == true).filter(Columns.deletedAt == nil)
+                .fetchAll(db)
+            return Dictionary(grouping: sets, by: \.exerciseId).mapValues { sets in
+                Dictionary(sets.map { ($0.setNumber, $0) }, uniquingKeysWith: { first, _ in first })
+            }
+        }
+    }
+
+    /// Letter of the last completed session in the arc since its last count reset, for the A, B, C rotation.
+    public func lastLetter(arcId: UUID) async throws -> String? {
+        try await database.writer.read { db in
+            let resetAt = try String.fetchOne(
+                db, sql: "SELECT count_reset_at FROM arc WHERE id = ?", arguments: [arcId.sql])
+            var request = Session.filter(Column("arc_id") == arcId.sql)
+                .filter(Column("status") == SessionStatus.completed.rawValue)
+                .filter(Columns.deletedAt == nil)
+            if let resetAt { request = request.filter(Column("started_at") >= resetAt) }
+            return try request.order(Column("started_at").desc).fetchOne(db)?.planSnapshot.letter
+        }
     }
 
     public func inProgress(athleteId: UUID) async throws -> Session? {
