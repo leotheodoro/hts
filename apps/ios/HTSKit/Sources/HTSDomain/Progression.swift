@@ -108,3 +108,22 @@ public struct Progression: Sendable {
         return NSDecimalNumber(decimal: result).intValue
     }
 }
+
+extension Progression {
+    /// Where `xp` sits inside its level, for the XP bar.
+    public struct LevelProgress: Hashable, Sendable {
+        public let level: Int
+        /// Cumulative XP where this level started and where it ends.
+        public let start: Int
+        public let end: Int
+        public let fraction: Double
+    }
+
+    public func levelProgress(xp: Int) -> LevelProgress {
+        let level = level(forXP: xp)
+        let start = level == 1 ? 0 : xpToComplete(level: level - 1)
+        let end = xpToComplete(level: level)
+        return LevelProgress(
+            level: level, start: start, end: end, fraction: Double(xp - start) / Double(max(end - start, 1)))
+    }
+}

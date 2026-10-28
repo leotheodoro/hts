@@ -1,6 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { levelForXp, rankForLevel, type SessionXpInput, xpForSession } from "../src/index.js";
+import {
+  type HistorySet,
+  levelForXp,
+  type ProgressHistory,
+  progressHistory,
+  rankForLevel,
+  type SessionXpInput,
+  xpForSession,
+} from "../src/index.js";
 
 interface Fixture<I, E> {
   function: string;
@@ -31,5 +39,14 @@ describe("xpForSession", () => {
   const fixture = load<SessionXpInput, ReturnType<typeof xpForSession>>("xp-for-session.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
     expect(xpForSession(input)).toEqual(expected);
+  });
+});
+
+describe("progressHistory", () => {
+  const fixture = load<{ sessions: { sets: HistorySet[] }[] }, ProgressHistory>(
+    "progress-history.json",
+  );
+  it.each(fixture.cases)("$name", ({ input, expected }) => {
+    expect(progressHistory(input.sessions)).toEqual(expected);
   });
 });

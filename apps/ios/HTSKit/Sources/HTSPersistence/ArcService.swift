@@ -142,6 +142,33 @@ public struct ArcService: Sendable {
         }
     }
 
+    /// After a finished session: when the arc has all its sessions it becomes completed and the next queued arc of
+    /// the saga becomes current. Returns the arc that became current, if any.
+    @discardableResult
+    public func completeIfDone(arcId: UUID, now: Date = .now) async throws -> Arc? {
+        try await database.writer.write { db in
+            guard var arc = try Arc.filter(key: arcId).fetchOne(db), arc.status == .current else { return nil }
+            let letters = try String.fetchAll(
+                db, sql: "SELECT letter FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL",
+                arguments: [arc.id.sql])
+            let schedule = ArcSchedule(letters: letters, weeks: arc.weeks, startDate: arc.startDate)
+            guard schedule.isComplete(completedSessions: try Self.completedSessions(arc: arc, db)) else { return nil }
+            let stamp = now.roundedToMilliseconds
+            arc.status = .completed
+            arc.updatedAt = stamp
+            try arc.update(db)
+            guard
+                var next = try Arc.filter(Column("saga_id") == arc.sagaId.sql)
+                    .filter(Column("status") == ArcStatus.queued.rawValue).filter(Columns.deletedAt == nil)
+                    .order(Columns.position).fetchOne(db)
+            else { return nil }
+            next.status = .current
+            next.updatedAt = stamp
+            try next.update(db)
+            return next
+        }
+    }
+
     /// "Recomeçar contagem": progress starts over, history stays.
     public func restartCount(arcId: UUID, now: Date = .now) async throws {
         try await database.writer.write { db in

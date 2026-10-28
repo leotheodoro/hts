@@ -64,3 +64,82 @@ export function xpForSession(input: SessionXpInput, r: ProgressionRules = rules)
   const volume = Math.min(Math.floor(input.volumeKg / r.xp.volume.kgPerXp), r.xp.volume.maxXp);
   return { sets, session, records, volume, total: sets + session + records + volume };
 }
+
+export interface HistorySet {
+  exerciseId: string;
+  unit: "reps" | "seconds" | "minutes" | "meters";
+  completed: boolean;
+  /** Decimal string ("62.5"), or null. */
+  weightKg: string | null;
+  reps: number | null;
+}
+
+export interface SessionProgress {
+  completedSets: number;
+  /** Decimal string, exact. */
+  volumeKg: string;
+  /** Exercises whose best load beat every earlier session, in first-seen order. */
+  records: string[];
+  xp: number;
+}
+
+export interface ProgressHistory {
+  sessions: SessionProgress[];
+  totalXp: number;
+  level: number;
+  rank: RankId;
+}
+
+// Loads are exact decimals: work in hundredths of a kg (numeric(6,2) in Postgres) to avoid float error.
+const toCents = (kg: string): bigint => {
+  const [whole = "0", fraction = ""] = kg.split(".");
+  return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0").slice(0, 2));
+};
+
+const centsToString = (cents: bigint): string => {
+  const whole = cents / 100n;
+  const fraction = cents % 100n;
+  if (fraction === 0n) return whole.toString();
+  return `${whole}.${fraction.toString().padStart(2, "0").replace(/0$/, "")}`;
+};
+
+/**
+ * Derived progress of completed sessions in chronological order (docs/decisions/0010, 0019).
+ * Volume is kg × reps of completed rep sets. A record is a load above every earlier session for
+ * that exercise; the first time an exercise is logged sets the bar and is not a record.
+ */
+export function progressHistory(
+  sessions: { sets: HistorySet[] }[],
+  r: ProgressionRules = rules,
+): ProgressHistory {
+  const best = new Map<string, bigint>();
+  const result: SessionProgress[] = [];
+  let totalXp = 0;
+  for (const session of sessions) {
+    const done = session.sets.filter((s) => s.completed);
+    let volumeCents = 0n;
+    const sessionBest = new Map<string, bigint>();
+    for (const set of done) {
+      if (set.weightKg === null) continue;
+      const cents = toCents(set.weightKg);
+      if (set.unit === "reps" && set.reps !== null) volumeCents += cents * BigInt(set.reps);
+      const current = sessionBest.get(set.exerciseId);
+      if (current === undefined || cents > current) sessionBest.set(set.exerciseId, cents);
+    }
+    const records: string[] = [];
+    for (const [exerciseId, cents] of sessionBest) {
+      const previous = best.get(exerciseId);
+      if (previous !== undefined && cents > previous) records.push(exerciseId);
+      if (previous === undefined || cents > previous) best.set(exerciseId, cents);
+    }
+    const volumeKg = centsToString(volumeCents);
+    const xp = xpForSession(
+      { completedSets: done.length, personalRecords: records.length, volumeKg: Number(volumeKg) },
+      r,
+    ).total;
+    totalXp += xp;
+    result.push({ completedSets: done.length, volumeKg, records, xp });
+  }
+  const level = levelForXp(totalXp, r);
+  return { sessions: result, totalXp, level, rank: rankForLevel(level, r).id };
+}
