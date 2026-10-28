@@ -1,10 +1,13 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { Db } from "./db/client.js";
+import { athleteRoutes } from "./routes/athletes.js";
 import { healthRoutes } from "./routes/health.js";
 import { version } from "./version.js";
 
-export function createApp() {
+export function createApp({ db }: { db: Db }) {
   const app = new OpenAPIHono();
   app.route("/", healthRoutes);
+  app.route("/", athleteRoutes(db));
   return app;
 }
 

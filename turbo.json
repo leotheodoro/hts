@@ -10,7 +10,7 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "env": ["DATABASE_URL", "PORT"]
+      "env": ["DATABASE_URL", "TEST_DATABASE_URL", "PORT"]
     },
     "dev": {
       "cache": false,
