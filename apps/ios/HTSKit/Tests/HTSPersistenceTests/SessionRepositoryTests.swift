@@ -73,13 +73,13 @@ import Testing
         try await repository.save(logged)
 
         let stored = try await fixture.database.writer.read { db in
-            try String.fetchOne(db, sql: "SELECT weight_kg FROM logged_set")
+            try String.fetchOne(db, sql: "SELECT weight_kg FROM logged_set WHERE id = ?", arguments: [logged.id.sql])
         }
         #expect(stored == "62.5")
-        #expect(try await repository.sets(sessionId: session.id) == [logged])
+        #expect(try await repository.sets(sessionId: session.id).contains(logged))
 
         try await repository.deleteSet(id: logged.id, now: fixture.now)
-        #expect(try await repository.sets(sessionId: session.id).isEmpty)
+        #expect(try await !repository.sets(sessionId: session.id).contains(logged))
     }
 
     @Test func storesFightRoundsWithDecimalStringWeights() async throws {
@@ -148,5 +148,38 @@ import Testing
         let session = try await SessionRepository(fixture.database).start(
             plan, now: lateUTC, timeZone: TimeZone(identifier: "America/Sao_Paulo")!)
         #expect(session.localDate == LocalDate("2025-10-28"))
+    }
+
+    @Test func startCreatesOneRowPerMinimumSet() async throws {
+        let (fixture, plan) = try await seeded()
+        let repository = SessionRepository(fixture.database)
+        let session = try await repository.start(plan, now: fixture.now, timeZone: utc)
+        let sets = try await repository.sets(sessionId: session.id)
+        #expect(sets.map(\.setNumber) == [1, 2, 3, 4])
+        #expect(sets.allSatisfy { !$0.completed })
+
+        let extra = try await repository.addSet(
+            to: session, exercise: session.planSnapshot.blocks[0].exercises[0], now: fixture.now)
+        #expect(extra.setNumber == 5)
+    }
+
+    @Test func previousSetsComeFromTheLastCompletedSessionOfTheTemplate() async throws {
+        let (fixture, plan) = try await seeded()
+        let repository = SessionRepository(fixture.database)
+        let first = try await repository.start(plan, now: fixture.now, timeZone: utc)
+        var rows = try await repository.sets(sessionId: first.id)
+        rows[0].weightKg = 60
+        rows[0].reps = 6
+        rows[0].completed = true
+        try await repository.save(rows[0])
+        _ = try await repository.finish(sessionId: first.id, now: fixture.now.addingTimeInterval(3600))
+        #expect(try await repository.lastLetter(arcId: first.arcId) == "A")
+
+        let second = try await repository.start(plan, now: fixture.now.addingTimeInterval(86_400), timeZone: utc)
+        let previous = try await repository.previousSets(for: second)
+        let exerciseId = plan.blocks[0].exercises[0].exercise.id
+        #expect(previous[exerciseId]?[1]?.summary(unit: .reps) == "60 × 6")
+        #expect(previous[exerciseId]?[2] == nil)
+        #expect(try await repository.previousSets(for: first).isEmpty)
     }
 }

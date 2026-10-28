@@ -6,6 +6,8 @@
     /// Sample arcs for screenshots and manual checks: launch with `-HTSSeedDemo YES`. Only when there are no arcs.
     enum DemoData {
         static var isRequested: Bool { UserDefaults.standard.bool(forKey: "HTSSeedDemo") }
+        /// `-HTSStartDemoWorkout YES` starts the suggested workout on launch (screenshots).
+        static var startsWorkout: Bool { UserDefaults.standard.bool(forKey: "HTSStartDemoWorkout") }
 
         static func seed(_ database: AppDatabase, athleteId: UUID) async throws {
             let service = ArcService(database)
@@ -50,6 +52,23 @@
                     ]),
             ]
             try await TemplateService(database).save(template)
+
+            // A finished session of template A two days ago, so "Anterior" has values.
+            guard let filled = try await PlanRepository(database).plan(arcId: first.arc.id)?.templates.first else {
+                return
+            }
+            let sessions = SessionRepository(database)
+            let started = Date.now.addingTimeInterval(-2 * 86_400)
+            let past = try await sessions.start(filled, now: started)
+            for var set in try await sessions.sets(sessionId: past.id) {
+                let isZercher = set.exerciseId == filled.blocks[1].exercises[0].exercise.id
+                set.weightKg = isZercher ? [60, 62.5, 70, 70][min(set.setNumber - 1, 3)] : 20
+                set.reps = isZercher ? [6, 6, 3, 3][min(set.setNumber - 1, 3)] : 10
+                set.seconds = set.exerciseId == filled.blocks[0].exercises[0].exercise.id ? 40 : nil
+                set.completed = true
+                try await sessions.save(set)
+            }
+            _ = try await sessions.finish(sessionId: past.id, now: started.addingTimeInterval(3_900))
         }
     }
 #endif

@@ -18,6 +18,10 @@ final class AppModel {
     private(set) var athlete: Athlete?
     private(set) var databaseError: String?
     private(set) var health: HealthState = .unknown
+    /// The workout in progress, if any. It survives app restarts because it lives in the database.
+    private(set) var activeSession: Session?
+    /// Whether the active workout covers the tabs (false = minimized to the bottom bar).
+    var showsActiveSession = false
 
     let apiConfiguration: APIConfiguration?
     let database: AppDatabase?
@@ -55,9 +59,34 @@ final class AppModel {
                 if DemoData.isRequested { try await DemoData.seed(database, athleteId: athlete.id) }
             #endif
             self.athlete = athlete
+            activeSession = try await SessionRepository(database).inProgress(athleteId: athlete.id)
+            #if DEBUG
+                if DemoData.startsWorkout, activeSession == nil,
+                    let arc = try await PlanRepository(database).currentArc(athleteId: athlete.id),
+                    let plan = try await PlanRepository(database).plan(arcId: arc.id)?.templates.first
+                {
+                    await startWorkout(plan)
+                }
+            #endif
         } catch {
             databaseError = String(describing: error)
         }
+    }
+
+    func startWorkout(_ plan: TemplatePlan) async {
+        guard let database else { return }
+        do {
+            activeSession = try await SessionRepository(database).start(plan)
+            showsActiveSession = true
+        } catch {
+            databaseError = String(describing: error)
+        }
+    }
+
+    /// Called when the active workout is finished or discarded.
+    func endWorkout() {
+        activeSession = nil
+        showsActiveSession = false
     }
 
     func checkHealth() async {
