@@ -9,14 +9,36 @@ struct ActiveSessionScreen: View {
     @Environment(AppModel.self) private var app
     @State private var model: ActiveSessionModel
     @State private var confirmingFinish = false
+    @State private var completed: Completed?
+
+    struct Completed {
+        let completion: ProgressService.Completion
+        let promotedArc: Arc?
+        let nextWorkout: String?
+    }
+
+    private let database: AppDatabase
 
     init(database: AppDatabase, session: Session, defaultRestSeconds: Int) {
+        self.database = database
         _model = State(
             initialValue: ActiveSessionModel(
                 database: database, session: session, defaultRestSeconds: defaultRestSeconds))
     }
 
     var body: some View {
+        if let completed {
+            SessionCompleteView(
+                completion: completed.completion, promotedArc: completed.promotedArc,
+                nextWorkout: completed.nextWorkout
+            ) { app.endWorkout() }
+            .preferredColorScheme(.dark)
+        } else {
+            workout
+        }
+    }
+
+    private var workout: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: HTSSpacing.space7) {
                 header
@@ -43,6 +65,24 @@ struct ActiveSessionScreen: View {
                     let exercise = model.snapshot.blocks.first(where: { $0.kind != .fightRound })?.exercises.first
                 {
                     model.startRest(after: exercise)
+                }
+                // `-HTSDemoFinish YES` checks every set and finishes (screenshots of "Treino concluído").
+                if UserDefaults.standard.bool(forKey: "HTSDemoFinish") {
+                    for block in model.snapshot.blocks {
+                        for exercise in block.exercises {
+                            for set in model.rows(for: exercise) where !set.completed {
+                                var heavier = set
+                                heavier.weightKg = model.previous(for: exercise, setNumber: set.setNumber)?
+                                    .weightKg.map { $0 + 5 }
+                                model.update(heavier)
+                                model.toggle(
+                                    model.rows(for: exercise).first { $0.id == set.id } ?? heavier, exercise: exercise)
+                            }
+                        }
+                    }
+                    model.skipRest()
+                    try? await Task.sleep(for: .milliseconds(300))
+                    await finish()
                 }
             #endif
         }
@@ -91,9 +131,25 @@ struct ActiveSessionScreen: View {
     }
 
     private func finish() async {
-        if await model.finish() != nil {
+        guard let session = await model.finish() else { return }
+        let promoted = try? await ArcService(database).completeIfDone(arcId: session.arcId)
+        guard let completion = try? await ProgressService(database).completion(sessionId: session.id) else {
             app.endWorkout()
+            return
         }
+        completed = Completed(
+            completion: completion, promotedArc: promoted,
+            nextWorkout: await nextWorkout(arcId: promoted?.id ?? session.arcId))
+    }
+
+    /// "B · Trincheira": the rotation after this session in the arc that is now current.
+    private func nextWorkout(arcId: UUID) async -> String? {
+        guard let plan = try? await PlanRepository(database).plan(arcId: arcId) else { return nil }
+        let last = try? await SessionRepository(database).lastLetter(arcId: arcId)
+        guard let letter = ArcSchedule(plan).next(after: last),
+            let template = plan.templates.first(where: { $0.template.letter == letter })?.template
+        else { return nil }
+        return "\(template.letter) · \(template.name)"
     }
 }
 
