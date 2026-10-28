@@ -97,6 +97,8 @@ Depois de mudar tokens.json, progression.json, fixtures ou rotas da API: rode `p
 - Um ticket por branch: `<N>-<slug-curto>` a partir de `main` (ex.: `12-active-session`).
 - PR com `Closes #<N>` no corpo. Decisões tomadas durante o trabalho viram comentário na issue (ou ADR, se forem duradouras).
 - O ticket só está pronto com o CI verde no PR. Novo trabalho descoberto vira issue nova, não escopo extra.
+- Merge: o Claude faz squash merge quando o CI está verde e todos os critérios de aceite estão marcados. PR que depende de teste do Leo (ex.: no iPhone) fica em rascunho até o ok dele.
+- Quadro: https://github.com/users/leotheodoro/projects/1 (Todo, In Progress, Done). Mova o card ao começar e ao terminar.
 
 ## Commits
 
