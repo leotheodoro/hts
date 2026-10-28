@@ -1,0 +1,145 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hard To Submit API",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8787",
+      "description": "Local"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "example": "0.1.0"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ]
+      },
+      "Athlete": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Leo"
+          },
+          "defaultRestSeconds": {
+            "type": "integer",
+            "example": 90
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "defaultRestSeconds",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": [
+          "system"
+        ],
+        "summary": "Report API status and version",
+        "responses": {
+          "200": {
+            "description": "API is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/athletes/{id}": {
+      "get": {
+        "operationId": "getAthlete",
+        "tags": [
+          "athletes"
+        ],
+        "summary": "Get an athlete by id",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Athlete found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Athlete"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Athlete not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

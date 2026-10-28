@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts"
+    "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
+    "openapi:generate": "tsx scripts/generate-openapi.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
