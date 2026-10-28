@@ -123,7 +123,14 @@ final class AppModel {
         do {
             health = .online(version: try await api.health().version)
         } catch {
-            health = .offline(error.localizedDescription)
+            let host = apiConfiguration?.baseURL.host() ?? "API"
+            let message =
+                switch APIFailure(error) {
+                case .timedOut: String(localized: "Sem resposta de \(host) em 10 s.")
+                case .unreachable: String(localized: "Não foi possível conectar a \(host).")
+                case .other(let detail): detail
+                }
+            health = .offline(message)
         }
     }
 }
