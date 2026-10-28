@@ -54,6 +54,43 @@ struct RankOutput: Decodable, Sendable { let id: String, name: String }
     @Test func everyFixtureFileIsCovered() throws {
         let urls = Bundle.module.urls(forResourcesWithExtension: "json", subdirectory: "Fixtures") ?? []
         let names = Set(urls.map { $0.deletingPathExtension().lastPathComponent })
-        #expect(names == ["level-for-xp", "normalize-exercise-name", "rank-for-level", "xp-for-session"])
+        #expect(
+            names == [
+                "level-for-xp", "normalize-exercise-name", "progress-history", "rank-for-level", "xp-for-session",
+            ])
+    }
+}
+
+struct HistoryInput: Decodable, Sendable {
+    struct Session: Decodable, Sendable { let sets: [HistorySet] }
+    let sessions: [Session]
+}
+
+struct HistoryOutput: Decodable, Sendable {
+    struct Session: Decodable, Sendable {
+        let completedSets: Int
+        let volumeKg: String
+        let records: [String]
+        let xp: Int
+    }
+    let sessions: [Session]
+    let totalXp: Int
+    let level: Int
+    let rank: String
+}
+
+@Suite struct ProgressHistoryFixtureTests {
+    @Test(arguments: Fixture<HistoryInput, HistoryOutput>.load("progress-history"))
+    func progressHistory(_ c: Fixture<HistoryInput, HistoryOutput>.Case) {
+        let history = Progression().history(c.input.sessions.map(\.sets))
+        #expect(history.totalXp == c.expected.totalXp)
+        #expect(history.level == c.expected.level)
+        #expect(history.rank.id.rawValue == c.expected.rank)
+        #expect(history.sessions.map(\.xp) == c.expected.sessions.map(\.xp))
+        #expect(history.sessions.map(\.records) == c.expected.sessions.map(\.records))
+        #expect(history.sessions.map(\.completedSets) == c.expected.sessions.map(\.completedSets))
+        #expect(
+            history.sessions.map { NSDecimalNumber(decimal: $0.volumeKg).stringValue }
+                == c.expected.sessions.map(\.volumeKg))
     }
 }

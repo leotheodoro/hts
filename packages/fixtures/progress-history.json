@@ -1,0 +1,171 @@
+{
+  "function": "progressHistory",
+  "cases": [
+    {
+      "name": "first session sets the bar: no record yet",
+      "input": {
+        "sessions": [
+          {
+            "sets": [
+              {
+                "exerciseId": "squat",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "60",
+                "reps": 6
+              },
+              {
+                "exerciseId": "squat",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "62.5",
+                "reps": 6
+              },
+              {
+                "exerciseId": "plank",
+                "unit": "seconds",
+                "completed": true,
+                "weightKg": null,
+                "reps": null
+              },
+              {
+                "exerciseId": "squat",
+                "unit": "reps",
+                "completed": false,
+                "weightKg": "100",
+                "reps": 1
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "completedSets": 3,
+            "volumeKg": "735",
+            "records": [],
+            "xp": 71
+          }
+        ],
+        "totalXp": 71,
+        "level": 1,
+        "rank": "E"
+      }
+    },
+    {
+      "name": "a heavier load breaks the limit once per exercise",
+      "input": {
+        "sessions": [
+          {
+            "sets": [
+              {
+                "exerciseId": "squat",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "60",
+                "reps": 5
+              },
+              {
+                "exerciseId": "bench",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "40",
+                "reps": 8
+              }
+            ]
+          },
+          {
+            "sets": [
+              {
+                "exerciseId": "squat",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "62.5",
+                "reps": 5
+              },
+              {
+                "exerciseId": "squat",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "65",
+                "reps": 3
+              },
+              {
+                "exerciseId": "bench",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "40",
+                "reps": 10
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "completedSets": 2,
+            "volumeKg": "620",
+            "records": [],
+            "xp": 61
+          },
+          {
+            "completedSets": 3,
+            "volumeKg": "907.5",
+            "records": ["squat"],
+            "xp": 96
+          }
+        ],
+        "totalXp": 157,
+        "level": 2,
+        "rank": "E"
+      }
+    },
+    {
+      "name": "volume XP is capped and reps without load add no volume",
+      "input": {
+        "sessions": [
+          {
+            "sets": [
+              {
+                "exerciseId": "deadlift",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "200",
+                "reps": 200
+              },
+              {
+                "exerciseId": "pullup",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": null,
+                "reps": 12
+              },
+              {
+                "exerciseId": "run",
+                "unit": "meters",
+                "completed": true,
+                "weightKg": "10",
+                "reps": null
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "completedSets": 3,
+            "volumeKg": "40000",
+            "records": [],
+            "xp": 130
+          }
+        ],
+        "totalXp": 130,
+        "level": 2,
+        "rank": "E"
+      }
+    }
+  ]
+}

@@ -60,3 +60,14 @@ import Testing
         #expect(set().summary(unit: .reps) == nil)
     }
 }
+
+@Suite struct LevelProgressTests {
+    @Test func placesXpInsideItsLevel() {
+        let progression = Progression()
+        #expect(progression.levelProgress(xp: 0) == .init(level: 1, start: 0, end: 108, fraction: 0))
+        let seven = progression.levelProgress(xp: 1999)
+        #expect(seven.level == 7)
+        #expect(seven.end == 2000)
+        #expect(seven.fraction > 0.99)
+    }
+}
