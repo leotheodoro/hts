@@ -208,9 +208,12 @@ final class ActiveSessionModel {
         sets[set.prescribedExerciseId]?[index] = set
     }
 
+    /// Saves the latest in-memory state of the set, not the value captured when the change was made: two quick
+    /// changes (type the load, then check) would otherwise race and the older one could win.
     private func persist(_ set: LoggedSet) async {
+        let latest = sets[set.prescribedExerciseId]?.first { $0.id == set.id } ?? set
         do {
-            try await repository.save(set)
+            try await repository.save(latest)
         } catch {
             self.error = String(describing: error)
         }
