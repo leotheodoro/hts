@@ -57,7 +57,7 @@ struct ArcsScreen: View {
             Button {
                 editing = .arc(summary.arc.id)
             } label: {
-                ArcRow(summary: summary)
+                ArcRow(summary: summary, eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
             }
             .buttonStyle(.plain)
         }
@@ -72,6 +72,8 @@ struct ArcsScreen: View {
 
 struct ArcRow: View {
     let summary: ArcService.Summary
+    /// The special arc in the week of A Batalha.
+    var eve = false
 
     private var overdue: Bool {
         summary.arc.status == .current
@@ -88,7 +90,7 @@ struct ArcRow: View {
                 }
                 VStack(alignment: .leading, spacing: HTSSpacing.space2) {
                     Text(statusLabel).htsTextStyle(.label)
-                        .foregroundStyle(overdue ? Color.hts.redText : Color.hts.grey)
+                        .foregroundStyle(overdue || eve ? Color.hts.redText : Color.hts.grey)
                     Text(verbatim: summary.arc.name).htsTextStyle(.uiSection).foregroundStyle(Color.hts.bone)
                     Text(subtitle).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                     if let total = summary.schedule.totalSessions {
@@ -105,6 +107,7 @@ struct ArcRow: View {
     }
 
     private var statusLabel: LocalizedStringKey {
+        if eve { return "A VÉSPERA · SEMANA DA BATALHA" }
         if overdue { return "ATRASADO" }
         switch summary.arc.status {
         case .current: return "ATUAL"

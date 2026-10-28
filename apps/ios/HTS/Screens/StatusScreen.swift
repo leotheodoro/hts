@@ -11,6 +11,7 @@ struct StatusScreen: View {
         ScreenScaffold(title: "Status") {
             if let athlete = app.athlete, let model {
                 athleteCard(athlete, model)
+                if let battle = model.battle, battle.daysUntil(.today) >= 0 { battleCard(battle) }
                 workoutCard(model)
                 weekCard(model)
             }
@@ -84,6 +85,30 @@ struct StatusScreen: View {
         } else {
             PlaceholderCard(label: "PRÓXIMO TREINO", text: "Nenhum arco atual. Crie um em Arcos.")
         }
+    }
+
+    /// Countdown to A Batalha: alert card on `blood-deep` with the tape on top.
+    private func battleCard(_ battle: Battle) -> some View {
+        let days = battle.daysUntil(.today)
+        return VStack(alignment: .leading, spacing: 0) {
+            AlertTape()
+            VStack(alignment: .leading, spacing: HTSSpacing.space2) {
+                Text("A BATALHA").htsTextStyle(.label).foregroundStyle(Color.hts.redText)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(verbatim: battle.name).htsTextStyle(.uiSection)
+                    Spacer()
+                    Text(days == 0 ? "Hoje" : (days == 1 ? "1 dia" : "\(days) dias")).htsTextStyle(.data)
+                }
+                Text(verbatim: battle.date.short).htsTextStyle(.dataSm).foregroundStyle(Color.hts.greyApp)
+                if battle.isEve(.today) {
+                    Text("Semana da Véspera. Faça os treinos do arco especial.")
+                        .htsTextStyle(.caption).foregroundStyle(Color.hts.bone)
+                }
+            }
+            .padding(HTSSpacing.space5)
+        }
+        .background(Color.hts.bloodDeep)
+        .overlay(Rectangle().strokeBorder(Color.hts.blood, lineWidth: HTSStroke.hair))
     }
 
     private func weekCard(_ model: StatusModel) -> some View {

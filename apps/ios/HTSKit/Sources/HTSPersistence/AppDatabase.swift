@@ -50,6 +50,18 @@ public final class AppDatabase: Sendable {
         }
         migrator.registerMigration("v2_create_plan", migrate: createPlan)
         migrator.registerMigration("v3_create_record", migrate: createRecord)
+        migrator.registerMigration("v4_create_battle") { db in
+            // Mirrors apps/api/drizzle/0003_create_battle.sql.
+            try db.create(table: "battle") { t in
+                owned(t)
+                t.column("saga_id", .text).notNull().references("saga")
+                t.column("name", .text).notNull()
+                t.column("date", .text).notNull()
+                t.column("result", .text).check(sql: "result IN (\(oneOf(BattleResult.self)))")
+                timestamps(t)
+            }
+            try db.execute(sql: "CREATE INDEX battle_athlete_date_idx ON battle(athlete_id, date)")
+        }
         return migrator
     }
 

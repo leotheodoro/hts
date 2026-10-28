@@ -95,6 +95,47 @@
       ]
     },
     {
+      "name": "battle",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "saga_id",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "notNull": true
+        },
+        {
+          "name": "date",
+          "notNull": true
+        },
+        {
+          "name": "result",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
       "name": "block",
       "columns": [
         {

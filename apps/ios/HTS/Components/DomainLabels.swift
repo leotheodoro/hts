@@ -80,3 +80,14 @@ extension TitleID {
         }
     }
 }
+
+extension BattleResult {
+    var label: LocalizedStringKey {
+        switch self {
+        case .gold: "Ouro"
+        case .silver: "Prata"
+        case .bronze: "Bronze"
+        case .participation: "Participação"
+        }
+    }
+}

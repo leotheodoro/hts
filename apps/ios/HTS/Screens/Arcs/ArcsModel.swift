@@ -10,6 +10,8 @@ final class ArcsModel {
     private(set) var saga: Saga?
     private(set) var summaries: [ArcService.Summary] = []
     private(set) var error: String?
+    /// The competition ahead, to spotlight the special arc in its week.
+    private(set) var battle: Battle?
 
     private let database: AppDatabase
     private let athleteId: UUID
@@ -27,6 +29,8 @@ final class ArcsModel {
             let saga = try await service.saga(athleteId: athleteId, year: year, now: now)
             self.saga = saga
             summaries = try await service.summaries(athleteId: athleteId, sagaId: saga.id)
+            battle = try await BattleRepository(database).current(
+                athleteId: athleteId, today: LocalDate(now, in: .current))
             error = nil
         } catch {
             self.error = String(describing: error)
