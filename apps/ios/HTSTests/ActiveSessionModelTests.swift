@@ -9,7 +9,7 @@ import Testing
 @Suite struct ActiveSessionModelTests {
     func setUp() async throws -> (AppDatabase, AppModel) {
         let database = try AppDatabase.inMemory()
-        let app = AppModel(database: database, apiConfiguration: nil)
+        let app = AppModel(database: database, apiConfiguration: nil, requestNotifications: {})
         await app.loadLocalAthlete()
         let athlete = try #require(app.athlete)
         let service = ArcService(database)

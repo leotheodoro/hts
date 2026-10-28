@@ -39,8 +39,11 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: Bindable(app).showsActiveSession) {
             if let database = app.database, let session = app.activeSession {
-                ActiveSessionScreen(database: database, session: session)
-                    .environment(app)
+                ActiveSessionScreen(
+                    database: database, session: session,
+                    defaultRestSeconds: app.athlete?.defaultRestSeconds ?? 90
+                )
+                .environment(app)
             }
         }
     }
