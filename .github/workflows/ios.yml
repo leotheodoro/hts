@@ -1,0 +1,41 @@
+name: iOS
+
+on:
+  push:
+    paths:
+      - apps/ios/**
+      - packages/**
+      - Makefile
+      - scripts/ios-simulator-id.sh
+      - .github/workflows/ios.yml
+  pull_request:
+    paths:
+      - apps/ios/**
+      - packages/**
+      - Makefile
+      - scripts/ios-simulator-id.sh
+      - .github/workflows/ios.yml
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Lint Swift
+        run: make ios-lint
+      - name: Test HTSKit
+        run: make ios-kit-test
+      - name: Generate project
+        run: make ios-generate
+      # No code signing: simulator build only. TestFlight needs a paid Apple account (separate ticket).
+      - name: Build app for the simulator
+        run: make ios-build
