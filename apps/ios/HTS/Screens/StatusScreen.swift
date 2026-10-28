@@ -77,7 +77,7 @@ struct StatusScreen: View {
                     }
                     Text(verbatim: next.arc.name).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                     if next.plan.blocks.isEmpty {
-                        Text("Este treino ainda não tem exercícios. Edite em Arcos.")
+                        Text("Este treino ainda não tem exercícios.")
                             .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                     } else {
                         HTSButton("Iniciar treino") { Task { await app.startWorkout(next.plan) } }
@@ -85,7 +85,7 @@ struct StatusScreen: View {
                 }
             }
         } else {
-            PlaceholderCard(label: "PRÓXIMO TREINO", text: "Nenhum arco atual. Crie um em Arcos.")
+            PlaceholderCard(label: "PRÓXIMO TREINO", text: "Nenhum arco atual.")
         }
     }
 

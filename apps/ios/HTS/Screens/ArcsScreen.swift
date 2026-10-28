@@ -6,8 +6,9 @@ import SwiftUI
 struct ArcsScreen: View {
     @Environment(AppModel.self) private var app
     @State private var model: ArcsModel?
-    @State private var editing: EditTarget?
 
+    /// Target of `ArcFormSheet`. The form is kept for later but hidden: arcs are loaded from the starter plan for
+    /// now, and the app only shows them (#64).
     enum EditTarget: Identifiable {
         case new
         case arc(UUID)
@@ -30,19 +31,6 @@ struct ArcsScreen: View {
             let model = ArcsModel(database: database, athleteId: athlete.id)
             await model.load()
             self.model = model
-            #if DEBUG
-                // `-HTSOpenArcForm new` or `-HTSOpenArcForm first` opens the form (screenshots, UI checks).
-                switch UserDefaults.standard.string(forKey: "HTSOpenArcForm") {
-                case "new": editing = .new
-                case "first": editing = model.summaries.first.map { .arc($0.arc.id) }
-                default: break
-                }
-            #endif
-        }
-        .sheet(item: $editing) { target in
-            if let model {
-                ArcFormSheet(model: model, target: target)
-            }
         }
     }
 
@@ -51,18 +39,10 @@ struct ArcsScreen: View {
             Text(verbatim: saga.name.uppercased()).htsTextStyle(.label).foregroundStyle(Color.hts.grey)
         }
         if model.summaries.isEmpty {
-            PlaceholderCard(label: "SAGA", text: "Crie o primeiro arco para começar a temporada.")
+            PlaceholderCard(label: "SAGA", text: "Nenhum arco ainda.")
         }
         ForEach(model.summaries) { summary in
-            Button {
-                editing = .arc(summary.arc.id)
-            } label: {
-                ArcRow(summary: summary, eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
-            }
-            .buttonStyle(.plain)
-        }
-        HTSButton("Criar arco", kind: model.summaries.isEmpty ? .primary : .ghost) {
-            editing = .new
+            ArcRow(summary: summary, eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
         }
         if let error = model.error {
             Text(verbatim: error).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
