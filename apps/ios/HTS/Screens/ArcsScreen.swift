@@ -25,7 +25,7 @@ struct ArcsScreen: View {
                 content(model)
             }
         }
-        .task(id: app.athlete?.id) {
+        .task(id: "\(app.athlete?.id.uuidString ?? "")-\(app.dataVersion)") {
             guard let database = app.database, let athlete = app.athlete else { return }
             let model = ArcsModel(database: database, athleteId: athlete.id)
             await model.load()
@@ -119,6 +119,6 @@ struct ArcRow: View {
     private var subtitle: LocalizedStringKey {
         let count = summary.schedule.weeklyGoal
         guard let weeks = summary.arc.weeks else { return "\(count) treinos · sem prazo" }
-        return "\(count) treinos × \(weeks) semanas"
+        return weeks == 1 ? "\(count) treinos × 1 semana" : "\(count) treinos × \(weeks) semanas"
     }
 }

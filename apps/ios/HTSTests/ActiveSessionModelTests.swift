@@ -36,7 +36,7 @@ import Testing
         let session = try #require(app.activeSession)
         #expect(app.showsActiveSession)
 
-        let model = ActiveSessionModel(database: database, session: session)
+        let model = ActiveSessionModel(database: database, session: session, alerts: FakeRestAlerts())
         await model.load()
         let exercise = session.planSnapshot.blocks[0].exercises[0]
         #expect(model.rows(for: exercise).count == 3)
@@ -49,7 +49,7 @@ import Testing
         try await Task.sleep(for: .milliseconds(100))
 
         // A fresh model (as after killing the app) reads the same state from SQLite.
-        let reloaded = ActiveSessionModel(database: database, session: session)
+        let reloaded = ActiveSessionModel(database: database, session: session, alerts: FakeRestAlerts())
         await reloaded.load()
         let saved = reloaded.rows(for: exercise)[0]
         #expect(saved.completed)
