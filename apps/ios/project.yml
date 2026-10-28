@@ -31,6 +31,10 @@ targets:
     platform: iOS
     sources:
       - path: HTS
+      # Personal plan imported on first launch, kept out of git (licensed content, public repo).
+      - path: LocalSeed
+        optional: true
+        buildPhase: resources
     dependencies:
       - package: HTSKit
         product: HTSDesign

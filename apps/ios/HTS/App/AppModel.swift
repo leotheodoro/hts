@@ -27,6 +27,8 @@ final class AppModel {
     }
 
     private(set) var syncState: SyncState = .idle
+    /// Bumped when data changes outside the screens (sync pulled rows, starter plan imported), so they reload.
+    private(set) var dataVersion = 0
 
     /// The workout in progress, if any. It survives app restarts because it lives in the database.
     private(set) var activeSession: Session?
@@ -44,6 +46,7 @@ final class AppModel {
     init(
         database: AppDatabase?, apiConfiguration: APIConfiguration?, databaseError: String? = nil,
         requestNotifications: @escaping @Sendable () async -> Void = {
+            guard !TestHost.isRunningTests else { return }
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         }
     ) {
@@ -65,7 +68,6 @@ final class AppModel {
 
     func start() async {
         await loadLocalAthlete()
-        await sync()
         #if DEBUG
             await checkHealth()
         #endif
@@ -76,6 +78,15 @@ final class AppModel {
         do {
             let athlete = try await AthleteRepository(database).ensureLocalAthlete(
                 displayName: String(localized: "Atleta"))
+            // Sync before the starter plan: a reinstall gets its arcs back from the server instead of a new copy.
+            await sync()
+            if !TestHost.isRunningTests, let url = Bundle.main.url(forResource: "StarterPlan", withExtension: "json") {
+                let plan = try StarterPlan.load(from: url)
+                if try await plan.importIfNeeded(into: database, athleteId: athlete.id, today: .today) {
+                    dataVersion += 1
+                    await sync()
+                }
+            }
             #if DEBUG
                 if DemoData.isRequested { try await DemoData.seed(database, athleteId: athlete.id) }
             #endif
@@ -124,8 +135,11 @@ final class AppModel {
         else { return }
         syncState = .syncing
         do {
-            try await SyncService(database, transport: APIClient(configuration: configuration, timeout: 90)).sync()
+            let result = try await SyncService(
+                database, transport: APIClient(configuration: configuration, timeout: 90)
+            ).sync()
             syncState = .synced(.now)
+            if result.pulled > 0 { dataVersion += 1 }
             if let id = athlete?.id, let refreshed = try await AthleteRepository(database).athlete(id: id) {
                 athlete = refreshed
             }

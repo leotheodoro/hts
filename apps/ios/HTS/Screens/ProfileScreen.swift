@@ -22,7 +22,9 @@ struct ProfileScreen: View {
                 DiagnosticsSection()
             #endif
         }
-        .task(id: "\(app.athlete?.id.uuidString ?? "")-\(app.activeSession?.id.uuidString ?? "none")") {
+        .task(
+            id: "\(app.athlete?.id.uuidString ?? "")-\(app.activeSession?.id.uuidString ?? "none")-\(app.dataVersion)"
+        ) {
             guard let athlete = app.athlete else { return }
             name = athlete.displayName
             rest = athlete.defaultRestSeconds

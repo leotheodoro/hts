@@ -16,7 +16,9 @@ struct JournalScreen: View {
                 sessions(model)
             }
         }
-        .task(id: "\(app.athlete?.id.uuidString ?? "")-\(app.activeSession?.id.uuidString ?? "none")") {
+        .task(
+            id: "\(app.athlete?.id.uuidString ?? "")-\(app.activeSession?.id.uuidString ?? "none")-\(app.dataVersion)"
+        ) {
             guard let database = app.database, let athlete = app.athlete else { return }
             let model = self.model ?? JournalModel(database: database, athleteId: athlete.id)
             await model.load()

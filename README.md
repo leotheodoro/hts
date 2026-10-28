@@ -66,6 +66,10 @@ Funciona com um Apple ID gratuito (Personal Team). Nesse caso o app expira em 7 
 
 O simulador continua usando `localhost`; só builds para o aparelho usam `HTS_DEVICE_API_BASE_URL`. Configurações de build ficam em `apps/ios/Config/*.xcconfig`.
 
+## Plano inicial (opcional)
+
+Para o app já abrir com os seus arcos e treinos, copie `apps/ios/LocalSeed.example` para `apps/ios/LocalSeed` e edite o `StarterPlan.json` (formato no README da pasta). A pasta fica fora do git: programas de preparador costumam ser licenciados e o repositório é público. Na primeira abertura, se o atleta ainda não tiver arcos (nem no aparelho nem no servidor), o app importa o plano uma vez.
+
 ## Deploy da API (Render + Neon)
 
 O deploy é automático a cada push na `main` (`render.yaml`, ADR 0025). Para criar do zero:

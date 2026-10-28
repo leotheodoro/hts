@@ -8,11 +8,18 @@ protocol RestAlerts: Sendable {
     func cancel() async
 }
 
+/// Unit tests run inside the app: asking for permission there leaves a system alert queued on the simulator that
+/// shows up the next time the real app opens.
+enum TestHost {
+    static let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+}
+
 /// Local notification with sound (and vibration when the phone is silent).
 struct LocalNotificationRestAlerts: RestAlerts {
     private static let identifier = "rest-timer"
 
     func schedule(at date: Date, exerciseName: String) async {
+        guard !TestHost.isRunningTests else { return }
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
         if settings.authorizationStatus == .notDetermined {
