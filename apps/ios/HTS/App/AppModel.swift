@@ -105,6 +105,15 @@ final class AppModel {
         showsActiveSession = false
     }
 
+    func updateAthlete(_ athlete: Athlete) async {
+        guard let database else { return }
+        do {
+            self.athlete = try await AthleteRepository(database).update(athlete)
+        } catch {
+            databaseError = String(describing: error)
+        }
+    }
+
     func checkHealth() async {
         guard let api else {
             health = .offline(String(localized: "URL da API não configurada"))
