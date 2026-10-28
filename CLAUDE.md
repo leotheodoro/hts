@@ -62,7 +62,7 @@ pnpm sync:shared                 gera Tokens.swift e copia progression.json, fix
 pnpm --filter api db:generate    nova migration a partir de src/db/schema.ts
 pnpm --filter api db:migrate     aplica as migrations
 pnpm --filter api openapi:generate
-docker compose up -d             Postgres local (5432)
+docker compose up -d             Postgres local (porta 5442 no host)
 make ios-generate | make ios-test | make ios-build
 ```
 

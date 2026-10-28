@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: hts
+      POSTGRES_PASSWORD: hts
+      POSTGRES_DB: hts
+    ports:
+      - "5442:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hts -d hts"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-data:
