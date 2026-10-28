@@ -185,6 +185,112 @@
       ]
     },
     {
+      "name": "logged_round",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "session_id",
+          "notNull": true
+        },
+        {
+          "name": "block_id",
+          "notNull": true
+        },
+        {
+          "name": "rounds_completed",
+          "notNull": true
+        },
+        {
+          "name": "weights",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "logged_set",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "session_id",
+          "notNull": true
+        },
+        {
+          "name": "prescribed_exercise_id",
+          "notNull": true
+        },
+        {
+          "name": "exercise_id",
+          "notNull": true
+        },
+        {
+          "name": "set_number",
+          "notNull": true
+        },
+        {
+          "name": "weight_kg",
+          "notNull": false
+        },
+        {
+          "name": "reps",
+          "notNull": false
+        },
+        {
+          "name": "seconds",
+          "notNull": false
+        },
+        {
+          "name": "meters",
+          "notNull": false
+        },
+        {
+          "name": "completed",
+          "notNull": true
+        },
+        {
+          "name": "completed_at",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
       "name": "prescribed_exercise",
       "columns": [
         {
@@ -254,6 +360,59 @@
         },
         {
           "name": "name",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
+      "name": "session",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "arc_id",
+          "notNull": true
+        },
+        {
+          "name": "workout_template_id",
+          "notNull": true
+        },
+        {
+          "name": "status",
+          "notNull": true
+        },
+        {
+          "name": "started_at",
+          "notNull": true
+        },
+        {
+          "name": "finished_at",
+          "notNull": false
+        },
+        {
+          "name": "local_date",
+          "notNull": true
+        },
+        {
+          "name": "plan_snapshot",
           "notNull": true
         },
         {

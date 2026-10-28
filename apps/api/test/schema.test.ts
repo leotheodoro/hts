@@ -8,10 +8,14 @@ import {
   athlete,
   block,
   exercise,
+  loggedRound,
+  loggedSet,
   prescribedExercise,
   saga,
+  session,
   workoutTemplate,
 } from "../src/db/schema.js";
+import { PlanSnapshotSchema } from "../src/db/snapshot.js";
 import { SetTargetSchema, targetsFitSets } from "../src/db/targets.js";
 import { createTestDb } from "./db.js";
 
@@ -21,6 +25,9 @@ const athleteIds: string[] = [];
 afterAll(async () => {
   if (athleteIds.length > 0) {
     // Children first: the schema uses plain foreign keys (soft delete), no cascades.
+    await db.delete(loggedSet).where(inArray(loggedSet.athleteId, athleteIds));
+    await db.delete(loggedRound).where(inArray(loggedRound.athleteId, athleteIds));
+    await db.delete(session).where(inArray(session.athleteId, athleteIds));
     await db.delete(prescribedExercise).where(inArray(prescribedExercise.athleteId, athleteIds));
     await db.delete(exercise).where(inArray(exercise.athleteId, athleteIds));
     await db.delete(block).where(inArray(block.athleteId, athleteIds));
@@ -157,5 +164,134 @@ describe("normalizeExerciseName (shared fixture)", () => {
   };
   it.each(fixture.cases)("$name", ({ input, expected }) => {
     expect(normalizeExerciseName(input.name)).toBe(expected.normalized);
+  });
+});
+
+describe("record schema", () => {
+  async function seedTemplate() {
+    const { athleteId, sagaId } = await seedAthlete();
+    const ids = {
+      arcId: uuidv7(),
+      templateId: uuidv7(),
+      blockId: uuidv7(),
+      exerciseId: uuidv7(),
+      prescribedId: uuidv7(),
+    };
+    await db.insert(arc).values({ id: ids.arcId, athleteId, sagaId, name: "Arco", position: 0 });
+    await db.insert(workoutTemplate).values({
+      id: ids.templateId,
+      athleteId,
+      arcId: ids.arcId,
+      letter: "A",
+      name: "Linha de Frente",
+      position: 0,
+    });
+    await db.insert(block).values({
+      id: ids.blockId,
+      athleteId,
+      workoutTemplateId: ids.templateId,
+      kind: "strength",
+      attributes: ["strength"],
+      position: 0,
+    });
+    await db.insert(exercise).values({
+      id: ids.exerciseId,
+      athleteId,
+      name: "Supino",
+      normalizedName: "supino",
+    });
+    await db.insert(prescribedExercise).values({
+      id: ids.prescribedId,
+      athleteId,
+      blockId: ids.blockId,
+      exerciseId: ids.exerciseId,
+      setsMin: 3,
+      setsMax: 3,
+      targets: [{ type: "fixed", value: 8 }],
+      position: 0,
+    });
+    const snapshot = PlanSnapshotSchema.parse({
+      workoutTemplateId: ids.templateId,
+      letter: "A",
+      name: "Linha de Frente",
+      focus: null,
+      blocks: [
+        {
+          blockId: ids.blockId,
+          kind: "strength",
+          attributes: ["strength"],
+          durationMinutes: null,
+          exercises: [
+            {
+              prescribedExerciseId: ids.prescribedId,
+              exerciseId: ids.exerciseId,
+              name: "Supino",
+              unit: "reps",
+              perSide: false,
+              setsMin: 3,
+              setsMax: 3,
+              targets: [{ type: "fixed", value: 8 }],
+              restSeconds: null,
+            },
+          ],
+        },
+      ],
+    });
+    return { athleteId, snapshot, ...ids };
+  }
+
+  it("stores a session with its plan snapshot and exact decimal loads", async () => {
+    const t = await seedTemplate();
+    const sessionId = uuidv7();
+    await db.insert(session).values({
+      id: sessionId,
+      athleteId: t.athleteId,
+      arcId: t.arcId,
+      workoutTemplateId: t.templateId,
+      startedAt: new Date("2026-11-02T10:00:00Z"),
+      localDate: "2026-11-02",
+      planSnapshot: t.snapshot,
+    });
+    await db.insert(loggedSet).values({
+      id: uuidv7(),
+      athleteId: t.athleteId,
+      sessionId,
+      prescribedExerciseId: t.prescribedId,
+      exerciseId: t.exerciseId,
+      setNumber: 1,
+      weightKg: "62.5",
+      reps: 8,
+      completed: true,
+      completedAt: new Date("2026-11-02T10:05:00Z"),
+    });
+    await db.insert(loggedRound).values({
+      id: uuidv7(),
+      athleteId: t.athleteId,
+      sessionId,
+      blockId: t.blockId,
+      roundsCompleted: 3,
+      weights: [{ exerciseId: t.exerciseId, weightKg: "24" }],
+    });
+
+    const [stored] = await db.select().from(session).where(eq(session.id, sessionId));
+    expect(PlanSnapshotSchema.parse(stored?.planSnapshot)).toEqual(t.snapshot);
+    expect(stored?.status).toBe("in_progress");
+    const [set] = await db.select().from(loggedSet).where(eq(loggedSet.sessionId, sessionId));
+    expect(set?.weightKg).toBe("62.50");
+  });
+
+  it("allows only one session in progress per athlete", async () => {
+    const t = await seedTemplate();
+    const base = {
+      athleteId: t.athleteId,
+      arcId: t.arcId,
+      workoutTemplateId: t.templateId,
+      startedAt: new Date(),
+      localDate: "2026-11-02",
+      planSnapshot: t.snapshot,
+    };
+    await db.insert(session).values({ ...base, id: uuidv7() });
+    await expect(db.insert(session).values({ ...base, id: uuidv7() })).rejects.toThrow();
+    await db.insert(session).values({ ...base, id: uuidv7(), status: "completed" });
   });
 });
