@@ -1,0 +1,6 @@
+{
+  "name": "@hts/fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared test cases run by both the TS and the Swift implementations."
+}

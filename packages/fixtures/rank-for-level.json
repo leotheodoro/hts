@@ -1,0 +1,35 @@
+{
+  "function": "rankForLevel",
+  "cases": [
+    {
+      "name": "level 1 is Recruta",
+      "input": { "level": 1 },
+      "expected": { "id": "E", "name": "Recruta" }
+    },
+    {
+      "name": "level 4 is still Recruta",
+      "input": { "level": 4 },
+      "expected": { "id": "E", "name": "Recruta" }
+    },
+    {
+      "name": "level 5 is Soldado",
+      "input": { "level": 5 },
+      "expected": { "id": "D", "name": "Soldado" }
+    },
+    {
+      "name": "level 21 is Sargento",
+      "input": { "level": 21 },
+      "expected": { "id": "B", "name": "Sargento" }
+    },
+    {
+      "name": "level 22 is Tenente",
+      "input": { "level": 22 },
+      "expected": { "id": "A", "name": "Tenente" }
+    },
+    {
+      "name": "level 30 and above is Comandante",
+      "input": { "level": 45 },
+      "expected": { "id": "S", "name": "Comandante" }
+    }
+  ]
+}
