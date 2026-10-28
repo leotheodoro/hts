@@ -28,7 +28,7 @@ Visão de produto, glossário e regras do repo: [CLAUDE.md](CLAUDE.md). Decisõe
    pnpm lint
    pnpm test        # precisa do Postgres do passo 6 para os testes da API
    ```
-6. Suba o Postgres e a API:
+6. Suba o Postgres e a API (gere um `API_TOKEN` com `openssl rand -hex 32` e ponha no `.env` e no `apps/ios/Local.xcconfig` como `HTS_API_TOKEN`):
    ```sh
    cp apps/api/.env.example apps/api/.env
    docker compose up -d

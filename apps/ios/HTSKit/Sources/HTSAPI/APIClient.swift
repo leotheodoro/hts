@@ -1,4 +1,5 @@
 import Foundation
+import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
 
@@ -6,18 +7,39 @@ import OpenAPIURLSession
 /// project.yml (Debug: http://localhost:8787).
 public struct APIConfiguration: Sendable, Hashable {
     public var baseURL: URL
+    /// Fixed bearer token for /v1 (docs/decisions/0024). Nil when not configured.
+    public var token: String?
 
-    public init(baseURL: URL) {
+    public init(baseURL: URL, token: String? = nil) {
         self.baseURL = baseURL
+        self.token = token
     }
 
     public static let infoPlistKey = "HTSAPIBaseURL"
+    public static let tokenInfoPlistKey = "HTSAPIToken"
 
     public static func fromBundle(_ bundle: Bundle = .main) -> APIConfiguration? {
         guard let value = bundle.object(forInfoDictionaryKey: infoPlistKey) as? String,
             let url = URL(string: value), url.scheme != nil
         else { return nil }
-        return APIConfiguration(baseURL: url)
+        let token = (bundle.object(forInfoDictionaryKey: tokenInfoPlistKey) as? String).flatMap {
+            $0.isEmpty || $0.hasPrefix("$(") ? nil : $0
+        }
+        return APIConfiguration(baseURL: url, token: token)
+    }
+}
+
+/// Adds `Authorization: Bearer <token>` to every request.
+struct BearerTokenMiddleware: ClientMiddleware {
+    let token: String
+
+    func intercept(
+        _ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String,
+        next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
+    ) async throws -> (HTTPResponse, HTTPBody?) {
+        var request = request
+        request.headerFields[.authorization] = "Bearer \(token)"
+        return try await next(request, body, baseURL)
     }
 }
 
@@ -74,7 +96,9 @@ public struct APIClient: Sendable {
     }
 
     init(configuration: APIConfiguration, transport: some ClientTransport) {
-        client = Client(serverURL: configuration.baseURL, transport: transport)
+        client = Client(
+            serverURL: configuration.baseURL, transport: transport,
+            middlewares: configuration.token.map { [BearerTokenMiddleware(token: $0)] } ?? [])
     }
 
     public func health() async throws -> HealthStatus {
@@ -98,6 +122,8 @@ public struct APIClient: Sendable {
                 createdAt: body.createdAt, updatedAt: body.updatedAt)
         case .notFound:
             return nil
+        case .unauthorized:
+            throw APIError.unexpectedStatus(401)
         case .undocumented(let status, _):
             throw APIError.unexpectedStatus(status)
         }

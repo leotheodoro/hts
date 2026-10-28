@@ -21,6 +21,7 @@ const getAthlete = createRoute({
   operationId: "getAthlete",
   tags: ["athletes"],
   summary: "Get an athlete by id",
+  security: [{ bearer: [] }],
   request: {
     params: z.object({
       id: z.uuid().openapi({ param: { name: "id", in: "path" } }),
@@ -31,6 +32,10 @@ const getAthlete = createRoute({
       description: "Athlete found",
       content: { "application/json": { schema: AthleteSchema } },
     },
+    401: {
+      description: "Missing or wrong bearer token",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
     404: {
       description: "Athlete not found or deleted",
       content: { "application/json": { schema: ErrorSchema } },
@@ -39,7 +44,7 @@ const getAthlete = createRoute({
 });
 
 export function athleteRoutes(db: Db) {
-  // TODO(auth ticket): require authentication and only allow the caller's own athlete.
+  // Protected by the fixed bearer token (docs/decisions/0024); per-athlete access comes with real accounts.
   return new OpenAPIHono().openapi(getAthlete, async (c) => {
     const { id } = c.req.valid("param");
     const [row] = await db
