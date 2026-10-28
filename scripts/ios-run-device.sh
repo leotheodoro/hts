@@ -40,4 +40,9 @@ xcodebuild build -project apps/ios/HTS.xcodeproj -scheme HTS -configuration Debu
 app=apps/ios/build/Build/Products/Debug-iphoneos/HTS.app
 bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Info.plist")
 xcrun devicectl device install app --device "$device" "$app"
-xcrun devicectl device process launch --device "$device" "$bundle_id"
+if ! xcrun devicectl device process launch --device "$device" "$bundle_id"; then
+  echo "" >&2
+  echo "Installed, but iOS refused to launch it. On the first install with a Personal Team, trust the developer on" >&2
+  echo "the iPhone: Settings > General > VPN & Device Management > your Apple ID > Trust. Then run this again." >&2
+  exit 1
+fi
