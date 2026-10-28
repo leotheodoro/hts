@@ -111,21 +111,23 @@ public struct SessionRepository: Sendable {
     public func number(of session: Session) async throws -> Number {
         try await database.writer.read { db in
             let started = ISO8601Millis.format(session.startedAt)
-            let global = try Int.fetchOne(
-                db,
-                sql: """
-                    SELECT COUNT(*) FROM session
-                    WHERE athlete_id = ? AND deleted_at IS NULL AND started_at <= ?
-                    """, arguments: [session.athleteId.sql, started]) ?? 0
+            let global =
+                try Int.fetchOne(
+                    db,
+                    sql: """
+                        SELECT COUNT(*) FROM session
+                        WHERE athlete_id = ? AND deleted_at IS NULL AND started_at <= ?
+                        """, arguments: [session.athleteId.sql, started]) ?? 0
             let resetAt = try String.fetchOne(
                 db, sql: "SELECT count_reset_at FROM arc WHERE id = ?", arguments: [session.arcId.sql])
-            let inArc = try Int.fetchOne(
-                db,
-                sql: """
-                    SELECT COUNT(*) FROM session
-                    WHERE arc_id = ? AND deleted_at IS NULL AND started_at <= ?
-                    AND (? IS NULL OR started_at >= ?)
-                    """, arguments: [session.arcId.sql, started, resetAt, resetAt]) ?? 0
+            let inArc =
+                try Int.fetchOne(
+                    db,
+                    sql: """
+                        SELECT COUNT(*) FROM session
+                        WHERE arc_id = ? AND deleted_at IS NULL AND started_at <= ?
+                        AND (? IS NULL OR started_at >= ?)
+                        """, arguments: [session.arcId.sql, started, resetAt, resetAt]) ?? 0
             return Number(global: global, inArc: inArc)
         }
     }
