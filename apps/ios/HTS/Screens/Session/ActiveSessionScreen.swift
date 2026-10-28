@@ -111,9 +111,16 @@ private struct BlockSection: View {
             }
             .foregroundStyle(Color.hts.grey)
             if block.kind == .fightRound {
-                Text("Round de Luta: o registro de rounds chega no próximo ticket.")
-                    .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                FightRoundSection(model: model, block: block)
             } else {
+                if block.kind == .combo || block.kind == .chainedCombo {
+                    Text(
+                        block.kind == .combo
+                            ? "Em sequência. Descanso depois do último exercício."
+                            : "Um logo após o outro, sem pausa. Descanso no fim."
+                    )
+                    .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                }
                 ForEach(block.exercises, id: \.prescribedExerciseId) { exercise in
                     ExerciseTable(model: model, exercise: exercise)
                 }
@@ -243,7 +250,7 @@ private struct SetRow: View {
 }
 
 /// Numeric field that keeps its own text while typing and reports parsed decimals (comma or dot).
-private struct NumberField: View {
+struct NumberField: View {
     let value: Decimal?
     let prompt: String
     let keyboard: UIKeyboardType

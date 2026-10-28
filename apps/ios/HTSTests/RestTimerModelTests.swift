@@ -15,7 +15,9 @@ actor FakeRestAlerts: RestAlerts {
 
 @MainActor
 @Suite struct RestTimerModelTests {
-    func makeModel(restSeconds: Int?) async throws -> (ActiveSessionModel, FakeRestAlerts, PlanSnapshot.Exercise) {
+    func makeModel(
+        restSeconds: Int?, blocks: [TemplateDraft.BlockDraft]? = nil
+    ) async throws -> (ActiveSessionModel, FakeRestAlerts, PlanSnapshot.Exercise) {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
@@ -27,9 +29,10 @@ actor FakeRestAlerts: RestAlerts {
             athleteId: athlete.id, sagaId: saga.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         var draft = try #require(try await TemplateService(database).draft(templateId: plan.templates[0].template.id))
-        draft.blocks = [
-            .init(exercises: [.init(name: "Swing", setsText: "2", targetText: "10", restSeconds: restSeconds)])
-        ]
+        draft.blocks =
+            blocks ?? [
+                .init(exercises: [.init(name: "Swing", setsText: "2", targetText: "10", restSeconds: restSeconds)])
+            ]
         try await TemplateService(database).save(draft)
         let filled = try #require(try await PlanRepository(database).plan(arcId: arc.id)?.templates.first)
         let session = try await SessionRepository(database).start(filled)
@@ -69,5 +72,40 @@ actor FakeRestAlerts: RestAlerts {
         model.skipRest()
         model.toggle(model.rows(for: exercise)[0], exercise: exercise)
         #expect(model.rest == nil)
+    }
+
+    @Test func comboRestsOnlyAfterItsLastExercise() async throws {
+        let combo = TemplateDraft.BlockDraft(
+            kind: .combo, attributes: [.power],
+            exercises: [
+                .init(name: "Salto", setsText: "3", targetText: "5"),
+                .init(name: "Arremesso", setsText: "3", targetText: "5", restSeconds: 120),
+            ])
+        let (model, _, first) = try await makeModel(restSeconds: nil, blocks: [combo])
+        model.toggle(model.rows(for: first)[0], exercise: first)
+        #expect(model.rest == nil)
+        let last = model.snapshot.blocks[0].exercises[1]
+        model.toggle(model.rows(for: last)[0], exercise: last)
+        #expect(model.rest?.duration == 120)
+        model.skipRest()
+    }
+
+    @Test func fightRoundStoresRoundsAndLoads() async throws {
+        let round = TemplateDraft.BlockDraft(
+            kind: .fightRound, attributes: [.conditioning], durationMinutes: 6,
+            exercises: [
+                .init(name: "Swing Russo", setsText: "1", targetText: "máx")
+            ])
+        let (model, _, exercise) = try await makeModel(restSeconds: nil, blocks: [round])
+        let block = model.snapshot.blocks[0]
+        #expect(model.rows(for: exercise).isEmpty)
+        await model.loadRound(block)
+        model.setRoundsCompleted(3, block: block)
+        model.setRoundWeight(24, exercise: exercise, block: block)
+        model.startRoundTimer(block)
+        #expect(model.roundTimers[block.blockId]?.duration == 360)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(model.rounds[block.blockId]?.roundsCompleted == 3)
+        #expect(model.roundWeight(exercise: exercise, block: block) == 24)
     }
 }
