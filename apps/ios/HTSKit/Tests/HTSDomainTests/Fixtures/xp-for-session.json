@@ -1,0 +1,20 @@
+{
+  "function": "xpForSession",
+  "cases": [
+    {
+      "name": "session with no sets still gives the completion bonus",
+      "input": { "completedSets": 0, "personalRecords": 0, "volumeKg": 0 },
+      "expected": { "sets": 0, "session": 40, "records": 0, "volume": 0, "total": 40 }
+    },
+    {
+      "name": "typical session rounds volume down to whole 500 kg",
+      "input": { "completedSets": 12, "personalRecords": 1, "volumeKg": 3240.5 },
+      "expected": { "sets": 120, "session": 40, "records": 25, "volume": 6, "total": 191 }
+    },
+    {
+      "name": "volume XP is capped at 60",
+      "input": { "completedSets": 20, "personalRecords": 2, "volumeKg": 31000 },
+      "expected": { "sets": 200, "session": 40, "records": 50, "volume": 60, "total": 350 }
+    }
+  ]
+}

@@ -11,6 +11,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.6.3
         version: 2.6.3
+      '@hts/design-tokens':
+        specifier: workspace:*
+        version: link:packages/design-tokens
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2

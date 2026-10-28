@@ -1,0 +1,13 @@
+{
+  "function": "levelForXp",
+  "cases": [
+    { "name": "starts at level 1", "input": { "xp": 0 }, "expected": { "level": 1 } },
+    { "name": "level 2 starts at 108 XP", "input": { "xp": 108 }, "expected": { "level": 2 } },
+    {
+      "name": "level 7 ends just before 2000 XP",
+      "input": { "xp": 1999 },
+      "expected": { "level": 7 }
+    },
+    { "name": "2000 XP reaches level 8", "input": { "xp": 2000 }, "expected": { "level": 8 } }
+  ]
+}
