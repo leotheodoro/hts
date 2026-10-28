@@ -24,6 +24,16 @@ public struct LocalDate: Hashable, Comparable, Sendable, Codable, CustomStringCo
         self.init(year: year, month: month, day: day)
     }
 
+    /// The calendar day of `date` in `timeZone` (the athlete's device time zone).
+    public init(_ date: Date, in timeZone: TimeZone) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        self.year = c.year!
+        self.month = c.month!
+        self.day = c.day!
+    }
+
     public var description: String {
         String(format: "%04d-%02d-%02d", year, month, day)
     }

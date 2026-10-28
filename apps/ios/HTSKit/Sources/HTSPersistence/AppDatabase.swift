@@ -49,25 +49,28 @@ public final class AppDatabase: Sendable {
             }
         }
         migrator.registerMigration("v2_create_plan", migrate: createPlan)
+        migrator.registerMigration("v3_create_record", migrate: createRecord)
         return migrator
     }
 
     /// Mirrors apps/api/drizzle/0001_create_plan.sql. Postgres enums become TEXT with CHECK, jsonb becomes JSON
     /// TEXT, date becomes "YYYY-MM-DD" TEXT.
-    private static func createPlan(_ db: Database) throws {
-        func owned(_ t: TableDefinition) {
-            t.primaryKey("id", .text)
-            t.column("athlete_id", .text).notNull().references("athlete")
-        }
-        func timestamps(_ t: TableDefinition) {
-            t.column("created_at", .text).notNull()
-            t.column("updated_at", .text).notNull()
-            t.column("deleted_at", .text)
-        }
-        func oneOf<E: RawRepresentable & CaseIterable>(_: E.Type) -> String where E.RawValue == String {
-            E.allCases.map { "'\($0.rawValue)'" }.joined(separator: ", ")
-        }
+    private static func owned(_ t: TableDefinition) {
+        t.primaryKey("id", .text)
+        t.column("athlete_id", .text).notNull().references("athlete")
+    }
 
+    private static func timestamps(_ t: TableDefinition) {
+        t.column("created_at", .text).notNull()
+        t.column("updated_at", .text).notNull()
+        t.column("deleted_at", .text)
+    }
+
+    private static func oneOf<E: RawRepresentable & CaseIterable>(_: E.Type) -> String where E.RawValue == String {
+        E.allCases.map { "'\($0.rawValue)'" }.joined(separator: ", ")
+    }
+
+    private static func createPlan(_ db: Database) throws {
         try db.create(table: "saga") { t in
             owned(t)
             t.column("year", .integer).notNull()
@@ -139,5 +142,56 @@ public final class AppDatabase: Sendable {
             t.column("position", .integer).notNull()
             timestamps(t)
         }
+    }
+
+    /// Mirrors apps/api/drizzle/0002_create_record.sql. Loads are decimal TEXT ("62.5"), never REAL.
+    private static func createRecord(_ db: Database) throws {
+        try db.create(table: "session") { t in
+            owned(t)
+            t.column("arc_id", .text).notNull().references("arc")
+            t.column("workout_template_id", .text).notNull().references("workout_template")
+            t.column("status", .text).notNull().defaults(to: SessionStatus.inProgress.rawValue)
+                .check(sql: "status IN (\(oneOf(SessionStatus.self)))")
+            t.column("started_at", .text).notNull()
+            t.column("finished_at", .text)
+            t.column("local_date", .text).notNull()
+            t.column("plan_snapshot", .jsonText).notNull()
+            timestamps(t)
+        }
+        try db.execute(
+            sql: """
+                CREATE INDEX session_athlete_started_at_idx ON session(athlete_id, started_at);
+                CREATE INDEX session_workout_template_id_idx ON session(workout_template_id);
+                CREATE UNIQUE INDEX session_one_in_progress_idx
+                ON session(athlete_id) WHERE status = 'in_progress' AND deleted_at IS NULL;
+                """)
+        try db.create(table: "logged_set") { t in
+            owned(t)
+            t.column("session_id", .text).notNull().references("session")
+            t.column("prescribed_exercise_id", .text).notNull().references("prescribed_exercise")
+            t.column("exercise_id", .text).notNull().references("exercise")
+            t.column("set_number", .integer).notNull()
+            t.column("weight_kg", .text)
+            t.column("reps", .integer)
+            t.column("seconds", .integer)
+            t.column("meters", .text)
+            t.column("completed", .boolean).notNull().defaults(to: false)
+            t.column("completed_at", .text)
+            timestamps(t)
+        }
+        try db.execute(
+            sql: """
+                CREATE INDEX logged_set_session_id_idx ON logged_set(session_id);
+                CREATE INDEX logged_set_exercise_id_idx ON logged_set(exercise_id);
+                """)
+        try db.create(table: "logged_round") { t in
+            owned(t)
+            t.column("session_id", .text).notNull().references("session")
+            t.column("block_id", .text).notNull().references("block")
+            t.column("rounds_completed", .integer).notNull().defaults(to: 0)
+            t.column("weights", .jsonText).notNull()
+            timestamps(t)
+        }
+        try db.execute(sql: "CREATE INDEX logged_round_session_id_idx ON logged_round(session_id)")
     }
 }
