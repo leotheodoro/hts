@@ -8,12 +8,13 @@ let package = Package(
     // macOS is only here so `swift test` runs on the host; the app is iPhone-only.
     platforms: [.iOS(.v26), .macOS(.v26)],
     products: [
-        .library(name: "HTSDesign", targets: ["HTSDesign"]),
+        .library(name: "HTSDesign", targets: ["HTSDesign"])
     ],
     targets: [
         .target(
             name: "HTSDesign",
             resources: [.process("Resources")]
         ),
+        .testTarget(name: "HTSDesignTests", dependencies: ["HTSDesign"]),
     ]
 )
