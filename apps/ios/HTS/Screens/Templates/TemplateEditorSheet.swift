@@ -124,13 +124,7 @@ private struct BlockEditor: View {
                     }
                 }
                 if block.kind == .fightRound {
-                    Stepper(value: $block.durationMinutes, in: 1...60) {
-                        HStack {
-                            FieldLabel(text: "DURAÇÃO")
-                            Spacer()
-                            Text(verbatim: "\(block.durationMinutes) min").htsTextStyle(.data)
-                        }
-                    }
+                    HTSStepper("DURAÇÃO", value: $block.durationMinutes, in: 1...60) { "\($0) min" }
                 }
                 ForEach($block.exercises) { $exercise in
                     Divider().overlay(Color.hts.line)

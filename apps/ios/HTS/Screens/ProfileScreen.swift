@@ -35,12 +35,8 @@ struct ProfileScreen: View {
             Text("Ajustes").htsTextStyle(.uiSection)
             HTSTextField(label: "NOME", text: $name, prompt: "Seu nome")
                 .onSubmit { save() }
-            Stepper(value: $rest, in: 15...600, step: 15) {
-                HStack {
-                    FieldLabel(text: "DESCANSO PADRÃO")
-                    Spacer()
-                    Text(verbatim: RestTimer.format(TimeInterval(rest))).htsTextStyle(.data)
-                }
+            HTSStepper("DESCANSO PADRÃO", value: $rest, in: 15...600, step: 15) {
+                RestTimer.format(TimeInterval($0))
             }
             .onChange(of: rest) { save() }
             Text("Vale para exercícios sem descanso próprio.").htsTextStyle(.caption)
@@ -178,7 +174,7 @@ private struct BattleSettings: View {
         VStack(alignment: .leading, spacing: HTSSpacing.space4) {
             Text("A Batalha").htsTextStyle(.uiSection)
             HTSTextField(label: "COMPETIÇÃO", text: $name, prompt: "Copa Hard To Submit")
-            DatePicker(selection: $date, displayedComponents: .date) { FieldLabel(text: "DATA") }
+            HTSDateField("DATA", date: $date)
             if let battle, battle.daysUntil(.today) <= 0 {
                 VStack(alignment: .leading, spacing: HTSSpacing.space2) {
                     FieldLabel(text: "RESULTADO")

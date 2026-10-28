@@ -78,29 +78,19 @@ struct ArcFormSheet: View {
 
             VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                 FieldLabel(text: "TIPO")
-                Picker("Tipo", selection: draft.kind) {
-                    Text("Normal").tag(ArcKind.normal)
-                    Text("Especial").tag(ArcKind.special)
-                    Text("Manutenção").tag(ArcKind.filler)
-                }
-                .pickerStyle(.segmented)
+                HTSSegmented(
+                    selection: draft.kind,
+                    options: [(.normal, "Normal"), (.special, "Especial"), (.filler, "Manutenção")])
             }
 
             if draft.wrappedValue.hasDuration {
                 VStack(alignment: .leading, spacing: HTSSpacing.space4) {
-                    DatePicker(
-                        selection: Binding(
+                    HTSDateField(
+                        "INÍCIO",
+                        date: Binding(
                             get: { draft.wrappedValue.startDate.date },
-                            set: { draft.wrappedValue.startDate = LocalDate($0, in: .current) }),
-                        displayedComponents: .date
-                    ) { FieldLabel(text: "INÍCIO") }
-                    Stepper(value: draft.weeks, in: 1...52) {
-                        HStack {
-                            FieldLabel(text: "SEMANAS")
-                            Spacer()
-                            Text(verbatim: "\(draft.wrappedValue.weeks)").htsTextStyle(.data)
-                        }
-                    }
+                            set: { draft.wrappedValue.startDate = LocalDate($0, in: .current) }))
+                    HTSStepper("SEMANAS", value: draft.weeks, in: 1...52)
                 }
             }
 
