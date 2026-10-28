@@ -79,6 +79,35 @@
         "required": [
           "error"
         ]
+      },
+      "SyncChanges": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "description": "Rows by table (athlete, saga, arc, workout_template, block, exercise, prescribed_exercise, session, logged_set, logged_round, battle), keyed by column name."
+      },
+      "SyncPull": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "changes": {
+            "$ref": "#/components/schemas/SyncChanges"
+          }
+        },
+        "required": [
+          "cursor",
+          "changes"
+        ]
       }
     },
     "parameters": {}
@@ -151,6 +180,124 @@
           },
           "404": {
             "description": "Athlete not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sync/push": {
+      "post": {
+        "operationId": "syncPush",
+        "tags": [
+          "sync"
+        ],
+        "summary": "Upsert rows changed on the device (last write wins by updated_at)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "changes": {
+                    "$ref": "#/components/schemas/SyncChanges"
+                  }
+                },
+                "required": [
+                  "changes"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rows applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "applied": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "applied"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown table",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sync/pull": {
+      "get": {
+        "operationId": "syncPull",
+        "tags": [
+          "sync"
+        ],
+        "summary": "Rows written on the server after the cursor",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "since",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Changed rows and the next cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncPull"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
             "content": {
               "application/json": {
                 "schema": {

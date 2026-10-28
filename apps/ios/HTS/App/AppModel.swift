@@ -19,6 +19,15 @@ final class AppModel {
     private(set) var athlete: Athlete?
     private(set) var databaseError: String?
     private(set) var health: HealthState = .unknown
+    enum SyncState: Equatable {
+        case idle
+        case syncing
+        case synced(Date)
+        case failed(String)
+    }
+
+    private(set) var syncState: SyncState = .idle
+
     /// The workout in progress, if any. It survives app restarts because it lives in the database.
     private(set) var activeSession: Session?
     /// Whether the active workout covers the tabs (false = minimized to the bottom bar).
@@ -56,6 +65,7 @@ final class AppModel {
 
     func start() async {
         await loadLocalAthlete()
+        await sync()
         #if DEBUG
             await checkHealth()
         #endif
@@ -103,6 +113,32 @@ final class AppModel {
     func endWorkout() {
         activeSession = nil
         showsActiveSession = false
+        Task { await sync() }
+    }
+
+    /// Pushes local changes and pulls the server's (docs/decisions/0026). Needs the API URL and token; without them
+    /// the app simply stays local. The timeout is long because the free Render instance takes ~1 min to wake.
+    func sync() async {
+        guard let database, let configuration = apiConfiguration, configuration.token != nil,
+            syncState != .syncing
+        else { return }
+        syncState = .syncing
+        do {
+            try await SyncService(database, transport: APIClient(configuration: configuration, timeout: 90)).sync()
+            syncState = .synced(.now)
+            if let id = athlete?.id, let refreshed = try await AthleteRepository(database).athlete(id: id) {
+                athlete = refreshed
+            }
+        } catch {
+            let host = configuration.baseURL.host() ?? "API"
+            let message =
+                switch APIFailure(error) {
+                case .timedOut: String(localized: "Sem resposta de \(host).")
+                case .unreachable: String(localized: "Sem conexão com \(host). Os dados ficam no aparelho.")
+                case .other(let detail): detail
+                }
+            syncState = .failed(message)
+        }
     }
 
     func updateAthlete(_ athlete: Athlete) async {

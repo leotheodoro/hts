@@ -67,7 +67,7 @@ struct PlanFixture {
             try String.fetchAll(
                 db,
                 sql:
-                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'grdb_%' AND name NOT LIKE 'sqlite_%'"
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'grdb_%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'local_%'"
             )
         }
         #expect(Set(sqliteTables) == Set(snapshot.tables.map(\.name)))

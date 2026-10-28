@@ -5,6 +5,7 @@ import UserNotifications
 @main
 struct HTSApp: App {
     @State private var model = AppModel.live()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         HTSFonts.register()
@@ -16,6 +17,9 @@ struct HTSApp: App {
             RootView()
                 .environment(model)
                 .task { await model.start() }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { Task { await model.sync() } }
+                }
         }
     }
 }
