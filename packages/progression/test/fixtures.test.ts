@@ -4,7 +4,7 @@ import {
   type Attribute,
   type AttributeSet,
   attributeLevels,
-  type HistorySet,
+  type HistorySession,
   levelForXp,
   type ProgressHistory,
   progressHistory,
@@ -52,9 +52,7 @@ describe("xpForSession", () => {
 });
 
 describe("progressHistory", () => {
-  const fixture = load<{ sessions: { sets: HistorySet[] }[] }, ProgressHistory>(
-    "progress-history.json",
-  );
+  const fixture = load<{ sessions: HistorySession[] }, ProgressHistory>("progress-history.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
     expect(progressHistory(input.sessions)).toEqual(expected);
   });

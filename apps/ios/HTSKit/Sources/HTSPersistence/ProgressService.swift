@@ -33,7 +33,7 @@ public struct ProgressService: Sendable {
     public func history(athleteId: UUID) async throws -> (sessions: [Session], history: ProgressHistory) {
         try await database.writer.read { db in
             let sessions = try Self.completedSessions(athleteId: athleteId, db)
-            return (sessions, progression.history(try sessions.map { try Self.historySets($0, db) }))
+            return (sessions, progression.history(try sessions.map { try Self.historySession($0, db) }))
         }
     }
 
@@ -42,7 +42,7 @@ public struct ProgressService: Sendable {
             guard let session = try Session.filter(key: sessionId).fetchOne(db) else { return nil }
             let sessions = try Self.completedSessions(athleteId: session.athleteId, db)
             guard let index = sessions.firstIndex(where: { $0.id == sessionId }) else { return nil }
-            let sets = try sessions.map { try Self.historySets($0, db) }
+            let sets = try sessions.map { try Self.historySession($0, db) }
             let after = progression.history(Array(sets[...index]))
             let before = progression.history(Array(sets[..<index]))
             let progress = after.sessions[index]
@@ -72,6 +72,16 @@ public struct ProgressService: Sendable {
                 sets += logged.map {
                     AttributeSet(attributes: attributes[$0.prescribedExerciseId] ?? [], completed: $0.completed)
                 }
+                // Each complete fight round counts as a completed set of its block (docs/decisions/0027).
+                let blockAttributes = Dictionary(
+                    session.planSnapshot.blocks.map { ($0.blockId, $0.attributes) }, uniquingKeysWith: { a, _ in a })
+                for round in try LoggedRound.filter(Column("session_id") == session.id.sql)
+                    .filter(Columns.deletedAt == nil).fetchAll(db)
+                {
+                    sets += Array(
+                        repeating: AttributeSet(attributes: blockAttributes[round.blockId] ?? [], completed: true),
+                        count: max(round.roundsCompleted, 0))
+                }
             }
             return progression.attributeLevels(sets)
         }
@@ -81,7 +91,7 @@ public struct ProgressService: Sendable {
     public func titles(athleteId: UUID) async throws -> [UnlockedTitle] {
         try await database.writer.read { db in
             let sessions = try Self.completedSessions(athleteId: athleteId, db)
-            let history = progression.history(try sessions.map { try Self.historySets($0, db) })
+            let history = progression.history(try sessions.map { try Self.historySession($0, db) })
             return progression.titles(try Self.titleSessions(sessions, history: history, db))
         }
     }
@@ -194,6 +204,14 @@ public struct ProgressService: Sendable {
             .filter(Columns.deletedAt == nil)
             .order(Column("started_at"))
             .fetchAll(db)
+    }
+
+    /// Sets and fight rounds of a session as progress sees them (docs/decisions/0027).
+    private static func historySession(_ session: Session, _ db: Database) throws -> HistorySession {
+        let rounds = try LoggedRound.filter(Column("session_id") == session.id.sql).filter(Columns.deletedAt == nil)
+            .fetchAll(db)
+            .map { HistoryRound(roundsCompleted: $0.roundsCompleted, weightsKg: $0.weights.map(\.weightKg)) }
+        return HistorySession(sets: try historySets(session, db), rounds: rounds)
     }
 
     private static func historySets(_ session: Session, _ db: Database) throws -> [HistorySet] {

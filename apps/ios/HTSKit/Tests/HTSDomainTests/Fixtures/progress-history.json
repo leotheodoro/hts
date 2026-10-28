@@ -166,6 +166,52 @@
         "level": 2,
         "rank": "E"
       }
+    },
+    {
+      "name": "fight rounds count as sets and add kg × rounds to the volume, without records",
+      "input": {
+        "sessions": [
+          {
+            "sets": [
+              {
+                "exerciseId": "squat",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "60",
+                "reps": 5
+              }
+            ]
+          },
+          {
+            "sets": [],
+            "rounds": [
+              {
+                "roundsCompleted": 4,
+                "weightsKg": ["24", "16"]
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "completedSets": 1,
+            "volumeKg": "300",
+            "records": [],
+            "xp": 50
+          },
+          {
+            "completedSets": 4,
+            "volumeKg": "160",
+            "records": [],
+            "xp": 80
+          }
+        ],
+        "totalXp": 130,
+        "level": 2,
+        "rank": "E"
+      }
     }
   ]
 }

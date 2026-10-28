@@ -31,6 +31,46 @@ public struct HistorySet: Hashable, Sendable, Decodable {
     }
 }
 
+/// A fight round block: complete rounds and the load of each exercise. Mirrors `HistoryRound`.
+public struct HistoryRound: Hashable, Sendable, Decodable {
+    public let roundsCompleted: Int
+    public let weightsKg: [Decimal]
+
+    public init(roundsCompleted: Int, weightsKg: [Decimal]) {
+        self.roundsCompleted = roundsCompleted
+        self.weightsKg = weightsKg
+    }
+
+    private enum CodingKeys: String, CodingKey { case roundsCompleted, weightsKg }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        roundsCompleted = try c.decode(Int.self, forKey: .roundsCompleted)
+        weightsKg = try c.decode([String].self, forKey: .weightsKg).compactMap {
+            Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX"))
+        }
+    }
+}
+
+/// One completed session as progress sees it. Mirrors `HistorySession`.
+public struct HistorySession: Hashable, Sendable, Decodable {
+    public let sets: [HistorySet]
+    public let rounds: [HistoryRound]
+
+    public init(sets: [HistorySet], rounds: [HistoryRound] = []) {
+        self.sets = sets
+        self.rounds = rounds
+    }
+
+    private enum CodingKeys: String, CodingKey { case sets, rounds }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sets = try c.decode([HistorySet].self, forKey: .sets)
+        rounds = try c.decodeIfPresent([HistoryRound].self, forKey: .rounds) ?? []
+    }
+}
+
 public struct SessionProgress: Hashable, Sendable {
     public let completedSets: Int
     public let volumeKg: Decimal
@@ -47,14 +87,14 @@ public struct ProgressHistory: Hashable, Sendable {
 }
 
 extension Progression {
-    /// Derived progress of completed sessions in chronological order (docs/decisions/0010, 0019). Must match
-    /// `progressHistory` in packages/progression; both run packages/fixtures/progress-history.json.
-    public func history(_ sessions: [[HistorySet]]) -> ProgressHistory {
+    /// Derived progress of completed sessions in chronological order (docs/decisions/0010, 0019, 0027). Must
+    /// match `progressHistory` in packages/progression; both run packages/fixtures/progress-history.json.
+    public func history(_ sessions: [HistorySession]) -> ProgressHistory {
         var best: [String: Decimal] = [:]
         var results: [SessionProgress] = []
         var total = 0
-        for sets in sessions {
-            let done = sets.filter(\.completed)
+        for session in sessions {
+            let done = session.sets.filter(\.completed)
             var volume: Decimal = 0
             var order: [String] = []
             var sessionBest: [String: Decimal] = [:]
@@ -63,6 +103,11 @@ extension Progression {
                 if set.unit == .reps, let reps = set.reps { volume += weight * Decimal(reps) }
                 if sessionBest[set.exerciseId] == nil { order.append(set.exerciseId) }
                 if weight > sessionBest[set.exerciseId] ?? -1 { sessionBest[set.exerciseId] = weight }
+            }
+            var roundSets = 0
+            for round in session.rounds {
+                roundSets += round.roundsCompleted
+                for kg in round.weightsKg { volume += kg * Decimal(round.roundsCompleted) }
             }
             var records: [String] = []
             for exerciseId in order {
@@ -76,11 +121,12 @@ extension Progression {
                     best[exerciseId] = weight
                 }
             }
+            let completedSets = done.count + roundSets
             let xp = self.xp(
-                for: SessionXPInput(completedSets: done.count, personalRecords: records.count, volumeKg: volume)
+                for: SessionXPInput(completedSets: completedSets, personalRecords: records.count, volumeKg: volume)
             ).total
             total += xp
-            results.append(SessionProgress(completedSets: done.count, volumeKg: volume, records: records, xp: xp))
+            results.append(SessionProgress(completedSets: completedSets, volumeKg: volume, records: records, xp: xp))
         }
         let level = level(forXP: total)
         return ProgressHistory(sessions: results, totalXp: total, level: level, rank: rank(forLevel: level))

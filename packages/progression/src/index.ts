@@ -103,13 +103,25 @@ const centsToString = (cents: bigint): string => {
   return `${whole}.${fraction.toString().padStart(2, "0").replace(/0$/, "")}`;
 };
 
+/** A fight round block: complete rounds and the load of each exercise (decimal strings). */
+export interface HistoryRound {
+  roundsCompleted: number;
+  weightsKg: string[];
+}
+
+export interface HistorySession {
+  sets: HistorySet[];
+  rounds?: HistoryRound[];
+}
+
 /**
- * Derived progress of completed sessions in chronological order (docs/decisions/0010, 0019).
- * Volume is kg × reps of completed rep sets. A record is a load above every earlier session for
- * that exercise; the first time an exercise is logged sets the bar and is not a record.
+ * Derived progress of completed sessions in chronological order (docs/decisions/0010, 0019, 0027).
+ * Volume is kg × reps of completed rep sets plus kg × rounds of fight rounds. Each complete round
+ * counts as a completed set. A record is a load above every earlier session for that exercise
+ * (sets only); the first time an exercise is logged sets the bar and is not a record.
  */
 export function progressHistory(
-  sessions: { sets: HistorySet[] }[],
+  sessions: HistorySession[],
   r: ProgressionRules = rules,
 ): ProgressHistory {
   const best = new Map<string, bigint>();
@@ -126,6 +138,11 @@ export function progressHistory(
       const current = sessionBest.get(set.exerciseId);
       if (current === undefined || cents > current) sessionBest.set(set.exerciseId, cents);
     }
+    let roundSets = 0;
+    for (const round of session.rounds ?? []) {
+      roundSets += round.roundsCompleted;
+      for (const kg of round.weightsKg) volumeCents += toCents(kg) * BigInt(round.roundsCompleted);
+    }
     const records: string[] = [];
     for (const [exerciseId, cents] of sessionBest) {
       const previous = best.get(exerciseId);
@@ -133,12 +150,13 @@ export function progressHistory(
       if (previous === undefined || cents > previous) best.set(exerciseId, cents);
     }
     const volumeKg = centsToString(volumeCents);
+    const completedSets = done.length + roundSets;
     const xp = xpForSession(
-      { completedSets: done.length, personalRecords: records.length, volumeKg: Number(volumeKg) },
+      { completedSets, personalRecords: records.length, volumeKg: Number(volumeKg) },
       r,
     ).total;
     totalXp += xp;
-    result.push({ completedSets: done.length, volumeKg, records, xp });
+    result.push({ completedSets, volumeKg, records, xp });
   }
   const level = levelForXp(totalXp, r);
   return { sessions: result, totalXp, level, rank: rankForLevel(level, r).id };
@@ -293,7 +311,7 @@ export const ATTRIBUTES = ["strength", "power", "conditioning", "core", "mobilit
 export type Attribute = (typeof ATTRIBUTES)[number];
 
 export interface AttributeSet {
-  /** Attributes of the set's block. */
+  /** Attributes of the set's block. A complete fight round is one completed set. */
   attributes: Attribute[];
   completed: boolean;
 }
