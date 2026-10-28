@@ -16,3 +16,6 @@ apps/ios/HTSKit/.swiftpm/
 DerivedData/
 xcuserdata/
 *.xcresult
+
+# Machine-specific signing and API host (see apps/ios/Local.xcconfig.example)
+apps/ios/Local.xcconfig

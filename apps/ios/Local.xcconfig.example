@@ -1,0 +1,11 @@
+// Copy to apps/ios/Local.xcconfig (ignored by git) and fill in. Then run `make ios-generate`.
+
+// Team ID (10 characters). A free Apple ID works as a Personal Team; the app then expires after 7 days.
+// Find it with: make ios-team-id
+HTS_DEVELOPMENT_TEAM = ABCDE12345
+
+// Uncomment if a Personal Team cannot register com.hardtosubmit.app.
+// HTS_BUNDLE_ID = com.hardtosubmit.app.yourname
+
+// The Mac running `pnpm dev`, as seen from the iPhone on the same Wi-Fi. Find the name with: make ios-mac-host
+// HTS_DEVICE_API_BASE_URL = http:/$()/Your-Mac.local:8787

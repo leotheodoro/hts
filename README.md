@@ -44,6 +44,28 @@ Visão de produto, glossário e regras do repo: [CLAUDE.md](CLAUDE.md). Decisõe
    ```
    Rode o esquema `HTS` no simulador iPhone 17 Pro Max. A aba Perfil mostra o Diagnóstico (só em Debug), com o atleta local e o `GET /health` da API em `localhost:8787`.
 
+## Rodar no iPhone
+
+Funciona com um Apple ID gratuito (Personal Team). Nesse caso o app expira em 7 dias; rode de novo para renovar.
+
+1. No Xcode, em **Settings > Accounts**, adicione o Apple ID. Selecione o time, clique em **Manage Certificates… > + > Apple Development**.
+2. Crie o arquivo local (fora do git) e preencha o Team ID:
+   ```sh
+   cp apps/ios/Local.xcconfig.example apps/ios/Local.xcconfig
+   make ios-team-id      # mostra o Team ID do certificado
+   make ios-mac-host     # valor para HTS_DEVICE_API_BASE_URL
+   ```
+   Se o Personal Team recusar o bundle id `com.hardtosubmit.app`, descomente `HTS_BUNDLE_ID` com um sufixo seu.
+3. No iPhone: ligue o **Modo de Desenvolvedor** (Ajustes > Privacidade e Segurança), conecte por cabo e confie no Mac.
+4. Instale e abra:
+   ```sh
+   make ios-device                          # ou DEVICE="Nome do iPhone" make ios-device
+   ```
+   Ou rode pelo Xcode escolhendo o iPhone como destino. Na primeira abertura, o iOS pede para confiar no desenvolvedor em Ajustes > Geral > VPN e Gerenciamento de Dispositivo.
+5. Para o Diagnóstico ver a API, deixe `pnpm dev` rodando no Mac, com o iPhone na mesma Wi-Fi, e aceite o pedido de acesso à rede local.
+
+O simulador continua usando `localhost`; só builds para o aparelho usam `HTS_DEVICE_API_BASE_URL`. Configurações de build ficam em `apps/ios/Config/*.xcconfig`.
+
 ## Notas
 
 - O Postgres do docker-compose escuta na porta **5442** do host, para não conflitar com outro Postgres local. Os testes da API usam o banco `hts_test`, criado pelo script em `docker/postgres/init`.

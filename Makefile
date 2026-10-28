@@ -7,7 +7,7 @@ DESTINATION = platform=iOS Simulator,id=$(SIMULATOR_ID)
 XCODEBUILD_FLAGS = -project $(PROJECT) -scheme HTS -destination "$(DESTINATION)" \
 	-skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO
 
-.PHONY: ios-generate ios-test ios-kit-test ios-app-test ios-build ios-format ios-lint
+.PHONY: ios-generate ios-test ios-kit-test ios-app-test ios-build ios-format ios-lint ios-device ios-team-id ios-mac-host
 
 ios-generate:
 	cd $(IOS_DIR) && xcodegen generate
@@ -30,3 +30,13 @@ ios-format:
 ios-lint:
 	swift format lint --strict --recursive --configuration $(IOS_DIR)/.swift-format \
 		$(IOS_DIR)/HTS $(IOS_DIR)/HTSTests $(KIT_DIR)/Sources $(KIT_DIR)/Tests $(KIT_DIR)/Package.swift
+
+# Physical iPhone (needs apps/ios/Local.xcconfig, see Local.xcconfig.example).
+ios-device: ios-generate
+	scripts/ios-run-device.sh
+
+ios-team-id:
+	@scripts/ios-team-id.sh
+
+ios-mac-host:
+	@echo "http:/\$$()/$$(scutil --get LocalHostName).local:8787"

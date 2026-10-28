@@ -1,0 +1,10 @@
+// Shared by every target and configuration. Machine-specific values go in apps/ios/Local.xcconfig
+// (not versioned; copy Local.xcconfig.example). `//` starts a comment in xcconfig, hence `:/$()/` in URLs.
+
+HTS_BUNDLE_ID = com.hardtosubmit.app
+HTS_DEVELOPMENT_TEAM =
+
+// The simulator shares the Mac's network, so localhost reaches `pnpm dev`. A physical iPhone needs the Mac's
+// address on the local network: set HTS_DEVICE_API_BASE_URL in Local.xcconfig.
+HTS_LOCAL_API_BASE_URL = http:/$()/localhost:8787
+HTS_DEVICE_API_BASE_URL = $(HTS_LOCAL_API_BASE_URL)

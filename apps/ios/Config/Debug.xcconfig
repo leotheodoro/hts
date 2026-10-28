@@ -1,0 +1,6 @@
+#include "Base.xcconfig"
+
+HTS_API_BASE_URL = $(HTS_LOCAL_API_BASE_URL)
+HTS_API_BASE_URL[sdk=iphoneos*] = $(HTS_DEVICE_API_BASE_URL)
+
+#include? "../Local.xcconfig"

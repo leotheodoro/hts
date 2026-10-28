@@ -1,6 +1,5 @@
 name: HTS
 options:
-  bundleIdPrefix: com.hardtosubmit
   deploymentTarget:
     iOS: "26.0"
   developmentLanguage: pt-BR
@@ -15,8 +14,12 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     SWIFT_EMIT_LOC_STRINGS: YES
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: $(HTS_DEVELOPMENT_TEAM)
     CODE_SIGN_STYLE: Automatic
+
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
 
 packages:
   HTSKit:
@@ -57,9 +60,10 @@ targets:
         HTSAPIBaseURL: $(HTS_API_BASE_URL)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: O HTS acessa a rede local só em builds de desenvolvimento, para falar com a API no seu Mac.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.hardtosubmit.app
+        PRODUCT_BUNDLE_IDENTIFIER: $(HTS_BUNDLE_ID)
         PRODUCT_NAME: HTS
         TARGETED_DEVICE_FAMILY: "1"
         MARKETING_VERSION: "0.1.0"
@@ -70,11 +74,7 @@ targets:
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
       configs:
         Debug:
-          HTS_API_BASE_URL: http://localhost:8787
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
-        Release:
-          # TODO(deploy ticket): point to the Cloud Run URL.
-          HTS_API_BASE_URL: https://api.hardtosubmit.com
 
   HTSTests:
     type: bundle.unit-test
@@ -85,7 +85,7 @@ targets:
       - target: HTS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.hardtosubmit.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: $(HTS_BUNDLE_ID).tests
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1"
 
