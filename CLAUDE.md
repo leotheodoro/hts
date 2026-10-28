@@ -90,6 +90,14 @@ Depois de mudar tokens.json, progression.json, fixtures ou rotas da API: rode `p
 - Estêncil só no "HTS" do topo (`brand-app`). Números com `.monospacedDigit()`.
 - Voz: sem emoji, sem exclamação, botões começam por verbo ("Iniciar treino").
 
+## Fluxo de tickets (GitHub Issues)
+
+- Backlog em GitHub Issues de `leotheodoro/hts`, lido e escrito com `gh`. Labels: `area:*`, `type:*`, `priority:*`, `blocked`.
+- Antes de implementar: `gh issue view <N> --comments`. Se os critérios de aceite não estiverem claros, pergunte antes de codar.
+- Um ticket por branch: `<N>-<slug-curto>` a partir de `main` (ex.: `12-active-session`).
+- PR com `Closes #<N>` no corpo. Decisões tomadas durante o trabalho viram comentário na issue (ou ADR, se forem duradouras).
+- O ticket só está pronto com o CI verde no PR. Novo trabalho descoberto vira issue nova, não escopo extra.
+
 ## Commits
 
 - Gitmoji: `<emoji> <mensagem curta no imperativo>` em inglês. Ex.: `✨ Add health endpoint`, `🐛 Fix rest timer reset`.
