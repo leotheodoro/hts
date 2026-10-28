@@ -40,6 +40,15 @@ public struct LocalDate: Hashable, Comparable, Sendable, Codable, CustomStringCo
         return LocalDate(Self.calendar.date(byAdding: .day, value: days, to: start)!, in: Self.calendar.timeZone)
     }
 
+    /// Monday of the week (weeks run Monday to Sunday, as in the weekly goal).
+    public var weekStart: LocalDate {
+        let date = Self.calendar.date(from: DateComponents(year: year, month: month, day: day))!
+        let weekday = Self.calendar.component(.weekday, from: date)  // 1 = Sunday … 7 = Saturday
+        return adding(days: -((weekday + 5) % 7))
+    }
+
+    public var weekEnd: LocalDate { weekStart.adding(days: 6) }
+
     /// Whole days from `self` to `other`.
     public func days(to other: LocalDate) -> Int {
         let from = Self.calendar.date(from: DateComponents(year: year, month: month, day: day))!
