@@ -95,3 +95,22 @@ import Testing
         #expect(summaries.map(\.arc.status) == [.completed, .current])
     }
 }
+
+@Suite struct RecordsTests {
+    @Test func bestLoadPerExerciseIgnoresDeletedSessions() async throws {
+        let base = ProgressServiceTests()
+        let (database, athlete, _, plans) = try await base.setUp()
+        try await base.workout(database, plans[0], kg: 60, day: 0)
+        let heavy = try await base.workout(database, plans[1], kg: Decimal(string: "72.5")!, day: 1)
+        try await base.workout(database, plans[0], kg: 65, day: 2)
+
+        var records = try await ProgressService(database).records(athleteId: athlete.id)
+        #expect(records.map(\.exerciseName) == ["Supino"])
+        #expect(records[0].weightKg == Decimal(string: "72.5"))
+        #expect(records[0].sessionId == heavy.id)
+
+        try await SessionRepository(database).delete(sessionId: heavy.id)
+        records = try await ProgressService(database).records(athleteId: athlete.id)
+        #expect(records[0].weightKg == 65)
+    }
+}
