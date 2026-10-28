@@ -23,7 +23,9 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: macos-latest
+    # macos-latest (arm64) often gets no runner on GitHub's free tier; the Intel image has more capacity (#33).
+    runs-on: macos-15-intel
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
@@ -35,12 +37,13 @@ jobs:
           xcodebuild -version
           swift --version
           xcrun simctl list devices available | grep -E "^--|iPhone 17 Pro Max" || true
+          echo "Simulator: $(scripts/ios-simulator-id.sh)"
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Lint Swift
         run: make ios-lint
-      - name: Test HTSKit
-        run: make ios-kit-test
+      - name: Test HTSKit on the simulator
+        run: make ios-kit-test-sim
       - name: Generate project
         run: make ios-generate
       # No code signing: simulator build only. TestFlight needs a paid Apple account (separate ticket).
