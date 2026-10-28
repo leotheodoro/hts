@@ -3,6 +3,7 @@ import HTSAPI
 import HTSDomain
 import HTSPersistence
 import Observation
+import UserNotifications
 
 /// App-wide state: the local database, the local athlete and the API client.
 @MainActor
@@ -27,7 +28,17 @@ final class AppModel {
     let database: AppDatabase?
     private let api: APIClient?
 
-    init(database: AppDatabase?, apiConfiguration: APIConfiguration?, databaseError: String? = nil) {
+    /// Asks for notification permission when a workout starts. Tests pass a no-op: the system prompt never answers
+    /// in the test host.
+    private let requestNotifications: @Sendable () async -> Void
+
+    init(
+        database: AppDatabase?, apiConfiguration: APIConfiguration?, databaseError: String? = nil,
+        requestNotifications: @escaping @Sendable () async -> Void = {
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+        }
+    ) {
+        self.requestNotifications = requestNotifications
         self.database = database
         self.databaseError = databaseError
         self.apiConfiguration = apiConfiguration
@@ -61,6 +72,9 @@ final class AppModel {
             self.athlete = athlete
             activeSession = try await SessionRepository(database).inProgress(athleteId: athlete.id)
             #if DEBUG
+                if UserDefaults.standard.bool(forKey: "HTSShowActiveSession"), activeSession != nil {
+                    showsActiveSession = true
+                }
                 if DemoData.startsWorkout, activeSession == nil,
                     let arc = try await PlanRepository(database).currentArc(athleteId: athlete.id),
                     let plan = try await PlanRepository(database).plan(arcId: arc.id)?.templates.first
@@ -78,6 +92,8 @@ final class AppModel {
         do {
             activeSession = try await SessionRepository(database).start(plan)
             showsActiveSession = true
+            // Ask for notifications now, not in the middle of the first rest.
+            await requestNotifications()
         } catch {
             databaseError = String(describing: error)
         }

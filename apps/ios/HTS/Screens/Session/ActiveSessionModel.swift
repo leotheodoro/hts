@@ -12,12 +12,62 @@ final class ActiveSessionModel {
     private(set) var previous: [UUID: [Int: LoggedSet]] = [:]
     private(set) var number: SessionRepository.Number?
     private(set) var error: String?
+    /// The running rest, if any, and the exercise it was started from.
+    private(set) var rest: RestTimer?
+    private(set) var restExerciseName = ""
 
     private let repository: SessionRepository
+    private let alerts: any RestAlerts
+    private let defaultRestSeconds: Int
 
-    init(database: AppDatabase, session: Session) {
+    init(
+        database: AppDatabase, session: Session, defaultRestSeconds: Int = Athlete.defaultRestSeconds,
+        alerts: any RestAlerts = LocalNotificationRestAlerts()
+    ) {
         self.session = session
+        self.defaultRestSeconds = defaultRestSeconds
+        self.alerts = alerts
         repository = SessionRepository(database)
+        if let stored = RestStore.load(sessionId: session.id), !stored.timer.isFinished(at: .now) {
+            rest = stored.timer
+            restExerciseName = stored.exerciseName
+        }
+    }
+
+    /// Starts the rest after a checked set: the exercise's own rest, or the athlete's default.
+    func startRest(after exercise: PlanSnapshot.Exercise, now: Date = .now) {
+        let seconds = RestTimer.seconds(exerciseRest: exercise.restSeconds, athleteDefault: defaultRestSeconds)
+        setRest(RestTimer(startedAt: now, seconds: seconds), exerciseName: exercise.name)
+    }
+
+    func adjustRest(by seconds: TimeInterval, now: Date = .now) {
+        guard var timer = rest else { return }
+        timer.adjust(by: seconds, now: now)
+        setRest(timer, exerciseName: restExerciseName)
+    }
+
+    func skipRest() {
+        setRest(nil, exerciseName: "")
+    }
+
+    /// Called by the footer when the countdown reaches zero in the foreground.
+    func restDidFinish() {
+        rest = nil
+        RestStore.save(nil, exerciseName: "", sessionId: session.id)
+    }
+
+    private func setRest(_ timer: RestTimer?, exerciseName: String) {
+        rest = timer
+        restExerciseName = exerciseName
+        RestStore.save(timer, exerciseName: exerciseName, sessionId: session.id)
+        let alerts = self.alerts
+        Task {
+            if let timer {
+                await alerts.schedule(at: timer.endsAt, exerciseName: exerciseName)
+            } else {
+                await alerts.cancel()
+            }
+        }
     }
 
     var snapshot: PlanSnapshot { session.planSnapshot }
@@ -62,6 +112,7 @@ final class ActiveSessionModel {
                 previous: previous(for: exercise, setNumber: set.setNumber), at: .now)
         replace(changed)
         Task { await persist(changed) }
+        if changed.completed { startRest(after: exercise) }
     }
 
     func addSet(to exercise: PlanSnapshot.Exercise) async {
@@ -83,6 +134,7 @@ final class ActiveSessionModel {
     }
 
     func finish() async -> Session? {
+        skipRest()
         do {
             return try await repository.finish(sessionId: session.id)
         } catch {

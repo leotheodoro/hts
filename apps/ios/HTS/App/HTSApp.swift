@@ -1,5 +1,6 @@
 import HTSDesign
 import SwiftUI
+import UserNotifications
 
 @main
 struct HTSApp: App {
@@ -8,6 +9,7 @@ struct HTSApp: App {
     init() {
         HTSFonts.register()
         TabBarAppearance.apply()
+        UNUserNotificationCenter.current().delegate = ForegroundNotificationDelegate.shared
     }
 
     var body: some Scene {

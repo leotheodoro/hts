@@ -10,8 +10,10 @@ struct ActiveSessionScreen: View {
     @State private var model: ActiveSessionModel
     @State private var confirmingFinish = false
 
-    init(database: AppDatabase, session: Session) {
-        _model = State(initialValue: ActiveSessionModel(database: database, session: session))
+    init(database: AppDatabase, session: Session, defaultRestSeconds: Int) {
+        _model = State(
+            initialValue: ActiveSessionModel(
+                database: database, session: session, defaultRestSeconds: defaultRestSeconds))
     }
 
     var body: some View {
@@ -30,9 +32,20 @@ struct ActiveSessionScreen: View {
             .padding(.vertical, HTSSpacing.space4)
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) { RestFooter(model: model) }
         .background(Color.hts.black)
         .preferredColorScheme(.dark)
-        .task { await model.load() }
+        .task {
+            await model.load()
+            #if DEBUG
+                // `-HTSDemoRest YES` starts a rest on the first exercise (screenshots).
+                if UserDefaults.standard.bool(forKey: "HTSDemoRest"),
+                    let exercise = model.snapshot.blocks.first(where: { $0.kind != .fightRound })?.exercises.first
+                {
+                    model.startRest(after: exercise)
+                }
+            #endif
+        }
         .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
     }
