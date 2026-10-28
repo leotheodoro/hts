@@ -7,9 +7,9 @@ Visão de produto, glossário e regras do repo: [CLAUDE.md](CLAUDE.md). Decisõe
 ## Setup do zero em um Mac novo
 
 1. Instale o Xcode 26 ou mais novo pela App Store. Abra uma vez e aceite a licença.
-2. Instale o runtime do simulador iOS:
+2. Instale o runtime do simulador iOS 26. O iPhone 17 Pro Max não roda nos runtimes iOS 27.x:
    ```sh
-   xcodebuild -downloadPlatform iOS
+   xcodebuild -downloadPlatform iOS -buildVersion 26.5
    ```
 3. Instale o Homebrew (https://brew.sh) e as ferramentas:
    ```sh
@@ -43,6 +43,14 @@ Visão de produto, glossário e regras do repo: [CLAUDE.md](CLAUDE.md). Decisõe
    open apps/ios/HTS.xcodeproj
    ```
    Rode o esquema `HTS` no simulador iPhone 17 Pro Max. A aba Perfil mostra o Diagnóstico (só em Debug), com o atleta local e o `GET /health` da API em `localhost:8787`.
+
+## Notas
+
+- O Postgres do docker-compose escuta na porta **5442** do host, para não conflitar com outro Postgres local. Os testes da API usam o banco `hts_test`, criado pelo script em `docker/postgres/init`.
+- O app desliga o Liquid Glass (`UIDesignRequiresCompatibility` no `project.yml`). A barra de vidro ignora as cores das abas e acrescenta blur. A Apple vai remover essa chave em uma versão futura; até lá, a barra fica opaca e segue os tokens.
+- `make ios-*` escolhe o simulador pelo nome, através de `scripts/ios-simulator-id.sh`. Para usar outro aparelho: `make ios-test SIMULATOR="iPhone 17 Pro"`.
+- Para abrir o app direto numa aba, em Debug: argumento de lançamento `-HTSInitialTab profile` (`status`, `arcs`, `journal`, `profile`).
+- Fontes: TTF estáticos do Google Fonts (OFL), com as licenças em `HTSDesign/Resources/Fonts/Licenses`. O Noto Serif JP 900 completo tem 8 MB; fazer um subset dele é um ticket separado.
 
 ## Comandos
 
