@@ -56,7 +56,8 @@ struct RankOutput: Decodable, Sendable { let id: String, name: String }
         let names = Set(urls.map { $0.deletingPathExtension().lastPathComponent })
         #expect(
             names == [
-                "level-for-xp", "normalize-exercise-name", "progress-history", "rank-for-level", "streak",
+                "attribute-levels", "level-for-xp", "normalize-exercise-name", "progress-history", "rank-for-level",
+                "streak",
                 "titles", "xp-for-session",
             ])
     }
@@ -124,5 +125,15 @@ struct TitlesOutput: Decodable, Sendable { let titles: [UnlockedTitle] }
     @Test(arguments: Fixture<TitlesInput, TitlesOutput>.load("titles"))
     func titles(_ c: Fixture<TitlesInput, TitlesOutput>.Case) {
         #expect(Progression().titles(c.input.sessions) == c.expected.titles)
+    }
+}
+
+struct AttributeInput: Decodable, Sendable { let sets: [AttributeSet] }
+
+@Suite struct AttributeLevelsFixtureTests {
+    @Test(arguments: Fixture<AttributeInput, [String: AttributeLevel]>.load("attribute-levels"))
+    func attributeLevels(_ c: Fixture<AttributeInput, [String: AttributeLevel]>.Case) {
+        let levels = Progression().attributeLevels(c.input.sets)
+        #expect(Dictionary(uniqueKeysWithValues: levels.map { ($0.key.rawValue, $0.value) }) == c.expected)
     }
 }

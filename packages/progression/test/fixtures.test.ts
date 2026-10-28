@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  type Attribute,
+  type AttributeSet,
+  attributeLevels,
   type HistorySet,
   levelForXp,
   type ProgressHistory,
@@ -68,5 +71,14 @@ describe("titles", () => {
   const fixture = load<{ sessions: TitleSession[] }, { titles: UnlockedTitle[] }>("titles.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
     expect(titles(input.sessions)).toEqual(expected.titles);
+  });
+});
+
+describe("attributeLevels", () => {
+  const fixture = load<{ sets: AttributeSet[] }, Record<Attribute, { xp: number; level: number }>>(
+    "attribute-levels.json",
+  );
+  it.each(fixture.cases)("$name", ({ input, expected }) => {
+    expect(attributeLevels(input.sets)).toEqual(expected);
   });
 });
