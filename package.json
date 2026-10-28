@@ -1,0 +1,25 @@
+{
+  "name": "hts",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=api",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "sync:shared": "tsx scripts/sync-shared.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@types/node": "^24.19.2",
+    "tsx": "^4.23.15",
+    "turbo": "^2.11.10",
+    "typescript": "^7.0.2"
+  }
+}
