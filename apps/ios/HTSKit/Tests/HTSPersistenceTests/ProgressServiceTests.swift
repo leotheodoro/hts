@@ -144,3 +144,43 @@ import Testing
         #expect(levels[.mobility]?.xp == 0)
     }
 }
+
+@Suite struct FightRoundProgressTests {
+    @Test func roundsCountAsSetsAddVolumeAndFeedAttributes() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let service = ArcService(database)
+        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let arc = try await service.save(
+            ArcDraft(
+                name: "Torneio", weeks: 1, startDate: LocalDate("2026-11-02")!,
+                templates: [.init(origin: .new, name: "Muralha")]),
+            athleteId: athlete.id, sagaId: saga.id)
+        let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
+        var draft = try #require(try await TemplateService(database).draft(templateId: plan.templates[0].template.id))
+        draft.blocks = [
+            .init(
+                kind: .fightRound, attributes: [.conditioning], durationMinutes: 6,
+                exercises: [
+                    .init(name: "Swing Russo", setsText: "1", targetText: "máx")
+                ])
+        ]
+        try await TemplateService(database).save(draft)
+        let filled = try #require(try await PlanRepository(database).plan(arcId: arc.id)?.templates.first)
+
+        let sessions = SessionRepository(database)
+        let session = try await sessions.start(filled, timeZone: TimeZone(identifier: "UTC")!)
+        var round = try await sessions.round(for: session, block: session.planSnapshot.blocks[0])
+        round.roundsCompleted = 4
+        round.weights = [.init(exerciseId: filled.blocks[0].exercises[0].exercise.id, weightKg: 24)]
+        try await sessions.save(round)
+        _ = try await sessions.finish(sessionId: session.id)
+
+        let completion = try #require(try await ProgressService(database).completion(sessionId: session.id))
+        #expect(completion.progress.completedSets == 4)
+        #expect(completion.progress.volumeKg == 96)
+        #expect(completion.progress.xp == 80)  // 4 × 10 + 40, volume < 500
+        let levels = try await ProgressService(database).attributeLevels(athleteId: athlete.id)
+        #expect(levels[.conditioning]?.xp == 40)
+    }
+}

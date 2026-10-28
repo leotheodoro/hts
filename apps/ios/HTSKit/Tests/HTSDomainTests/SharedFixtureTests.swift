@@ -64,8 +64,7 @@ struct RankOutput: Decodable, Sendable { let id: String, name: String }
 }
 
 struct HistoryInput: Decodable, Sendable {
-    struct Session: Decodable, Sendable { let sets: [HistorySet] }
-    let sessions: [Session]
+    let sessions: [HistorySession]
 }
 
 struct HistoryOutput: Decodable, Sendable {
@@ -84,7 +83,7 @@ struct HistoryOutput: Decodable, Sendable {
 @Suite struct ProgressHistoryFixtureTests {
     @Test(arguments: Fixture<HistoryInput, HistoryOutput>.load("progress-history"))
     func progressHistory(_ c: Fixture<HistoryInput, HistoryOutput>.Case) {
-        let history = Progression().history(c.input.sessions.map(\.sets))
+        let history = Progression().history(c.input.sessions)
         #expect(history.totalXp == c.expected.totalXp)
         #expect(history.level == c.expected.level)
         #expect(history.rank.id.rawValue == c.expected.rank)
