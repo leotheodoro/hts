@@ -132,3 +132,15 @@ import Testing
         #expect(all.map(\.id) == [.firstSession, .recruitmentComplete, .perfectWeek])
     }
 }
+
+@Suite struct AttributeLevelsServiceTests {
+    @Test func completedSetsFeedTheirBlockAttribute() async throws {
+        let base = ProgressServiceTests()
+        let (database, athlete, _, plans) = try await base.setUp()
+        try await base.workout(database, plans[0], kg: 60, day: 0)
+        let levels = try await ProgressService(database).attributeLevels(athleteId: athlete.id)
+        #expect(levels[.strength]?.xp == 30)
+        #expect(levels[.strength]?.level == 1)
+        #expect(levels[.mobility]?.xp == 0)
+    }
+}

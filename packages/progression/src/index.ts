@@ -288,3 +288,30 @@ export function titles(sessions: TitleSession[]): UnlockedTitle[] {
   }
   return unlocked;
 }
+
+export const ATTRIBUTES = ["strength", "power", "conditioning", "core", "mobility"] as const;
+export type Attribute = (typeof ATTRIBUTES)[number];
+
+export interface AttributeSet {
+  /** Attributes of the set's block. */
+  attributes: Attribute[];
+  completed: boolean;
+}
+
+/**
+ * Each attribute has its own level on the athlete's curve (docs/decisions/0023): every completed set
+ * gives the set XP to each attribute of its block.
+ */
+export function attributeLevels(
+  sets: AttributeSet[],
+  r: ProgressionRules = rules,
+): Record<Attribute, { xp: number; level: number }> {
+  const xp = Object.fromEntries(ATTRIBUTES.map((a) => [a, 0])) as Record<Attribute, number>;
+  for (const set of sets) {
+    if (!set.completed) continue;
+    for (const attribute of new Set(set.attributes)) xp[attribute] += r.xp.setCompleted;
+  }
+  return Object.fromEntries(
+    ATTRIBUTES.map((a) => [a, { xp: xp[a], level: levelForXp(xp[a], r) }]),
+  ) as Record<Attribute, { xp: number; level: number }>;
+}

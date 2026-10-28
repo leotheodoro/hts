@@ -58,6 +58,25 @@ public struct ProgressService: Sendable {
         }
     }
 
+    /// Level of each attribute from the sets of completed sessions; attributes come from the session snapshot.
+    public func attributeLevels(athleteId: UUID) async throws -> [Attribute: AttributeLevel] {
+        try await database.writer.read { db in
+            var sets: [AttributeSet] = []
+            for session in try Self.completedSessions(athleteId: athleteId, db) {
+                var attributes: [UUID: [Attribute]] = [:]
+                for block in session.planSnapshot.blocks {
+                    for exercise in block.exercises { attributes[exercise.prescribedExerciseId] = block.attributes }
+                }
+                let logged = try LoggedSet.filter(Column("session_id") == session.id.sql)
+                    .filter(Columns.deletedAt == nil).fetchAll(db)
+                sets += logged.map {
+                    AttributeSet(attributes: attributes[$0.prescribedExerciseId] ?? [], completed: $0.completed)
+                }
+            }
+            return progression.attributeLevels(sets)
+        }
+    }
+
     /// Unlocked titles with their date, in unlock order.
     public func titles(athleteId: UUID) async throws -> [UnlockedTitle] {
         try await database.writer.read { db in

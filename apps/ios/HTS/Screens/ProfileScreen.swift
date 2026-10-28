@@ -8,6 +8,7 @@ struct ProfileScreen: View {
     @State private var name = ""
     @State private var rest = Athlete.defaultRestSeconds
     @State private var titles: [UnlockedTitle] = []
+    @State private var attributes: [Attribute: AttributeLevel] = [:]
 
     var body: some View {
         ScreenScaffold(title: "Perfil") {
@@ -15,7 +16,7 @@ struct ProfileScreen: View {
             loadGuide
             BattleSettings()
             titlesSection
-            PlaceholderCard(label: "ATRIBUTOS", text: "Chegam quando a escala dos atributos for definida.")
+            attributesSection
             #if DEBUG
                 DiagnosticsSection()
             #endif
@@ -26,6 +27,7 @@ struct ProfileScreen: View {
             rest = athlete.defaultRestSeconds
             if let database = app.database {
                 titles = (try? await ProgressService(database).titles(athleteId: athlete.id)) ?? []
+                attributes = (try? await ProgressService(database).attributeLevels(athleteId: athlete.id)) ?? [:]
             }
         }
     }
@@ -43,6 +45,30 @@ struct ProfileScreen: View {
                 .foregroundStyle(Color.hts.greyApp)
             if name.trimmingCharacters(in: .whitespaces) != app.athlete?.displayName {
                 HTSButton("Salvar nome", kind: .ghost) { save() }
+            }
+        }
+    }
+
+    /// FOR, EXP, GÁS, NÚC, MOB, each with its own level (docs/decisions/0023).
+    private var attributesSection: some View {
+        NotchCard {
+            VStack(alignment: .leading, spacing: HTSSpacing.space4) {
+                Text("ATRIBUTOS").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                ForEach(Attribute.allCases, id: \.self) { attribute in
+                    let level = attributes[attribute] ?? AttributeLevel(xp: 0, level: 1)
+                    let progress = Progression().levelProgress(xp: level.xp)
+                    VStack(alignment: .leading, spacing: HTSSpacing.space2) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(verbatim: attribute.abbreviation).htsTextStyle(.data).frame(
+                                width: 64, alignment: .leading)
+                            Text(attribute.label).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                            Spacer()
+                            Text(verbatim: "NÍVEL \(level.level)").htsTextStyle(.label)
+                        }
+                        ProgressBar(value: progress.fraction)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
             }
         }
     }
