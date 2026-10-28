@@ -7,6 +7,7 @@ enum AppTab: String, Hashable {
 }
 
 struct RootView: View {
+    @Environment(AppModel.self) private var app
     /// `-HTSInitialTab profile` as a launch argument opens a specific tab (screenshots, UI tests).
     @State private var selection =
         UserDefaults.standard.string(forKey: "HTSInitialTab").flatMap(AppTab.init(rawValue:)) ?? .status
@@ -36,6 +37,12 @@ struct RootView: View {
         }
         .tint(Color.hts.bone)
         .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: Bindable(app).showsActiveSession) {
+            if let database = app.database, let session = app.activeSession {
+                ActiveSessionScreen(database: database, session: session)
+                    .environment(app)
+            }
+        }
     }
 }
 
