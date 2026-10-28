@@ -26,3 +26,14 @@ import Testing
         #expect(path.contains(CGPoint(x: 1, y: 49)))
     }
 }
+
+@Suite struct KanjiSubsetTests {
+    @Test func brandKanjiIsInTheBundledSubset() {
+        HTSFonts.register()
+        let font = CTFontCreateWithName("NotoSerifJP-Black" as CFString, 56, nil)
+        let characters = Array("不屈".utf16)
+        var glyphs = [CGGlyph](repeating: 0, count: characters.count)
+        #expect(CTFontGetGlyphsForCharacters(font, characters, &glyphs, characters.count))
+        #expect(glyphs.allSatisfy { $0 != 0 })
+    }
+}
