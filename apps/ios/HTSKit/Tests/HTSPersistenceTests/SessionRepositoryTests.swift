@@ -183,3 +183,25 @@ import Testing
         #expect(try await repository.previousSets(for: first).isEmpty)
     }
 }
+
+@Suite struct FightRoundTests {
+    @Test func roundRecordIsCreatedOnceAndUpdated() async throws {
+        let fixture = try await PlanFixture()
+        let arc = fixture.arc("Torneio", status: .current)
+        let (template, exercise) = try await fixture.seedPlan(arc: arc)
+        let plan = try #require(
+            try await PlanRepository(fixture.database).plan(arcId: arc.id)?.templates.first {
+                $0.template.id == template.id
+            })
+        let repository = SessionRepository(fixture.database)
+        let session = try await repository.start(plan, now: fixture.now, timeZone: TimeZone(identifier: "UTC")!)
+        let block = session.planSnapshot.blocks[0]
+
+        var round = try await repository.round(for: session, block: block, now: fixture.now)
+        #expect(try await repository.round(for: session, block: block, now: fixture.now) == round)
+        round.roundsCompleted = 4
+        round.weights = [.init(exerciseId: exercise.id, weightKg: 24)]
+        try await repository.save(round)
+        #expect(try await repository.rounds(sessionId: session.id) == [round])
+    }
+}

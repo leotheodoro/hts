@@ -112,7 +112,67 @@ final class ActiveSessionModel {
                 previous: previous(for: exercise, setNumber: set.setNumber), at: .now)
         replace(changed)
         Task { await persist(changed) }
-        if changed.completed { startRest(after: exercise) }
+        guard changed.completed, let block = block(containing: exercise),
+            let index = block.exercises.firstIndex(where: { $0.prescribedExerciseId == exercise.prescribedExerciseId }),
+            RestPolicy.startsRest(blockKind: block.kind, exerciseIndex: index, exerciseCount: block.exercises.count)
+        else { return }
+        startRest(after: exercise)
+    }
+
+    private func block(containing exercise: PlanSnapshot.Exercise) -> PlanSnapshot.Block? {
+        snapshot.blocks.first { $0.exercises.contains { $0.prescribedExerciseId == exercise.prescribedExerciseId } }
+    }
+
+    // MARK: Fight rounds
+
+    private(set) var rounds: [UUID: LoggedRound] = [:]
+    /// Countdown of the round in progress per block. Not persisted: a round is minutes long and restarts by hand.
+    private(set) var roundTimers: [UUID: RestTimer] = [:]
+
+    func loadRound(_ block: PlanSnapshot.Block) async {
+        do {
+            rounds[block.blockId] = try await repository.round(for: session, block: block)
+        } catch {
+            self.error = String(describing: error)
+        }
+    }
+
+    func setRoundsCompleted(_ count: Int, block: PlanSnapshot.Block) {
+        guard var round = rounds[block.blockId] else { return }
+        round.roundsCompleted = max(count, 0)
+        saveRound(round)
+    }
+
+    func setRoundWeight(_ weight: Decimal?, exercise: PlanSnapshot.Exercise, block: PlanSnapshot.Block) {
+        guard var round = rounds[block.blockId] else { return }
+        round.weights.removeAll { $0.exerciseId == exercise.exerciseId }
+        if let weight { round.weights.append(.init(exerciseId: exercise.exerciseId, weightKg: weight)) }
+        saveRound(round)
+    }
+
+    func roundWeight(exercise: PlanSnapshot.Exercise, block: PlanSnapshot.Block) -> Decimal? {
+        rounds[block.blockId]?.weights.first { $0.exerciseId == exercise.exerciseId }?.weightKg
+    }
+
+    func startRoundTimer(_ block: PlanSnapshot.Block, now: Date = .now) {
+        roundTimers[block.blockId] = RestTimer(startedAt: now, seconds: (block.durationMinutes ?? 8) * 60)
+    }
+
+    func stopRoundTimer(_ block: PlanSnapshot.Block) {
+        roundTimers[block.blockId] = nil
+    }
+
+    private func saveRound(_ round: LoggedRound) {
+        var round = round
+        round.updatedAt = Date.now.roundedToMilliseconds
+        rounds[round.blockId] = round
+        Task {
+            do {
+                try await repository.save(round)
+            } catch {
+                self.error = String(describing: error)
+            }
+        }
     }
 
     func addSet(to exercise: PlanSnapshot.Exercise) async {
