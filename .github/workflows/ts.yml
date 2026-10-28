@@ -39,7 +39,7 @@ jobs:
       - run: pnpm typecheck
       - name: Shared files are in sync
         run: |
-          pnpm --filter api openapi:generate
+          pnpm --filter api contracts:generate
           pnpm sync:shared
           git status --porcelain
           test -z "$(git status --porcelain)"

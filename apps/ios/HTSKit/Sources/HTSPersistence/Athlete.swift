@@ -1,8 +1,9 @@
 import Foundation
 import GRDB
+import HTSDomain
 
 /// Root of all user data, so it has no `athlete_id` of its own.
-public struct Athlete: Codable, FetchableRecord, PersistableRecord, Sendable, Identifiable, Hashable {
+public struct Athlete: HTSRecord, Identifiable, Hashable {
     public static let databaseTableName = "athlete"
     public static let defaultRestSeconds = 90
 
@@ -24,32 +25,13 @@ public struct Athlete: Codable, FetchableRecord, PersistableRecord, Sendable, Id
         self.updatedAt = (updatedAt ?? createdAt).roundedToMilliseconds
         self.deletedAt = deletedAt?.roundedToMilliseconds
     }
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case displayName = "display_name"
-        case defaultRestSeconds = "default_rest_seconds"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case deletedAt = "deleted_at"
-    }
-
-    public enum Columns {
-        public static let createdAt = Column(CodingKeys.createdAt)
-        public static let deletedAt = Column(CodingKeys.deletedAt)
-    }
 }
 
-extension Athlete {
-    public static func databaseUUIDEncodingStrategy(for column: String) -> DatabaseUUIDEncodingStrategy {
-        Storage.uuidEncoding
-    }
-
-    public static func databaseDateEncodingStrategy(for column: String) -> DatabaseDateEncodingStrategy {
-        Storage.dateEncoding
-    }
-
-    public static func databaseDateDecodingStrategy(for column: String) -> DatabaseDateDecodingStrategy {
-        Storage.dateDecoding
-    }
+/// Columns used in queries. Names follow the snake_case convention of every table.
+enum Columns {
+    static let id = Column("id")
+    static let athleteId = Column("athlete_id")
+    static let createdAt = Column("created_at")
+    static let deletedAt = Column("deleted_at")
+    static let position = Column("position")
 }

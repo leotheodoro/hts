@@ -8,6 +8,13 @@
       "when": 1793193853084,
       "tag": "0000_create_athlete",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793199649726,
+      "tag": "0001_create_plan",
+      "breakpoints": true
     }
   ]
 }

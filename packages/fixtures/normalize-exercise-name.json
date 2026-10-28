@@ -1,0 +1,30 @@
+{
+  "function": "normalizeExerciseName",
+  "cases": [
+    {
+      "name": "lowercases",
+      "input": { "name": "Barra Fixa" },
+      "expected": { "normalized": "barra fixa" }
+    },
+    {
+      "name": "trims and collapses spaces",
+      "input": { "name": "  barra   fixa \t" },
+      "expected": { "normalized": "barra fixa" }
+    },
+    {
+      "name": "removes accents",
+      "input": { "name": "Agachamento Búlgaro" },
+      "expected": { "normalized": "agachamento bulgaro" }
+    },
+    {
+      "name": "keeps punctuation and digits",
+      "input": { "name": "Swing Russo (KB 24)" },
+      "expected": { "normalized": "swing russo (kb 24)" }
+    },
+    {
+      "name": "handles cedilla and tilde",
+      "input": { "name": "Extensão de Braço" },
+      "expected": { "normalized": "extensao de braco" }
+    }
+  ]
+}

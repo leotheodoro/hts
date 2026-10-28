@@ -34,3 +34,7 @@ copy(
 );
 mirrorJson(join(root, "packages/fixtures"), join(kit, "Tests/HTSDomainTests/Fixtures"));
 copy(join(root, "packages/contracts/openapi.json"), join(kit, "Sources/HTSAPI/openapi.json"));
+copy(
+  join(root, "packages/contracts/db-schema.json"),
+  join(kit, "Tests/HTSPersistenceTests/Resources/db-schema.json"),
+);

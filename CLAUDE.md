@@ -61,12 +61,12 @@ pnpm test | pnpm lint | pnpm typecheck
 pnpm sync:shared                 gera Tokens.swift e copia progression.json, fixtures e openapi.json
 pnpm --filter api db:generate    nova migration a partir de src/db/schema.ts
 pnpm --filter api db:migrate     aplica as migrations
-pnpm --filter api openapi:generate
+pnpm --filter api contracts:generate   openapi.json + db-schema.json em packages/contracts
 docker compose up -d             Postgres local (porta 5442 no host)
 make ios-generate | make ios-test | make ios-build
 ```
 
-Depois de mudar tokens.json, progression.json, fixtures ou rotas da API: rode `pnpm --filter api openapi:generate && pnpm sync:shared` e commite o resultado. O CI falha se houver diff.
+Depois de mudar tokens.json, progression.json, fixtures, rotas ou schema da API: rode `pnpm --filter api contracts:generate && pnpm sync:shared` e commite o resultado. O CI falha se houver diff.
 
 ## Convenções de dados (SQLite e Postgres)
 
@@ -75,7 +75,9 @@ Depois de mudar tokens.json, progression.json, fixtures ou rotas da API: rode `p
 - Datas em UTC: `timestamptz` no Postgres, texto ISO 8601 no SQLite.
 - Pesos em kg com decimal (62.5). Carga somada e dinheiro em `numeric` no Postgres, nunca float.
 - Valores derivados (XP total, nível, patente, atributos, sequência) não são colunas: são calculados a partir dos registros.
-- O schema local espelha o do Postgres: mesmos nomes de tabela e coluna (snake_case, singular).
+- O schema local espelha o do Postgres: mesmos nomes de tabela e coluna (snake_case, singular). O teste `SchemaParityTests` compara o SQLite com `packages/contracts/db-schema.json`, exportado do Drizzle.
+- Enum do Postgres vira TEXT com CHECK no SQLite; `jsonb` vira JSON em TEXT; `date` vira "YYYY-MM-DD".
+- Em consultas GRDB, compare ids com `uuid.sql` (texto minúsculo); um `UUID` cru vira blob e não casa.
 
 ## Progressão
 

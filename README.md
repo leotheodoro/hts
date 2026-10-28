@@ -85,7 +85,7 @@ O simulador continua usando `localhost`; só builds para o aparelho usam `HTS_DE
 | `pnpm sync:shared` | Gera `Tokens.swift` e copia progression.json, fixtures e openapi.json para o HTSKit |
 | `pnpm --filter api db:generate` | Nova migration a partir do schema Drizzle |
 | `pnpm --filter api db:migrate` | Aplica as migrations |
-| `pnpm --filter api openapi:generate` | Escreve `packages/contracts/openapi.json` |
+| `pnpm --filter api contracts:generate` | Escreve `packages/contracts/openapi.json` e `db-schema.json` |
 | `make ios-generate` | Gera `apps/ios/HTS.xcodeproj` com XcodeGen |
 | `make ios-test` | `swift test` no HTSKit e `xcodebuild test` do app no simulador |
 | `make ios-build` | Build do app para o simulador |
