@@ -72,7 +72,7 @@ O simulador continua usando `localhost`; só builds para o aparelho usam `HTS_DE
 - O app desliga o Liquid Glass (`UIDesignRequiresCompatibility` no `project.yml`). A barra de vidro ignora as cores das abas e acrescenta blur. A Apple vai remover essa chave em uma versão futura; até lá, a barra fica opaca e segue os tokens.
 - `make ios-*` escolhe o simulador pelo nome, através de `scripts/ios-simulator-id.sh`. Para usar outro aparelho: `make ios-test SIMULATOR="iPhone 17 Pro"`.
 - Para abrir o app direto numa aba, em Debug: argumento de lançamento `-HTSInitialTab profile` (`status`, `arcs`, `journal`, `profile`).
-- Fontes: TTF estáticos do Google Fonts (OFL), com as licenças em `HTSDesign/Resources/Fonts/Licenses`. O Noto Serif JP 900 completo tem 8 MB; fazer um subset dele é um ticket separado.
+- Fontes: TTF estáticos do Google Fonts (OFL), com as licenças em `HTSDesign/Resources/Fonts/Licenses`. O Noto Serif JP 900 é um subset (13 KB) só com os kanji de `packages/design-tokens/kanji.txt`; outro kanji cai na fonte do sistema. Para incluir mais, edite a lista e rode `scripts/subset-kanji-font.sh` (precisa de `pipx install fonttools`).
 
 ## Comandos
 

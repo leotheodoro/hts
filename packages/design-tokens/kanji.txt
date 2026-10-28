@@ -1,0 +1,3 @@
+# Kanji bundled in the Noto Serif JP 900 subset (one line, no spaces). 不屈 is the brand; the rest are
+# likely arc kanji. Anything else falls back to the system font. Regenerate with scripts/subset-kanji-font.sh.
+不屈募鍛前戦闘守攻鋼炎魂道武力勝練修進決心技剛覇烈刃牙盾陣
