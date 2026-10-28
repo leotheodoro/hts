@@ -1,5 +1,7 @@
 name: iOS
 
+# macOS minutes are expensive: iOS runs only on main and on demand. PRs rely on `make ios-test` locally
+# (CLAUDE.md, merge rule).
 on:
   push:
     branches: [main]
@@ -9,13 +11,7 @@ on:
       - Makefile
       - scripts/ios-simulator-id.sh
       - .github/workflows/ios.yml
-  pull_request:
-    paths:
-      - apps/ios/**
-      - packages/**
-      - Makefile
-      - scripts/ios-simulator-id.sh
-      - .github/workflows/ios.yml
+  workflow_dispatch:
 
 concurrency:
   group: ios-${{ github.ref }}
