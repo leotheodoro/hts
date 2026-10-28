@@ -39,15 +39,38 @@ public enum APIError: Error, Sendable {
     case invalidResponse
 }
 
+/// Short reason for a failed request, for the UI.
+public enum APIFailure: Equatable, Sendable {
+    case timedOut
+    case unreachable
+    case other(String)
+
+    public init(_ error: any Error) {
+        let underlying = (error as? ClientError)?.underlyingError ?? error
+        switch (underlying as? URLError)?.code {
+        case .timedOut?: self = .timedOut
+        case .cannotFindHost?, .cannotConnectToHost?, .notConnectedToInternet?, .networkConnectionLost?,
+            .dnsLookupFailed?:
+            self = .unreachable
+        default: self = .other(String(describing: underlying))
+        }
+    }
+}
+
 /// Thin wrapper over the generated client (packages/contracts/openapi.json), so the app never sees generated
 /// types.
 public struct APIClient: Sendable {
     private let client: Client
 
-    public init(configuration: APIConfiguration, session: URLSession = .shared) {
+    /// Requests give up after `timeout` seconds instead of URLSession's 60.
+    public init(configuration: APIConfiguration, timeout: TimeInterval = 10) {
+        let sessionConfiguration = URLSessionConfiguration.default
+        sessionConfiguration.timeoutIntervalForRequest = timeout
+        sessionConfiguration.waitsForConnectivity = false
         self.init(
             configuration: configuration,
-            transport: URLSessionTransport(configuration: .init(session: session)))
+            transport: URLSessionTransport(
+                configuration: .init(session: URLSession(configuration: sessionConfiguration))))
     }
 
     init(configuration: APIConfiguration, transport: some ClientTransport) {

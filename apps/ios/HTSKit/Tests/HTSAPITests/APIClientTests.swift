@@ -36,4 +36,9 @@ let configuration = APIConfiguration(baseURL: URL(string: "http://localhost:8787
         #expect(try await client.athlete(id: UUID()) == nil)
     }
 
+    @Test func classifiesTimeoutsAndUnreachableHosts() {
+        #expect(APIFailure(URLError(.timedOut)) == .timedOut)
+        #expect(APIFailure(URLError(.cannotConnectToHost)) == .unreachable)
+        #expect(APIFailure(APIError.invalidResponse) != .timedOut)
+    }
 }
