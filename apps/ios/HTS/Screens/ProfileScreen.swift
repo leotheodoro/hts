@@ -1,14 +1,70 @@
 import HTSDesign
+import HTSDomain
+import HTSPersistence
 import SwiftUI
 
 struct ProfileScreen: View {
+    @Environment(AppModel.self) private var app
+    @State private var name = ""
+    @State private var rest = Athlete.defaultRestSeconds
+
     var body: some View {
         ScreenScaffold(title: "Perfil") {
-            PlaceholderCard(label: "ATRIBUTOS", text: "Atributos, títulos e ajustes chegam nos próximos tickets.")
+            settings
+            loadGuide
+            PlaceholderCard(label: "ATRIBUTOS E TÍTULOS", text: "Chegam quando a escala dos atributos for definida.")
             #if DEBUG
                 DiagnosticsSection()
             #endif
         }
+        .task(id: app.athlete?.id) {
+            guard let athlete = app.athlete else { return }
+            name = athlete.displayName
+            rest = athlete.defaultRestSeconds
+        }
+    }
+
+    private var settings: some View {
+        VStack(alignment: .leading, spacing: HTSSpacing.space4) {
+            Text("Ajustes").htsTextStyle(.uiSection)
+            HTSTextField(label: "NOME", text: $name, prompt: "Seu nome")
+                .onSubmit { save() }
+            Stepper(value: $rest, in: 15...600, step: 15) {
+                HStack {
+                    FieldLabel(text: "DESCANSO PADRÃO")
+                    Spacer()
+                    Text(verbatim: RestTimer.format(TimeInterval(rest))).htsTextStyle(.data)
+                }
+            }
+            .onChange(of: rest) { save() }
+            Text("Vale para exercícios sem descanso próprio.").htsTextStyle(.caption)
+                .foregroundStyle(Color.hts.greyApp)
+            if name.trimmingCharacters(in: .whitespaces) != app.athlete?.displayName {
+                HTSButton("Salvar nome", kind: .ghost) { save() }
+            }
+        }
+    }
+
+    private var loadGuide: some View {
+        NotchCard {
+            VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                Text("ORIENTAÇÕES DE CARGA").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                ForEach(LoadGuide.allCases, id: \.self) { guide in
+                    HStack {
+                        Text(verbatim: guide.repRange).htsTextStyle(.body)
+                        Spacer()
+                        Text(verbatim: guide.label).htsTextStyle(.dataSm)
+                    }
+                }
+            }
+        }
+    }
+
+    private func save() {
+        guard var athlete = app.athlete, !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        athlete.displayName = name
+        athlete.defaultRestSeconds = rest
+        Task { await app.updateAthlete(athlete) }
     }
 }
 
@@ -67,6 +123,7 @@ struct ProfileScreen: View {
                 Spacer(minLength: HTSSpacing.space2)
                 Text(verbatim: value).htsTextStyle(.dataSm).foregroundStyle(Color.hts.bone)
                     .multilineTextAlignment(.trailing)
+                    .lineLimit(1).truncationMode(.middle)
                     .textSelection(.enabled)
             }
         }

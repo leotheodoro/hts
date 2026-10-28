@@ -84,3 +84,15 @@ import Testing
         #expect(earlier.uuidString.lowercased() < later.uuidString.lowercased())
     }
 }
+
+@Suite struct AthleteSettingsTests {
+    @Test func updatesNameAndDefaultRest() async throws {
+        let repository = AthleteRepository(try AppDatabase.inMemory())
+        var athlete = try await repository.ensureLocalAthlete(displayName: "Atleta")
+        athlete.displayName = "  Leo "
+        athlete.defaultRestSeconds = 120
+        let saved = try await repository.update(athlete)
+        #expect(saved.displayName == "Leo")
+        #expect(try await repository.localAthlete() == saved)
+    }
+}

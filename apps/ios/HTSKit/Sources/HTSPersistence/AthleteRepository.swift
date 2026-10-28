@@ -20,6 +20,16 @@ public struct AthleteRepository: Sendable {
         }
     }
 
+    /// Saves edited settings (name, default rest).
+    @discardableResult
+    public func update(_ athlete: Athlete, now: Date = .now) async throws -> Athlete {
+        var athlete = athlete
+        athlete.displayName = athlete.displayName.trimmingCharacters(in: .whitespaces)
+        athlete.updatedAt = now.roundedToMilliseconds
+        try await database.writer.write { [athlete] db in try athlete.update(db) }
+        return athlete
+    }
+
     public func localAthlete() async throws -> Athlete? {
         try await database.writer.read { db in try Self.localAthleteRequest.fetchOne(db) }
     }
