@@ -11,27 +11,32 @@ fi
 
 json=$(mktemp)
 xcrun devicectl list devices --json-output "$json" >/dev/null
-device=$(python3 - "$json" "${DEVICE:-}" <<'PY'
+# Prints "<CoreDevice id> <UDID>": devicectl wants the first, xcodebuild the second.
+ids=$(python3 - "$json" "${DEVICE:-}" <<'PY'
 import json, sys
 devices = json.load(open(sys.argv[1]))["result"]["devices"]
 wanted = sys.argv[2]
 for d in devices:
     props, hw = d.get("deviceProperties", {}), d.get("hardwareProperties", {})
-    if hw.get("platform") != "iOS" or d.get("connectionProperties", {}).get("pairingState") != "paired":
+    if hw.get("platform") != "iOS" or hw.get("reality") != "physical" \
+            or d.get("connectionProperties", {}).get("pairingState") != "paired":
         continue
     if not wanted or props.get("name") == wanted:
-        print(d["identifier"]); break
+        print(d["identifier"], hw.get("udid", "")); break
 PY
 )
 rm -f "$json"
-if [ -z "$device" ]; then
+device=${ids%% *}
+udid=${ids#* }
+if [ -z "$ids" ]; then
   echo "No paired iPhone found. Connect it by cable, trust this Mac and enable Developer Mode." >&2
   exit 1
 fi
 
 xcodebuild build -project apps/ios/HTS.xcodeproj -scheme HTS -configuration Debug \
-  -destination "generic/platform=iOS" -derivedDataPath apps/ios/build \
-  -allowProvisioningUpdates -skipPackagePluginValidation -skipMacroValidation -quiet
+  -destination "platform=iOS,id=$udid" -derivedDataPath apps/ios/build \
+  -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+  -skipPackagePluginValidation -skipMacroValidation -quiet
 app=apps/ios/build/Build/Products/Debug-iphoneos/HTS.app
 bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app/Info.plist")
 xcrun devicectl device install app --device "$device" "$app"
