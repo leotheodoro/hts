@@ -10,17 +10,40 @@
     }
   },
   "level": {
-    "provisional": true,
-    "note": "PROVISÓRIO. XP acumulado ao fim do nível n = round(base × n^exponent). Com base 108 e exponent 1.5, o nível 7 vai até 2000 XP, como no mockup. A curva final é decisão de produto em aberto.",
+    "note": "XP acumulado ao fim do nível n = round(base × n^exponent). Base 108 e exponent 1.5 (decisão do Leo, #17): nível 7 termina em 2000 XP e a patente S (nível 30) chega em 17.745 XP, cerca de 8 meses a 3 treinos por semana.",
     "base": 108,
     "exponent": 1.5
   },
   "ranks": [
-    { "id": "E", "name": "Recruta", "minLevel": 1 },
-    { "id": "D", "name": "Soldado", "minLevel": 5 },
-    { "id": "C", "name": "Cabo", "minLevel": 10 },
-    { "id": "B", "name": "Sargento", "minLevel": 15 },
-    { "id": "A", "name": "Tenente", "minLevel": 22 },
-    { "id": "S", "name": "Comandante", "minLevel": 30 }
+    {
+      "id": "E",
+      "name": "Recruta",
+      "minLevel": 1
+    },
+    {
+      "id": "D",
+      "name": "Soldado",
+      "minLevel": 5
+    },
+    {
+      "id": "C",
+      "name": "Cabo",
+      "minLevel": 10
+    },
+    {
+      "id": "B",
+      "name": "Sargento",
+      "minLevel": 15
+    },
+    {
+      "id": "A",
+      "name": "Tenente",
+      "minLevel": 22
+    },
+    {
+      "id": "S",
+      "name": "Comandante",
+      "minLevel": 30
+    }
   ]
 }
