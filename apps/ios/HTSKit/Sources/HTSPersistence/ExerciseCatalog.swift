@@ -29,19 +29,27 @@ public struct ExerciseCatalog: Sendable {
         name: String, athleteId: UUID, defaultAttribute: Attribute? = nil, unit: ExerciseUnit = .reps,
         perSide: Bool = false, now: Date = .now
     ) async throws -> Exercise {
-        let normalized = ExerciseName.normalize(name)
-        return try await database.writer.write { db in
-            if let existing = try Exercise.filter(
-                Columns.athleteId == athleteId.sql && Column("normalized_name") == normalized
-                    && Columns.deletedAt == nil
-            ).fetchOne(db) {
-                return existing
-            }
-            let exercise = Exercise(
-                id: UUIDv7.make(at: now), athleteId: athleteId, name: name, defaultAttribute: defaultAttribute,
-                unit: unit, perSide: perSide, createdAt: now)
-            try exercise.insert(db)
-            return exercise
+        try await database.writer.write { db in
+            try Self.findOrCreate(
+                name: name, athleteId: athleteId, defaultAttribute: defaultAttribute, unit: unit, perSide: perSide,
+                now: now, db)
         }
+    }
+
+    static func findOrCreate(
+        name: String, athleteId: UUID, defaultAttribute: Attribute?, unit: ExerciseUnit, perSide: Bool, now: Date,
+        _ db: Database
+    ) throws -> Exercise {
+        let normalized = ExerciseName.normalize(name)
+        if let existing = try Exercise.filter(
+            Columns.athleteId == athleteId.sql && Column("normalized_name") == normalized && Columns.deletedAt == nil
+        ).fetchOne(db) {
+            return existing
+        }
+        let exercise = Exercise(
+            id: UUIDv7.make(at: now), athleteId: athleteId, name: name, defaultAttribute: defaultAttribute,
+            unit: unit, perSide: perSide, createdAt: now)
+        try exercise.insert(db)
+        return exercise
     }
 }
