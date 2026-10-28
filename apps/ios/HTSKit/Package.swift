@@ -10,6 +10,10 @@ let package = Package(
     products: [
         .library(name: "HTSDesign", targets: ["HTSDesign"]),
         .library(name: "HTSDomain", targets: ["HTSDomain"]),
+        .library(name: "HTSPersistence", targets: ["HTSPersistence"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0")
     ],
     targets: [
         .target(
@@ -26,5 +30,10 @@ let package = Package(
             dependencies: ["HTSDomain"],
             resources: [.copy("Fixtures")]
         ),
+        .target(
+            name: "HTSPersistence",
+            dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
+        ),
+        .testTarget(name: "HTSPersistenceTests", dependencies: ["HTSPersistence"]),
     ]
 )
