@@ -52,6 +52,26 @@ public struct ProgressService: Sendable {
         }
     }
 
+    /// Weekly streak from completed sessions; the goal of each session is its arc's template count, nil for filler.
+    public func streak(athleteId: UUID, today: LocalDate) async throws -> Streak {
+        try await database.writer.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT s.local_date, a.kind,
+                        (SELECT COUNT(*) FROM workout_template t WHERE t.arc_id = a.id AND t.deleted_at IS NULL) AS goal
+                    FROM session s JOIN arc a ON a.id = s.arc_id
+                    WHERE s.athlete_id = ? AND s.status = 'completed' AND s.deleted_at IS NULL
+                    """, arguments: [athleteId.sql])
+            let sessions = rows.compactMap { row -> StreakSession? in
+                guard let date = LocalDate(row["local_date"] as String) else { return nil }
+                let filler = (row["kind"] as String) == ArcKind.filler.rawValue
+                return StreakSession(localDate: date, weeklyGoal: filler ? nil : row["goal"])
+            }
+            return progression.streak(sessions, today: today)
+        }
+    }
+
     /// Best load per catalog exercise over completed live sessions: the first set that reached it.
     public struct Record: Hashable, Sendable, Identifiable {
         public let exerciseId: UUID
