@@ -64,31 +64,29 @@ struct HomeScreen: View {
                 }
             }
         } else if let next = model.next {
-            NotchCard {
-                VStack(alignment: .leading, spacing: HTSSpacing.space3) {
-                    Text("PRÓXIMO TREINO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
-                    Text(verbatim: "\(next.plan.template.letter) · \(next.plan.template.name)")
-                        .htsTextStyle(.uiSection)
-                    if let total = next.total {
-                        HStack(spacing: HTSSpacing.space3) {
-                            ProgressBar(value: Double(next.completed) / Double(max(total, 1)))
-                            Text(verbatim: String(format: "%02d/%02d", next.completed, total)).htsTextStyle(.dataSm)
+            // The whole card opens the workout page; workouts start only there (#86, #102).
+            NavigationLink(value: Route.workout(templateId: next.plan.template.id)) {
+                NotchCard {
+                    HStack(spacing: HTSSpacing.space3) {
+                        VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                            Text("PRÓXIMO TREINO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                            Text(verbatim: "\(next.plan.template.letter) · \(next.plan.template.name)")
+                                .htsTextStyle(.uiSection)
+                            Text(verbatim: [next.seasonName, next.arc.name].compactMap { $0 }.joined(separator: " · "))
+                                .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                            if next.plan.blocks.isEmpty {
+                                Text("Este treino ainda não tem exercícios.")
+                                    .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                            }
                         }
-                    }
-                    Text(verbatim: [next.seasonName, next.arc.name].compactMap { $0 }.joined(separator: " · "))
-                        .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
-                    if next.plan.blocks.isEmpty {
-                        Text("Este treino ainda não tem exercícios.")
-                            .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
-                    } else {
-                        // Workouts start only from the workout page (#86).
-                        NavigationLink(value: Route.workout(templateId: next.plan.template.id)) {
-                            Text("Ver treino").frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(HTSButtonStyle(.primary))
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(Color.hts.greyApp)
+                            .accessibilityHidden(true)
                     }
                 }
             }
+            .buttonStyle(.plain)
+            .accessibilityHint("Abre o treino")
         } else {
             PlaceholderCard(label: "PRÓXIMO TREINO", text: "Nenhum arco atual.")
         }
