@@ -53,7 +53,7 @@ Funciona com um Apple ID gratuito (Personal Team). Nesse caso o app expira em 7 
    ```sh
    cp apps/ios/Local.xcconfig.example apps/ios/Local.xcconfig
    make ios-team-id      # mostra o Team ID do certificado
-   make ios-mac-host     # valor para HTS_DEVICE_API_BASE_URL
+   make ios-mac-host     # só se quiser o iPhone no pnpm dev (HTS_DEVICE_API_BASE_URL)
    ```
    Se o Personal Team recusar o bundle id `com.hardtosubmit.app`, descomente `HTS_BUNDLE_ID` com um sufixo seu.
 3. No iPhone: ligue o **Modo de Desenvolvedor** (Ajustes > Privacidade e Segurança), conecte por cabo e confie no Mac.
@@ -62,13 +62,13 @@ Funciona com um Apple ID gratuito (Personal Team). Nesse caso o app expira em 7 
    make ios-device                          # ou DEVICE="Nome do iPhone" make ios-device
    ```
    Ou rode pelo Xcode escolhendo o iPhone como destino. Na primeira abertura, o iOS pede para confiar no desenvolvedor em Ajustes > Geral > VPN e Gerenciamento de Dispositivo.
-5. Para o Diagnóstico ver a API, deixe `pnpm dev` rodando no Mac, com o iPhone na mesma Wi-Fi, e aceite o pedido de acesso à rede local.
+5. O iPhone sincroniza com a API de produção (Render + Neon, `https://hts-api-nrrk.onrender.com`). `HTS_API_TOKEN` no `Local.xcconfig` precisa ser o mesmo `API_TOKEN` do serviço no Render. Para testar contra o `pnpm dev`, defina `HTS_DEVICE_API_BASE_URL` com o endereço do Mac, deixe o iPhone na mesma Wi-Fi e aceite o pedido de acesso à rede local.
 
-O simulador continua usando `localhost`; só builds para o aparelho usam `HTS_DEVICE_API_BASE_URL`. Configurações de build ficam em `apps/ios/Config/*.xcconfig`.
+O simulador usa `localhost`; builds para o aparelho usam `HTS_DEVICE_API_BASE_URL` (por padrão, produção) e o Release usa sempre produção. Configurações de build ficam em `apps/ios/Config/*.xcconfig`.
 
 ## Plano inicial (opcional)
 
-Para o app já abrir com os seus arcos e treinos, copie `apps/ios/LocalSeed.example` para `apps/ios/LocalSeed` e edite o `StarterPlan.json` (formato no README da pasta). A pasta fica fora do git: programas de preparador costumam ser licenciados e o repositório é público. Na primeira abertura, se o atleta ainda não tiver arcos (nem no aparelho nem no servidor), o app importa o plano uma vez.
+Para o app já abrir com os seus arcos e treinos, copie `apps/ios/LocalSeed.example` para `apps/ios/LocalSeed` e edite o `StarterPlan.json` (formato no README da pasta). A pasta fica fora do git: programas de preparador costumam ser licenciados e o repositório é público. A cada abertura, depois da sincronização, o app importa só o que ainda não existe, pelo nome.
 
 ## Deploy da API (Render + Neon)
 
