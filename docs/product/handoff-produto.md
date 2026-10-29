@@ -34,7 +34,7 @@ Referências: [canvas de design](https://claude.ai/artifact/KzHW9r1MKGRutmzu1niX
 | Sequência | Semanas seguidas batendo a meta semanal de treinos (antes "Chama"). |
 | A Batalha | Competição com data cadastrada; o chefe final da temporada. |
 | A Véspera | Arco especial de 2 treinos na semana da competição. |
-| Filler / Manutenção | Arco sem prazo para viagens e semanas atípicas; conta para a sequência. |
+| Filler / Manutenção | Arco livre, sem prazo, sempre disponível (Manutenção, Mobilidade). É um extra: dá XP, mas não conta para a sequência. |
 
 ## Modelo de domínio
 
@@ -79,7 +79,7 @@ Ordem e sugestão:
 
 Arcos especiais:
 
-- **Filler / Manutenção:** sem duração, disponível a qualquer momento, cargas moderadas a leves. Conta para a sequência semanal, para viagem não quebrar a sequência.
+- **Filler / Manutenção:** sem duração, disponível a qualquer momento, cargas moderadas a leves. É um extra: dá XP para os atributos, mas não conta para a meta da semana nem para a sequência (ADR 0030).
 - **A Véspera:** 1 treino feito 2 vezes na semana da competição; ganha destaque quando a Batalha está a menos de 7 dias.
 - **A Batalha:** data cadastrada, contagem regressiva na tela inicial e resultado registrado depois. Fecha a temporada no histórico.
 
@@ -119,7 +119,7 @@ Toda a progressão vem só de treinar de verdade. Séries concluídas geram XP, 
 - **Atributos:** cada bloco ou exercício tem um atributo, e as séries concluídas alimentam esse atributo. São 5 eixos (FOR, EXP, GÁS, NÚC, MOB), mostrados como barras ou radar. A escala (0 a 100? relativa?) está em aberto.
 - **Sequência:** a meta é o número de treinos do arco atual por semana (segunda a domingo). Conta semanas seguidas com a meta batida. Não existe sequência diária. Treino de Manutenção conta.
 - **Limite Quebrado:** maior kg já registrado num exercício do catálogo. Fica salvo como recorde com data e sessão.
-- **Títulos (catálogo fixo):** Primeiro Treino (1º treino) · Recrutamento Concluído (fechar o arco I) · Semana Perfeita (meta da semana batida) · Sequência Acesa (4 semanas seguidas) · Limite Quebrado x10 (10 recordes) · Sobrevivente do Filler (manter a sequência numa semana só de Manutenção) · Cem Barras (100 séries de barra fixa) · Pronto para a Batalha (os 2 treinos da Véspera).
+- **Títulos (catálogo fixo):** Primeiro Treino (1º treino) · Recrutamento Concluído (fechar o arco I) · Semana Perfeita (meta da semana batida) · Sequência Acesa (4 semanas seguidas) · Limite Quebrado x10 (10 recordes) · Cem Barras (100 séries de barra fixa) · Pronto para a Batalha (os 2 treinos da Véspera).
 
 ## Telas e fluxos
 

@@ -1,6 +1,6 @@
 # 0020 · Sequência semanal
 
-Data: 2026-10-28 · Status: aceita
+Data: 2026-10-28 · Status: aceita; a regra de Manutenção foi substituída por 0030
 
 ## Decisão
 - Semanas de segunda a domingo, no fuso do aparelho (`session.local_date`).
