@@ -88,18 +88,23 @@ struct ArcRow: View {
             && summary.schedule.isOverdue(today: .today, completedSessions: summary.completedSessions)
     }
 
+    /// The current arc stands out in `blood`; locked arcs are dimmed (#90).
+    private var isCurrent: Bool { summary.arc.status == .current && summary.arc.kind != .filler }
+    private var isLocked: Bool { summary.arc.status == .queued && summary.arc.kind != .filler }
+    private var nameColor: Color { isLocked ? Color.hts.bone.opacity(HTSOpacity.next) : Color.hts.bone }
+
     var body: some View {
-        NotchCard {
+        NotchCard(border: isCurrent ? Color.hts.blood : Color.hts.line) {
             HStack(alignment: .top, spacing: HTSSpacing.space4) {
                 if let kanji = summary.arc.kanji {
-                    Text(verbatim: kanji).htsTextStyle(.kanji).foregroundStyle(Color.hts.bone)
+                    Text(verbatim: kanji).htsTextStyle(.kanji).foregroundStyle(nameColor)
                         .lineLimit(1).minimumScaleFactor(0.4).frame(width: 56, height: 56)
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: HTSSpacing.space2) {
                     Text(statusLabel).htsTextStyle(.label)
-                        .foregroundStyle(overdue || eve ? Color.hts.redText : Color.hts.grey)
-                    Text(verbatim: summary.arc.name).htsTextStyle(.uiSection).foregroundStyle(Color.hts.bone)
+                        .foregroundStyle(overdue || eve || isCurrent ? Color.hts.redText : Color.hts.grey)
+                    Text(verbatim: summary.arc.name).htsTextStyle(.uiSection).foregroundStyle(nameColor)
                     Text(subtitle).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                     if let total = summary.schedule.totalSessions {
                         HStack(spacing: HTSSpacing.space3) {
