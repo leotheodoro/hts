@@ -6,8 +6,18 @@ import SwiftUI
 struct ScreenScaffold<Content: View>: View {
     let title: LocalizedStringKey
     @ViewBuilder let content: Content
+    @Environment(\.scrollToTopSignal) private var scrollToTopSignal
+    @Namespace private var top
 
     var body: some View {
+        ScrollViewReader { proxy in
+            scroll.onChange(of: scrollToTopSignal) {
+                withAnimation { proxy.scrollTo(top, anchor: .top) }
+            }
+        }
+    }
+
+    private var scroll: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: HTSSpacing.space7) {
                 HStack(alignment: .firstTextBaseline) {
@@ -24,6 +34,7 @@ struct ScreenScaffold<Content: View>: View {
                         .foregroundStyle(Color.hts.tabIdle)
                         .accessibilityHidden(true)
                 }
+                .id(top)
                 Text(title)
                     .htsTextStyle(.uiTitle)
                     .foregroundStyle(Color.hts.bone)
@@ -38,6 +49,17 @@ struct ScreenScaffold<Content: View>: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { ActiveSessionBar() }
         .background(Color.hts.black)
         .foregroundStyle(Color.hts.bone)
+    }
+}
+
+extension EnvironmentValues {
+    /// Changes when the selected tab is tapped again on its first page (#106).
+    @Entry var scrollToTopSignal = 0
+}
+
+extension View {
+    func scrollToTopSignal(_ value: Int?) -> some View {
+        environment(\.scrollToTopSignal, value ?? 0)
     }
 }
 
