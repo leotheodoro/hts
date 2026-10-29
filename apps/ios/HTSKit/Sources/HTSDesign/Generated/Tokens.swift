@@ -137,7 +137,7 @@ extension HTSTextStyle {
     public static let brandHero = HTSTextStyle(name: "brand-hero", family: .stencil, size: 112, weight: 900, lineHeight: 95.2, tracking: 1.12, uppercase: true)
     /// Wordmark empilhado e momentos de clímax. Caixa alta.
     public static let brandStack = HTSTextStyle(name: "brand-stack", family: .stencil, size: 64, weight: 900, lineHeight: 52.48, tracking: 0, uppercase: true)
-    /// Só o HTS no topo do app.
+    /// Só o wordmark HARD TO SUBMIT no topo do app: HARD TO em `bone`, SUBMIT em `blood`.
     public static let brandApp = HTSTextStyle(name: "brand-app", family: .stencil, size: 22, weight: 900, lineHeight: 22, tracking: 0.44, uppercase: true)
     /// Subtítulo de banner, nome de coleção. Caixa alta.
     public static let pieceTitle = HTSTextStyle(name: "piece-title", family: .display, size: 34, weight: 900, lineHeight: 34, tracking: 1.36, uppercase: true)

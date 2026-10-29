@@ -1,7 +1,8 @@
 import HTSDesign
 import SwiftUI
 
-/// Common screen frame: the "HTS" mark on top (the only stencil in the app), the screen title, then content.
+/// Common screen frame: the HARD TO SUBMIT wordmark with the 不屈 seal on top (the only stencil in the app), the
+/// screen title, then content.
 struct ScreenScaffold<Content: View>: View {
     let title: LocalizedStringKey
     @ViewBuilder let content: Content
@@ -9,11 +10,20 @@ struct ScreenScaffold<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: HTSSpacing.space7) {
-                Text(verbatim: "HTS")
-                    .htsTextStyle(.brandApp)
-                    .foregroundStyle(Color.hts.bone)
-                    .accessibilityLabel("Hard To Submit")
-                    .accessibilityAddTraits(.isHeader)
+                HStack(alignment: .firstTextBaseline) {
+                    (Text(verbatim: "HARD TO ").foregroundStyle(Color.hts.bone)
+                        + Text(verbatim: "SUBMIT").foregroundStyle(Color.hts.blood))
+                        .htsTextStyle(.brandApp)
+                        .accessibilityLabel("Hard To Submit")
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    Text(verbatim: "不屈")
+                        .font(
+                            .custom(HTSFontFamily.kanji.postScriptName(weight: 900), size: HTSTextStyle.brandApp.size)
+                        )
+                        .foregroundStyle(Color.hts.tabIdle)
+                        .accessibilityHidden(true)
+                }
                 Text(title)
                     .htsTextStyle(.uiTitle)
                     .foregroundStyle(Color.hts.bone)

@@ -56,7 +56,7 @@ Todas as famílias são Google Fonts com licença OFL, liberadas para produto ve
 | Dados e especificações | `mono` | `data`, `data-sm`, `label` |
 | Kanji | `kanji` | `kanji` |
 
-- Estêncil sempre em caixa alta e entrelinha apertada (0,82 a 0,9), em peças e títulos curtos. No app, aparece só no "HTS" do topo (`brand-app`).
+- Estêncil sempre em caixa alta e entrelinha apertada (0,82 a 0,9), em peças e títulos curtos. No app, aparece só no wordmark do topo (`brand-app`): HARD TO em `bone` e SUBMIT em `blood`, com o selo 不屈 à direita em `tab-idle` (#87).
 - Big Shoulders Display em caixa alta.
 - No máximo duas famílias por peça, além do kanji.
 - Números sempre tabulares (`font-variant-numeric: tabular-nums`), com zero à esquerda em dados de peça: "062.5 KG × 06".

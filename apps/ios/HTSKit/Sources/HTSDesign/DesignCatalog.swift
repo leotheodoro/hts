@@ -70,7 +70,7 @@ public struct DesignCatalog: View {
     private func sample(for style: HTSTextStyle) -> String {
         switch style {
         case .brandHero, .brandStack: "HARD TO SUBMIT"
-        case .brandApp: "HTS"
+        case .brandApp: "HARD TO SUBMIT"
         case .pieceTitle: "LINHA DE FRENTE"
         case .pieceSub: "B · TRINCHEIRA"
         case .uiDisplay: "1:12"
