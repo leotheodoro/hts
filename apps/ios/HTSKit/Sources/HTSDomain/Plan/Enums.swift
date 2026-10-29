@@ -6,7 +6,7 @@ public enum Attribute: String, Codable, Sendable, CaseIterable {
     case power
     /// GÁS
     case conditioning
-    /// NÚC
+    /// COR
     case core
     /// MOB
     case mobility

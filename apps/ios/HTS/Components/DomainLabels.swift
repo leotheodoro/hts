@@ -20,13 +20,13 @@ extension BlockKind {
 }
 
 extension Attribute {
-    /// FOR, EXP, GÁS, NÚC, MOB.
+    /// FOR, EXP, GÁS, COR, MOB.
     var abbreviation: String {
         switch self {
         case .strength: "FOR"
         case .power: "EXP"
         case .conditioning: "GÁS"
-        case .core: "NÚC"
+        case .core: "COR"
         case .mobility: "MOB"
         }
     }
@@ -36,7 +36,7 @@ extension Attribute {
         case .strength: "Força"
         case .power: "Explosão"
         case .conditioning: "Resistência"
-        case .core: "Núcleo"
+        case .core: "Core"
         case .mobility: "Mobilidade"
         }
     }

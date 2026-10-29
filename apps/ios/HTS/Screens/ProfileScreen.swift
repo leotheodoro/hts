@@ -52,7 +52,7 @@ struct ProfileScreen: View {
         }
     }
 
-    /// FOR, EXP, GÁS, NÚC, MOB, each with its own level (docs/decisions/0023).
+    /// FOR, EXP, GÁS, COR, MOB, each with its own level (docs/decisions/0023).
     private var attributesSection: some View {
         NotchCard {
             VStack(alignment: .leading, spacing: HTSSpacing.space4) {
