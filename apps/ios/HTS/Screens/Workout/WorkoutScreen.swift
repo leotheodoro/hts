@@ -60,14 +60,16 @@ struct WorkoutScreen: View {
     private func blockSection(_ block: BlockPlan, number: Int) -> some View {
         VStack(alignment: .leading, spacing: HTSSpacing.space3) {
             HStack(spacing: HTSSpacing.space2) {
-                Text(verbatim: String(format: "%02d", number))
-                Text(block.block.kind.label).textCase(.uppercase)
-                Text(verbatim: block.block.attributes.map(\.abbreviation).joined(separator: " "))
-                if block.block.kind == .fightRound, let minutes = block.block.durationMinutes {
-                    Text(verbatim: "· \(minutes) MIN")
+                Group {
+                    Text(verbatim: String(format: "%02d", number))
+                    Text(block.block.kind.label).textCase(.uppercase)
+                    if block.block.kind == .fightRound, let minutes = block.block.durationMinutes {
+                        Text(verbatim: "· \(minutes) MIN")
+                    }
                 }
+                .htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                AttributeBadges(attributes: block.block.attributes)
             }
-            .htsTextStyle(.label).foregroundStyle(Color.hts.grey)
             NotchCard {
                 VStack(alignment: .leading, spacing: HTSSpacing.space4) {
                     ForEach(block.exercises, id: \.prescription.id) { planned in

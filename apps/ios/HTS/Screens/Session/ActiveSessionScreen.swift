@@ -163,7 +163,7 @@ private struct BlockSection: View {
             HStack(spacing: HTSSpacing.space2) {
                 Text(verbatim: String(format: "%02d", index + 1)).htsTextStyle(.label)
                 Text(block.kind.label).textCase(.uppercase).htsTextStyle(.label)
-                Text(verbatim: block.attributes.map(\.abbreviation).joined(separator: " ")).htsTextStyle(.label)
+                AttributeBadges(attributes: block.attributes)
             }
             .foregroundStyle(Color.hts.grey)
             if block.kind == .fightRound {
