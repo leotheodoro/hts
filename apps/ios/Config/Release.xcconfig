@@ -1,6 +1,5 @@
 #include "Base.xcconfig"
 
-// TODO(#20): point to the Cloud Run URL.
-HTS_API_BASE_URL = https:/$()/api.hardtosubmit.com
+HTS_API_BASE_URL = $(HTS_PRODUCTION_API_BASE_URL)
 
 #include? "../Local.xcconfig"

@@ -4,10 +4,13 @@
 HTS_BUNDLE_ID = com.hardtosubmit.app
 HTS_DEVELOPMENT_TEAM =
 
-// The simulator shares the Mac's network, so localhost reaches `pnpm dev`. A physical iPhone needs the Mac's
-// address on the local network: set HTS_DEVICE_API_BASE_URL in Local.xcconfig.
+// Production API on Render, with the Neon database (#20).
+HTS_PRODUCTION_API_BASE_URL = https:/$()/hts-api-nrrk.onrender.com
+
+// The simulator shares the Mac's network, so localhost reaches `pnpm dev`. A physical iPhone uses production;
+// to test it against `pnpm dev`, set HTS_DEVICE_API_BASE_URL to the Mac's address in Local.xcconfig.
 HTS_LOCAL_API_BASE_URL = http:/$()/localhost:8787
-HTS_DEVICE_API_BASE_URL = $(HTS_LOCAL_API_BASE_URL)
+HTS_DEVICE_API_BASE_URL = $(HTS_PRODUCTION_API_BASE_URL)
 
 // Fixed bearer token for the API (docs/decisions/0024). Set it in Local.xcconfig, never here.
 HTS_API_TOKEN =
