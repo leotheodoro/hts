@@ -5,7 +5,6 @@ public enum TitleID: String, Hashable, Sendable, Codable, CaseIterable {
     case perfectWeek = "perfect-week"
     case streakLit = "streak-lit"
     case limitBroken10 = "limit-broken-10"
-    case fillerSurvivor = "filler-survivor"
     case hundredBars = "hundred-bars"
     case readyForBattle = "ready-for-battle"
 }
@@ -49,43 +48,37 @@ extension Progression {
         }
         var records = 0
         var pullUps = 0
-        var lastGoal = 0
         var week: LocalDate?
         var done = 0
-        var goal: Int?
-        var fillerOnly = true
+        var goal = 0
         var met = false
         var runBefore = 0
         for session in sessions {
-            let start = session.localDate.weekStart
-            if start != week {
-                if let week {
-                    let run = met ? runBefore + 1 : 0
-                    runBefore = start == week.adding(days: 7) ? run : 0
-                }
-                week = start
-                done = 0
-                goal = nil
-                fillerOnly = true
-                met = false
-            }
-            done += 1
-            if let weeklyGoal = session.weeklyGoal {
-                goal = max(goal ?? 0, weeklyGoal)
-                lastGoal = goal!
-                fillerOnly = false
-            }
             records += session.records
             pullUps += session.pullUpSets
-
             unlock(.firstSession, session.localDate)
             if session.completedArc == .first { unlock(.recruitmentComplete, session.localDate) }
             if records >= 10 { unlock(.limitBroken10, session.localDate) }
-            if !met && done >= (goal ?? lastGoal) {
-                met = true
-                unlock(.perfectWeek, session.localDate)
-                if fillerOnly && runBefore >= 1 { unlock(.fillerSurvivor, session.localDate) }
-                if runBefore + 1 >= 4 { unlock(.streakLit, session.localDate) }
+            // Filler sessions only give XP: they never count for the week (docs/decisions/0030).
+            if let weeklyGoal = session.weeklyGoal {
+                let start = session.localDate.weekStart
+                if start != week {
+                    if let week {
+                        let run = met ? runBefore + 1 : 0
+                        runBefore = start == week.adding(days: 7) ? run : 0
+                    }
+                    week = start
+                    done = 0
+                    goal = 0
+                    met = false
+                }
+                done += 1
+                goal = max(goal, weeklyGoal)
+                if !met && done >= goal {
+                    met = true
+                    unlock(.perfectWeek, session.localDate)
+                    if runBefore + 1 >= 4 { unlock(.streakLit, session.localDate) }
+                }
             }
             if pullUps >= 100 { unlock(.hundredBars, session.localDate) }
             if session.completedArc == .special { unlock(.readyForBattle, session.localDate) }
