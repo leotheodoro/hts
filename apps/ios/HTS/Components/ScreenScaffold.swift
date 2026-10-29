@@ -24,6 +24,7 @@ struct ScreenScaffold<Content: View>: View {
             .padding(.vertical, HTSSpacing.space4)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .contentMargins(.bottom, BrandTabBar.height, for: .scrollContent)
         .safeAreaInset(edge: .bottom, spacing: 0) { ActiveSessionBar() }
         .background(Color.hts.black)
         .foregroundStyle(Color.hts.bone)

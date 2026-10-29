@@ -78,6 +78,32 @@ public final class AppDatabase: Sendable {
                     """, arguments: [ISO8601Millis.format(.now)])
         }
         migrator.registerMigration("v7_saga_to_season", migrate: sagaToSeason)
+        // The old yearly saga could be left with no arcs once Manutenção became free (#83). Soft-delete empty
+        // seasons so the deletion syncs; if the active one goes, the first remaining season takes its place.
+        migrator.registerMigration("v8_drop_empty_seasons") { db in
+            let stamp = ISO8601Millis.format(.now)
+            try db.execute(
+                sql: """
+                    UPDATE season SET deleted_at = ?, updated_at = ?, active = 0
+                    WHERE deleted_at IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM arc WHERE arc.season_id = season.id AND arc.deleted_at IS NULL);
+                    UPDATE season SET active = 1, updated_at = ?
+                    WHERE id = (
+                        SELECT s.id FROM season s WHERE s.athlete_id = season.athlete_id AND s.deleted_at IS NULL
+                        ORDER BY s.position LIMIT 1)
+                    AND NOT EXISTS (
+                        SELECT 1 FROM season a WHERE a.athlete_id = season.athlete_id AND a.active
+                        AND a.deleted_at IS NULL);
+                    UPDATE arc SET status = 'current', updated_at = ?
+                    WHERE id IN (
+                        SELECT (SELECT r.id FROM arc r WHERE r.season_id = s.id AND r.status = 'queued'
+                                AND r.kind != 'filler' AND r.deleted_at IS NULL ORDER BY r.position LIMIT 1)
+                        FROM season s WHERE s.active AND s.deleted_at IS NULL)
+                    AND NOT EXISTS (
+                        SELECT 1 FROM arc c WHERE c.athlete_id = arc.athlete_id AND c.status = 'current'
+                        AND c.deleted_at IS NULL);
+                    """, arguments: [stamp, stamp, stamp, stamp])
+        }
         return migrator
     }
 
