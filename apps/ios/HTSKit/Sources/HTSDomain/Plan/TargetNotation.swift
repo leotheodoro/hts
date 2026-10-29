@@ -6,7 +6,8 @@ import Foundation
 /// | ---------- | ---- | ----------------------------------------- | -------- |
 /// | `8`        | any  | `[.fixed(8)]`                             | no       |
 /// | `6-6-3-3`  | 4    | `[.fixed(6), .fixed(6), .fixed(3), .fixed(3)]` | no  |
-/// | `10-20`    | any  | `[.range(10, 20)]` (two rising numbers)   | no       |
+/// | `10-20`    | not 2 | `[.range(10, 20)]` (two rising numbers)  | no       |
+/// | `15 a 20`  | any  | `[.range(15, 20)]` (always a range)       | no       |
 /// | `12/12`    | any  | `[.fixed(12)]`                            | yes      |
 /// | `máx`      | any  | `[.max]`                                  | no       |
 ///
@@ -48,6 +49,11 @@ public enum TargetNotation {
         if ["máx", "max", "máximo", "maximo"].contains(body) {
             return Parsed(targets: [.max], perSide: false)
         }
+        if body.contains(" a ") {
+            let bounds = body.components(separatedBy: " a ").map { number(Substring($0)) }
+            guard bounds.count == 2, let min = bounds[0], let max = bounds[1], min > 0, min < max else { return nil }
+            return Parsed(targets: [.range(min: min, max: max)], perSide: false)
+        }
         if body.contains("/") {
             let sides = body.split(separator: "/").compactMap(number)
             guard sides.count == 2, sides[0] == sides[1], sides[0] > 0 else { return nil }
@@ -72,7 +78,8 @@ public enum TargetNotation {
         switch targets.count == 1 ? targets[0] : nil {
         case .fixed(let value)? where perSide: body = "\(text(value))/\(text(value))"
         case .fixed(let value)?: body = text(value)
-        case .range(let min, let max)?: body = "\(text(min))-\(text(max))"
+        // "15 a 20" reads back as a range whatever the number of sets.
+        case .range(let min, let max)?: body = "\(text(min)) a \(text(max))"
         case .max?: return "máx"
         case nil:
             body = targets.map {

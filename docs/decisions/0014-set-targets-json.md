@@ -11,4 +11,4 @@ As planilhas usam alvos em vários formatos: `3 × 8`, `6-6-3-3`, `12/12`, `10-2
 Tipos: `SetTarget` em `HTSDomain` e `SetTargetSchema` (Zod) em `apps/api/src/db/targets.ts`, com o mesmo JSON.
 
 ## Consequências
-Novos formatos entram como novo `type`, sem migration. Consultas SQL por alvo ficam mais difíceis, o que não é um uso previsto. Ler e escrever a notação da planilha é do ticket de criar treino-modelo (#5).
+Novos formatos entram como novo `type`, sem migration. Consultas SQL por alvo ficam mais difíceis, o que não é um uso previsto. Ler e escrever a notação da planilha é do ticket de criar treino-modelo (#5). "15 a 20" é sempre faixa, e é assim que uma faixa é mostrada; "15-20" com 2 séries é a lista por série (#75).
