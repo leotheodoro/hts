@@ -96,3 +96,38 @@ import Testing
         #expect(try await repository.localAthlete() == saved)
     }
 }
+
+@Suite struct SagaToSeasonMigrationTests {
+    @Test func keepsArcsFreesFillerAndActivatesTheCurrentSeason() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v6_filler_never_current")
+        let stamp = "2026-10-28T12:00:00.000Z"
+        try queue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO athlete (id, display_name, created_at, updated_at) VALUES ('a', 'Leo', ?, ?);
+                    INSERT INTO saga (id, athlete_id, year, name, created_at, updated_at) VALUES ('s', 'a', 2026, 'Saga 2026', ?, ?);
+                    INSERT INTO arc (id, athlete_id, saga_id, name, kind, status, position, created_at, updated_at)
+                    VALUES ('r', 'a', 's', 'Recrutamento', 'normal', 'current', 0, ?, ?),
+                           ('m', 'a', 's', 'Manutenção', 'filler', 'queued', 1, ?, ?);
+                    INSERT INTO battle (id, athlete_id, saga_id, name, date, created_at, updated_at)
+                    VALUES ('b', 'a', 's', 'Copa', '2026-12-12', ?, ?);
+                    """, arguments: [stamp, stamp, stamp, stamp, stamp, stamp, stamp, stamp, stamp, stamp])
+        }
+        try AppDatabase.migrator.migrate(queue)
+        let result = try queue.read { db in
+            (
+                normal: try String.fetchOne(db, sql: "SELECT season_id FROM arc WHERE id = 'r'"),
+                filler: try String.fetchOne(db, sql: "SELECT season_id FROM arc WHERE id = 'm'"),
+                active: try Bool.fetchOne(db, sql: "SELECT active FROM season WHERE id = 's'"),
+                battle: try String.fetchOne(db, sql: "SELECT season_id FROM battle WHERE id = 'b'"),
+                sagaExists: try db.tableExists("saga")
+            )
+        }
+        #expect(result.normal == "s")
+        #expect(result.filler == nil)
+        #expect(result.active == true)
+        #expect(result.battle == "s")
+        #expect(!result.sagaExists)
+    }
+}

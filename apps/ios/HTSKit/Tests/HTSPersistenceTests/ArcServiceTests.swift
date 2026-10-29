@@ -7,12 +7,12 @@ import Testing
 @Suite struct ArcServiceTests {
     let start = LocalDate("2026-11-02")!
 
-    func setUp() async throws -> (AppDatabase, Athlete, Saga, ArcService) {
+    func setUp() async throws -> (AppDatabase, Athlete, Season, ArcService) {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
-        return (database, athlete, saga, service)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
+        return (database, athlete, season, service)
     }
 
     func draft(_ name: String, templates: [String] = ["Linha de Frente", "Trincheira", "Bombardeio"]) -> ArcDraft {
@@ -21,19 +21,23 @@ import Testing
             templates: templates.map { .init(origin: .new, name: $0) })
     }
 
-    @Test func sagaIsCreatedOnceperYear() async throws {
-        let (_, athlete, saga, service) = try await setUp()
-        #expect(saga.name == "Saga 2026")
-        #expect(try await service.saga(athleteId: athlete.id, year: 2026) == saga)
+    @Test func seasonIsFoundByNameAndTheFirstOneIsActive() async throws {
+        let (database, athlete, season, _) = try await setUp()
+        #expect(season.name == "Jiu-Jitsu")
+        #expect(season.active)
+        #expect(try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id) == season)
+        let other = try await SeasonService(database).season(named: "Performance", athleteId: athlete.id)
+        #expect(!other.active)
+        #expect(other.position == 1)
     }
 
     @Test func firstArcIsCurrentAndNextOnesQueue() async throws {
-        let (_, athlete, saga, service) = try await setUp()
-        let first = try await service.save(draft("Recrutamento"), athleteId: athlete.id, sagaId: saga.id)
-        let second = try await service.save(draft("Forja"), athleteId: athlete.id, sagaId: saga.id)
+        let (_, athlete, season, service) = try await setUp()
+        let first = try await service.save(draft("Recrutamento"), athleteId: athlete.id, seasonId: season.id)
+        let second = try await service.save(draft("Forja"), athleteId: athlete.id, seasonId: season.id)
         #expect(first.status == .current)
         #expect(second.status == .queued)
-        let summaries = try await service.summaries(athleteId: athlete.id, sagaId: saga.id)
+        let summaries = try await service.summaries(athleteId: athlete.id, seasonId: season.id)
         #expect(summaries.map(\.arc.name) == ["Recrutamento", "Forja"])
         #expect(summaries[0].schedule.letters == ["A", "B", "C"])
         #expect(summaries[0].schedule.totalSessions == 6)
@@ -42,16 +46,16 @@ import Testing
     }
 
     @Test func editingReordersRenamesRemovesAndReuses() async throws {
-        let (database, athlete, saga, service) = try await setUp()
-        let first = try await service.save(draft("Recrutamento"), athleteId: athlete.id, sagaId: saga.id)
+        let (database, athlete, season, service) = try await setUp()
+        let first = try await service.save(draft("Recrutamento"), athleteId: athlete.id, seasonId: season.id)
         let second = try await service.save(
-            draft("Forja", templates: ["Blindado"]), athleteId: athlete.id, sagaId: saga.id)
+            draft("Forja", templates: ["Blindado"]), athleteId: athlete.id, seasonId: season.id)
         let firstPlan = try #require(try await PlanRepository(database).plan(arcId: first.id))
 
         var edit = ArcDraft(try #require(try await PlanRepository(database).plan(arcId: second.id)), today: start)
         edit.templates.insert(.init(origin: .reuse(firstPlan.templates[1].template.id), name: "Trincheira II"), at: 0)
         edit.weeks = 3
-        try await service.save(edit, athleteId: athlete.id, sagaId: saga.id)
+        try await service.save(edit, athleteId: athlete.id, seasonId: season.id)
 
         let edited = try #require(try await PlanRepository(database).plan(arcId: second.id))
         #expect(edited.templates.map(\.template.letter) == ["A", "B"])
@@ -62,23 +66,23 @@ import Testing
         // Removing a template soft-deletes it; the original arc keeps its own.
         edit = ArcDraft(edited, today: start)
         edit.templates.removeLast()
-        try await service.save(edit, athleteId: athlete.id, sagaId: saga.id)
+        try await service.save(edit, athleteId: athlete.id, seasonId: season.id)
         #expect(try await PlanRepository(database).plan(arcId: second.id)?.templates.count == 1)
         #expect(try await PlanRepository(database).plan(arcId: first.id)?.templates.count == 3)
     }
 
     @Test func fillerArcHasNoDuration() async throws {
-        let (_, athlete, saga, service) = try await setUp()
+        let (_, athlete, season, service) = try await setUp()
         var filler = draft("Manutenção", templates: ["Patrulha", "Sentinela"])
         filler.kind = .filler
-        let arc = try await service.save(filler, athleteId: athlete.id, sagaId: saga.id)
+        let arc = try await service.save(filler, athleteId: athlete.id, seasonId: season.id)
         #expect(arc.weeks == nil)
         #expect(arc.startDate == nil)
     }
 
     @Test func progressCountsCompletedSessionsSinceTheLastReset() async throws {
-        let (database, athlete, saga, service) = try await setUp()
-        let arc = try await service.save(draft("Recrutamento"), athleteId: athlete.id, sagaId: saga.id)
+        let (database, athlete, season, service) = try await setUp()
+        let arc = try await service.save(draft("Recrutamento"), athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         let sessions = SessionRepository(database)
         let utc = TimeZone(identifier: "UTC")!
@@ -89,10 +93,10 @@ import Testing
             _ = try await sessions.finish(sessionId: s.id, now: t0.addingTimeInterval(Double(i) * 86_400 + 3600))
         }
         _ = try await sessions.start(plan.templates[2], now: t0.addingTimeInterval(3 * 86_400), timeZone: utc)
-        #expect(try await service.summaries(athleteId: athlete.id, sagaId: saga.id)[0].completedSessions == 2)
+        #expect(try await service.summaries(athleteId: athlete.id, seasonId: season.id)[0].completedSessions == 2)
 
         try await service.restartCount(arcId: arc.id, now: t0.addingTimeInterval(2 * 86_400))
-        #expect(try await service.summaries(athleteId: athlete.id, sagaId: saga.id)[0].completedSessions == 0)
+        #expect(try await service.summaries(athleteId: athlete.id, seasonId: season.id)[0].completedSessions == 0)
         #expect(try await sessions.sessions(athleteId: athlete.id).count == 3)
     }
 }
@@ -104,18 +108,18 @@ import Testing
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let filler = try await service.save(
             ArcDraft(
                 name: "Manutenção", kanji: "守", kind: .filler, startDate: start,
                 templates: [.init(origin: .new, name: "PP"), .init(origin: .new, name: "FB")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         #expect(filler.status == .queued)
         #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id) == nil)
 
         let normal = try await service.save(
             ArcDraft(name: "Recrutamento", weeks: 1, startDate: start, templates: [.init(origin: .new, name: "A")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         #expect(normal.status == .current)
 
         // Closing the normal arc does not promote the filler.
@@ -138,9 +142,9 @@ import Testing
     @Test func migrationMovesAnOldCurrentFillerToTheQueue() async throws {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
-        let saga = try await ArcService(database).saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let old = Arc(
-            id: UUIDv7.make(), athleteId: athlete.id, sagaId: saga.id, name: "Manutenção", kind: .filler,
+            id: UUIDv7.make(), athleteId: athlete.id, seasonId: season.id, name: "Manutenção", kind: .filler,
             weeks: nil, startDate: nil, status: .current, position: 0, createdAt: .now.addingTimeInterval(-60))
         try await database.writer.write { db in try old.insert(db) }
         // Re-run the data fix the way the migrator does on an existing install.
@@ -150,7 +154,8 @@ import Testing
                     "UPDATE arc SET status = 'queued', updated_at = ? WHERE kind = 'filler' AND status = 'current' AND deleted_at IS NULL",
                 arguments: [ISO8601Millis.format(.now)])
         }
-        let stored = try #require(try await PlanRepository(database).arcs(athleteId: athlete.id, sagaId: saga.id).first)
+        let stored = try #require(
+            try await PlanRepository(database).arcs(athleteId: athlete.id, seasonId: season.id).first)
         #expect(stored.status == .queued)
         #expect(stored.updatedAt > old.updatedAt)
     }

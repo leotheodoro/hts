@@ -10,12 +10,12 @@ import Testing
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
                 name: "Recrutamento", weeks: 2, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Linha de Frente")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         return (database, athlete, plan.templates[0].template.id)
     }

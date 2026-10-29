@@ -64,7 +64,7 @@ import Testing
 @Suite struct BattleTests {
     @Test func countsDaysAndFlagsTheEve() {
         let battle = Battle(
-            id: UUID(), athleteId: UUID(), sagaId: UUID(), name: "Copa", date: LocalDate("2026-12-12")!,
+            id: UUID(), athleteId: UUID(), seasonId: UUID(), name: "Copa", date: LocalDate("2026-12-12")!,
             createdAt: .now)
         #expect(battle.daysUntil(LocalDate("2026-12-01")!) == 11)
         #expect(!battle.isEve(LocalDate("2026-12-05")!))

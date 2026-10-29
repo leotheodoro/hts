@@ -8,7 +8,7 @@ public enum BattleResult: String, Codable, Sendable, CaseIterable {
 public struct Battle: Identifiable, Hashable, Sendable, Codable {
     public var id: UUID
     public var athleteId: UUID
-    public var sagaId: UUID
+    public var seasonId: UUID?
     public var name: String
     public var date: LocalDate
     public var result: BattleResult?
@@ -17,12 +17,12 @@ public struct Battle: Identifiable, Hashable, Sendable, Codable {
     public var deletedAt: Date?
 
     public init(
-        id: UUID, athleteId: UUID, sagaId: UUID, name: String, date: LocalDate, result: BattleResult? = nil,
+        id: UUID, athleteId: UUID, seasonId: UUID?, name: String, date: LocalDate, result: BattleResult? = nil,
         createdAt: Date, updatedAt: Date? = nil, deletedAt: Date? = nil
     ) {
         self.id = id
         self.athleteId = athleteId
-        self.sagaId = sagaId
+        self.seasonId = seasonId
         self.name = name
         self.date = date
         self.result = result

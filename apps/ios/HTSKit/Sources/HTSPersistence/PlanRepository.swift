@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 import HTSDomain
 
-/// Reads and writes the plan side: sagas, arcs, workout templates, blocks and prescriptions.
+/// Reads and writes the plan side: arcs, workout templates, blocks and prescriptions.
 public struct PlanRepository: Sendable {
     private let database: AppDatabase
 
@@ -21,10 +21,10 @@ public struct PlanRepository: Sendable {
         }
     }
 
-    public func arcs(athleteId: UUID, sagaId: UUID) async throws -> [Arc] {
+    public func arcs(athleteId: UUID, seasonId: UUID) async throws -> [Arc] {
         try await database.writer.read { db in
             try Arc.filter(
-                Columns.athleteId == athleteId.sql && Column("saga_id") == sagaId.sql && Columns.deletedAt == nil
+                Columns.athleteId == athleteId.sql && Column("season_id") == seasonId.sql && Columns.deletedAt == nil
             )
             .order(Columns.position)
             .fetchAll(db)

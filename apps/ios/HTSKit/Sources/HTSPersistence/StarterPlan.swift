@@ -2,10 +2,16 @@ import Foundation
 import GRDB
 import HTSDomain
 
-/// A plan to load on first launch, from a JSON file that stays out of git (apps/ios/LocalSeed/StarterPlan.json):
-/// the coach's programs are licensed and the repository is public. Targets use the coach's notation
-/// (TargetNotation).
+/// The athlete's plan, from a JSON file that stays out of git (apps/ios/LocalSeed/StarterPlan.json): the coach's
+/// programs are licensed and the repository is public. Seasons hold arcs in order; free arcs (Manutenção) belong to
+/// no season. Targets use the coach's notation (TargetNotation). The import is additive by name, so new arcs can be
+/// appended to the file later (docs/decisions/0029).
 public struct StarterPlan: Decodable, Sendable {
+    public struct SeasonSeed: Decodable, Sendable {
+        public var name: String
+        public var arcs: [ArcSeed]
+    }
+
     public struct ArcSeed: Decodable, Sendable {
         public var name: String
         public var kanji: String?
@@ -37,7 +43,17 @@ public struct StarterPlan: Decodable, Sendable {
         public var restSeconds: Int?
     }
 
+    public var seasons: [SeasonSeed]
+    /// Free arcs, always available. They are imported as Manutenção.
     public var arcs: [ArcSeed]
+
+    private enum CodingKeys: String, CodingKey { case seasons, arcs }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        seasons = try c.decodeIfPresent([SeasonSeed].self, forKey: .seasons) ?? []
+        arcs = try c.decodeIfPresent([ArcSeed].self, forKey: .arcs) ?? []
+    }
 
     public static func load(from url: URL) throws -> StarterPlan {
         try JSONDecoder().decode(StarterPlan.self, from: Data(contentsOf: url))
@@ -49,57 +65,67 @@ public enum StarterPlanError: Error, Equatable {
 }
 
 extension StarterPlan {
-    private static let importedKey = "starter_plan_imported"
-
-    /// Imports the plan once, and only when the athlete has no arcs yet (a reinstall that already synced its arcs
-    /// keeps them). Returns whether it imported.
+    /// Adds every season and arc of the plan that the athlete does not have yet, matched by name (arcs by name
+    /// inside their season, or among free arcs). Existing arcs are left untouched so history never changes.
+    /// Returns how many arcs were added.
     @discardableResult
-    public func importIfNeeded(
+    public func importMissing(
         into database: AppDatabase, athleteId: UUID, today: LocalDate, now: Date = .now
-    ) async throws -> Bool {
-        let alreadyDone = try await database.writer.read { db in
-            let imported =
-                try String.fetchOne(
-                    db, sql: "SELECT value FROM local_sync_state WHERE key = ?", arguments: [Self.importedKey]) != nil
-            let arcs =
-                try Int.fetchOne(
-                    db, sql: "SELECT COUNT(*) FROM arc WHERE athlete_id = ? AND deleted_at IS NULL",
-                    arguments: [athleteId.sql]) ?? 0
-            return imported || arcs > 0
-        }
-        guard !alreadyDone else { return false }
-
-        let arcService = ArcService(database)
-        let templates = TemplateService(database)
-        let saga = try await arcService.saga(athleteId: athleteId, year: today.year, now: now)
-        for seed in arcs {
-            let draft = ArcDraft(
-                name: seed.name, kanji: seed.kanji ?? "", kind: seed.kind ?? .normal, weeks: seed.weeks ?? 1,
-                startDate: today, templates: seed.templates.map { .init(origin: .new, name: $0.name, focus: $0.focus) })
-            let arc = try await arcService.save(draft, athleteId: athleteId, sagaId: saga.id, now: now)
-            guard let plan = try await PlanRepository(database).plan(arcId: arc.id) else { continue }
-            for (templatePlan, templateSeed) in zip(plan.templates, seed.templates) {
-                guard var templateDraft = try await templates.draft(templateId: templatePlan.template.id) else {
-                    continue
+    ) async throws -> Int {
+        var added = 0
+        for seasonSeed in seasons {
+            let season = try await SeasonService(database).season(
+                named: seasonSeed.name, athleteId: athleteId, now: now)
+            for arcSeed in seasonSeed.arcs {
+                if try await Self.add(
+                    arcSeed, seasonId: season.id, into: database, athleteId: athleteId, today: today, now: now)
+                {
+                    added += 1
                 }
-                templateDraft.focus = templateSeed.focus ?? ""
-                templateDraft.blocks = templateSeed.blocks.map { block in
-                    TemplateDraft.BlockDraft(
-                        kind: block.kind, attributes: block.attributes, durationMinutes: block.durationMinutes ?? 8,
-                        exercises: block.exercises.map {
-                            .init(
-                                name: $0.name, unit: $0.unit ?? .reps, setsText: $0.sets, targetText: $0.target,
-                                restSeconds: $0.restSeconds)
-                        })
-                }
-                guard templateDraft.isValid else { throw StarterPlanError.invalidTemplate(templateSeed.name) }
-                try await templates.save(templateDraft, now: now)
             }
         }
-        try await database.writer.write { db in
-            try db.execute(
-                sql: "INSERT OR REPLACE INTO local_sync_state (key, value) VALUES (?, ?)",
-                arguments: [Self.importedKey, ISO8601Millis.format(now)])
+        for var arcSeed in arcs {
+            arcSeed.kind = .filler
+            if try await Self.add(arcSeed, seasonId: nil, into: database, athleteId: athleteId, today: today, now: now)
+            {
+                added += 1
+            }
+        }
+        return added
+    }
+
+    private static func add(
+        _ seed: ArcSeed, seasonId: UUID?, into database: AppDatabase, athleteId: UUID, today: LocalDate, now: Date
+    ) async throws -> Bool {
+        let exists = try await database.writer.read { db in
+            try Int.fetchOne(
+                db,
+                sql: """
+                    SELECT COUNT(*) FROM arc WHERE athlete_id = ? AND name = ? AND season_id IS ? AND deleted_at IS NULL
+                    """, arguments: [athleteId.sql, seed.name, seasonId?.sql]) ?? 0
+        }
+        guard exists == 0 else { return false }
+
+        let draft = ArcDraft(
+            name: seed.name, kanji: seed.kanji ?? "", kind: seed.kind ?? .normal, weeks: seed.weeks ?? 1,
+            startDate: today, templates: seed.templates.map { .init(origin: .new, name: $0.name, focus: $0.focus) })
+        let arc = try await ArcService(database).save(draft, athleteId: athleteId, seasonId: seasonId, now: now)
+        guard let plan = try await PlanRepository(database).plan(arcId: arc.id) else { return true }
+        let templates = TemplateService(database)
+        for (templatePlan, templateSeed) in zip(plan.templates, seed.templates) {
+            guard var templateDraft = try await templates.draft(templateId: templatePlan.template.id) else { continue }
+            templateDraft.focus = templateSeed.focus ?? ""
+            templateDraft.blocks = templateSeed.blocks.map { block in
+                TemplateDraft.BlockDraft(
+                    kind: block.kind, attributes: block.attributes, durationMinutes: block.durationMinutes ?? 8,
+                    exercises: block.exercises.map {
+                        TemplateDraft.ExerciseDraft(
+                            name: $0.name, unit: $0.unit ?? .reps, setsText: $0.sets, targetText: $0.target,
+                            restSeconds: $0.restSeconds)
+                    })
+            }
+            guard templateDraft.isValid else { throw StarterPlanError.invalidTemplate(templateSeed.name) }
+            try await templates.save(templateDraft, now: now)
         }
         return true
     }
