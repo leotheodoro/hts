@@ -123,12 +123,14 @@ Toda a progressão vem só de treinar de verdade. Séries concluídas geram XP, 
 
 ## Telas e fluxos
 
-O app tem quatro abas fixas (Status, Arcos, Diário, Perfil) e o treino ativo, que abre por cima de tudo.
+O app tem quatro abas fixas (Home, Arcos, Diário, Perfil) e o treino ativo, que abre por cima de tudo.
 
 | Tela | O que mostra | Dados que lê / escreve |
 | --- | --- | --- |
-| Status | Nome, patente, nível, barra de XP, próximo treino com "Iniciar", progresso do arco (4/6), dias até a Batalha, semana atual e sequência | Lê atleta, arco atual, última sessão, Batalha |
-| Arcos | Lista de arcos com kanji, nome, "3 treinos × 2 semanas", progresso; botão + | Lê arcos |
+| Home | Nome, patente, nível, barra de XP, próximo treino com "Ver treino", progresso do arco (4/6), dias até a Batalha, semana atual e sequência | Lê atleta, arco atual, última sessão, Batalha |
+| Arcos | Temporadas com seus arcos e os arcos livres; kanji, nome, "3 treinos × 2 semanas", progresso. Tocar abre o arco | Lê temporadas e arcos |
+| Arco | Kanji, nome, situação e os treinos; tocar abre o treino | Lê o arco |
+| Treino | Somente leitura: blocos, exercícios, séries × alvo, descanso. "Iniciar treino" só no arco atual e nos arcos livres; é o único lugar que inicia treino | Lê o treino-modelo |
 | Criar arco | Kanji, nome, início, treinos (criar ou reaproveitar), semanas; resumo com total, ritmo, grade semanal e data de término | Escreve arco e ligações com treinos |
 | Editar arco | Os mesmos campos + Recomeçar contagem | Escreve arco |
 | Criar treino | Letra, nome, blocos (tipo, atributo), exercícios (séries × alvo, descanso) | Escreve treino-modelo, blocos, prescrições, catálogo |

@@ -3,17 +3,16 @@ import HTSDomain
 import HTSPersistence
 import SwiftUI
 
-struct StatusScreen: View {
+struct HomeScreen: View {
     @Environment(AppModel.self) private var app
-    @State private var model: StatusModel?
+    @State private var model: HomeModel?
 
     var body: some View {
-        ScreenScaffold(title: "Status") {
+        ScreenScaffold(title: "Home") {
             if let athlete = app.athlete, let model {
                 athleteCard(athlete, model)
                 if let battle = model.battle, battle.daysUntil(.today) >= 0 { battleCard(battle) }
                 workoutCard(model)
-                if app.activeSession == nil, !model.fillers.isEmpty { fillerCard(model) }
                 weekCard(model)
             }
         }
@@ -21,13 +20,13 @@ struct StatusScreen: View {
             id: "\(app.athlete?.id.uuidString ?? "")-\(app.activeSession?.id.uuidString ?? "none")-\(app.dataVersion)"
         ) {
             guard let database = app.database, let athlete = app.athlete else { return }
-            let model = self.model ?? StatusModel(database: database, athleteId: athlete.id)
+            let model = self.model ?? HomeModel(database: database, athleteId: athlete.id)
             await model.load()
             self.model = model
         }
     }
 
-    private func athleteCard(_ athlete: Athlete, _ model: StatusModel) -> some View {
+    private func athleteCard(_ athlete: Athlete, _ model: HomeModel) -> some View {
         NotchCard {
             VStack(alignment: .leading, spacing: HTSSpacing.space4) {
                 HStack(spacing: HTSSpacing.space4) {
@@ -54,7 +53,7 @@ struct StatusScreen: View {
         }
     }
 
-    @ViewBuilder private func workoutCard(_ model: StatusModel) -> some View {
+    @ViewBuilder private func workoutCard(_ model: HomeModel) -> some View {
         if let session = app.activeSession {
             NotchCard {
                 VStack(alignment: .leading, spacing: HTSSpacing.space3) {
@@ -82,7 +81,11 @@ struct StatusScreen: View {
                         Text("Este treino ainda não tem exercícios.")
                             .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                     } else {
-                        HTSButton("Iniciar treino") { Task { await app.startWorkout(next.plan) } }
+                        // Workouts start only from the workout page (#86).
+                        NavigationLink(value: Route.workout(templateId: next.plan.template.id)) {
+                            Text("Ver treino").frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(HTSButtonStyle(.primary))
                     }
                 }
             }
@@ -115,48 +118,7 @@ struct StatusScreen: View {
         .overlay(Rectangle().strokeBorder(Color.hts.blood, lineWidth: HTSStroke.hair))
     }
 
-    /// Manutenção: every template of the filler arcs, always startable. Ghost buttons: red stays on the main action.
-    private func fillerCard(_ model: StatusModel) -> some View {
-        NotchCard {
-            VStack(alignment: .leading, spacing: HTSSpacing.space4) {
-                HStack(spacing: HTSSpacing.space2) {
-                    Text("MANUTENÇÃO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
-                    Spacer()
-                    Text("SEMPRE DISPONÍVEL").htsTextStyle(.label).foregroundStyle(Color.hts.greyApp)
-                }
-                ForEach(model.fillers, id: \.arc.id) { filler in
-                    ForEach(filler.templates, id: \.template.id) { plan in
-                        HStack(spacing: HTSSpacing.space3) {
-                            if let kanji = filler.arc.kanji {
-                                Text(verbatim: kanji)
-                                    .font(
-                                        .custom(
-                                            HTSFontFamily.kanji.postScriptName(weight: 900),
-                                            size: HTSTextStyle.uiSection.size)
-                                    )
-                                    .foregroundStyle(Color.hts.bone)
-                                    .accessibilityHidden(true)
-                            }
-                            Text(verbatim: "\(plan.template.letter) · \(plan.template.name)").htsTextStyle(.bodyStrong)
-                            Spacer()
-                            Button {
-                                Task { await app.startWorkout(plan) }
-                            } label: {
-                                Text("Iniciar").htsTextStyle(.bodyStrong).padding(.horizontal, HTSSpacing.space4)
-                                    .frame(minHeight: 44)
-                            }
-                            .buttonStyle(HTSButtonStyle(.ghost))
-                            .fixedSize()
-                            .disabled(plan.blocks.isEmpty)
-                            .accessibilityLabel("Iniciar \(plan.template.name)")
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func weekCard(_ model: StatusModel) -> some View {
+    private func weekCard(_ model: HomeModel) -> some View {
         NotchCard {
             VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                 HStack {

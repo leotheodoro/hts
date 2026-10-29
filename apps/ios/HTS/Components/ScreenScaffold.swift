@@ -31,6 +31,33 @@ struct ScreenScaffold<Content: View>: View {
     }
 }
 
+/// Pushed page: a back button instead of the brand and the screen title.
+struct DetailScaffold<Content: View>: View {
+    @ViewBuilder let content: Content
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: HTSSpacing.space7) {
+                Button {
+                    dismiss()
+                } label: {
+                    Label("Voltar", systemImage: "chevron.left").htsTextStyle(.bodyStrong).frame(minHeight: 44)
+                }
+                .foregroundStyle(Color.hts.bone)
+                content
+            }
+            .padding(.horizontal, HTSSpacing.space5)
+            .padding(.vertical, HTSSpacing.space4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .contentMargins(.bottom, BrandTabBar.height, for: .scrollContent)
+        .safeAreaInset(edge: .bottom, spacing: 0) { ActiveSessionBar() }
+        .background(Color.hts.black)
+        .foregroundStyle(Color.hts.bone)
+    }
+}
+
 /// Example card used by the placeholder screens until each tab gets its ticket.
 struct PlaceholderCard: View {
     let label: LocalizedStringKey

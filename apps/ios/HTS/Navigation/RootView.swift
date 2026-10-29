@@ -3,11 +3,11 @@ import SwiftUI
 import UIKit
 
 enum AppTab: String, Hashable, CaseIterable {
-    case status, arcs, journal, profile
+    case home, arcs, journal, profile
 
     var title: LocalizedStringKey {
         switch self {
-        case .status: "Status"
+        case .home: "Home"
         case .arcs: "Arcos"
         case .journal: "Diário"
         case .profile: "Perfil"
@@ -17,7 +17,7 @@ enum AppTab: String, Hashable, CaseIterable {
     /// Stroke icon until the brand icon set exists: SF Symbol at light weight.
     var symbol: String {
         switch self {
-        case .status: "shield"
+        case .home: "shield"
         case .arcs: "line.3.horizontal"
         case .journal: "calendar"
         case .profile: "person"
@@ -29,14 +29,14 @@ struct RootView: View {
     @Environment(AppModel.self) private var app
     /// `-HTSInitialTab profile` as a launch argument opens a specific tab (screenshots, UI tests).
     @State private var selection =
-        UserDefaults.standard.string(forKey: "HTSInitialTab").flatMap(AppTab.init(rawValue:)) ?? .status
+        UserDefaults.standard.string(forKey: "HTSInitialTab").flatMap(AppTab.init(rawValue:)) ?? .home
 
     var body: some View {
         // The system tab bar is hidden: Liquid Glass ignores the brand colors and adds blur, and the compatibility
         // key does not hold on every iOS version (docs/decisions/0022). TabView still keeps each tab's state.
         TabView(selection: $selection) {
-            Tab(value: AppTab.status) { StatusScreen().toolbar(.hidden, for: .tabBar) }
-            Tab(value: AppTab.arcs) { ArcsScreen().toolbar(.hidden, for: .tabBar) }
+            Tab(value: AppTab.home) { TabStack { HomeScreen() }.toolbar(.hidden, for: .tabBar) }
+            Tab(value: AppTab.arcs) { TabStack { ArcsScreen() }.toolbar(.hidden, for: .tabBar) }
             Tab(value: AppTab.journal) { JournalScreen().toolbar(.hidden, for: .tabBar) }
             Tab(value: AppTab.profile) { ProfileScreen().toolbar(.hidden, for: .tabBar) }
         }
