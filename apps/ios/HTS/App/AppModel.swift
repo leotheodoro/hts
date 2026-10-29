@@ -82,7 +82,7 @@ final class AppModel {
             await sync(athleteId: athlete.id)
             if !TestHost.isRunningTests, let url = Bundle.main.url(forResource: "StarterPlan", withExtension: "json") {
                 let plan = try StarterPlan.load(from: url)
-                if try await plan.importIfNeeded(into: database, athleteId: athlete.id, today: .today) {
+                if try await plan.importMissing(into: database, athleteId: athlete.id, today: .today) > 0 {
                     dataVersion += 1
                     await sync(athleteId: athlete.id)
                 }

@@ -261,11 +261,11 @@ private struct BattleSettings: View {
         guard let database = app.database, let athlete = app.athlete else { return }
         Task {
             let localDate = LocalDate(date, in: .current)
-            let saga = try await ArcService(database).saga(athleteId: athlete.id, year: localDate.year)
+            let season = try await SeasonService(database).activeSeason(athleteId: athlete.id)
             var updated =
                 battle
                 ?? Battle(
-                    id: UUIDv7.make(), athleteId: athlete.id, sagaId: saga.id, name: name, date: localDate,
+                    id: UUIDv7.make(), athleteId: athlete.id, seasonId: season?.id, name: name, date: localDate,
                     createdAt: .now)
             updated.name = name.trimmingCharacters(in: .whitespaces)
             updated.date = localDate

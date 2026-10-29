@@ -3,12 +3,19 @@ import HTSDomain
 import HTSPersistence
 import Observation
 
-/// State of the Arcos tab: the saga of the current year and its arcs.
+/// State of the Arcos tab: seasons with their arcs in order, and the free arcs (docs/decisions/0029).
 @MainActor
 @Observable
 final class ArcsModel {
-    private(set) var saga: Saga?
-    private(set) var summaries: [ArcService.Summary] = []
+    struct SeasonArcs: Identifiable {
+        let season: Season
+        let summaries: [ArcService.Summary]
+        var id: UUID { season.id }
+    }
+
+    private(set) var seasons: [SeasonArcs] = []
+    /// Arcs outside any season (Manutenção), always available.
+    private(set) var freeArcs: [ArcService.Summary] = []
     private(set) var error: String?
     /// The competition ahead, to spotlight the special arc in its week.
     private(set) var battle: Battle?
@@ -22,13 +29,19 @@ final class ArcsModel {
     }
 
     var service: ArcService { ArcService(database) }
+    var activeSeason: Season? { seasons.first { $0.season.active }?.season }
 
     func load(now: Date = .now) async {
         do {
-            let year = LocalDate(now, in: .current).year
-            let saga = try await service.saga(athleteId: athleteId, year: year, now: now)
-            self.saga = saga
-            summaries = try await service.summaries(athleteId: athleteId, sagaId: saga.id)
+            var loaded: [SeasonArcs] = []
+            for season in try await SeasonService(database).seasons(athleteId: athleteId) {
+                loaded.append(
+                    SeasonArcs(
+                        season: season,
+                        summaries: try await service.summaries(athleteId: athleteId, seasonId: season.id)))
+            }
+            seasons = loaded
+            freeArcs = try await service.summaries(athleteId: athleteId, seasonId: nil)
             battle = try await BattleRepository(database).current(
                 athleteId: athleteId, today: LocalDate(now, in: .current))
             error = nil
@@ -36,6 +49,18 @@ final class ArcsModel {
             self.error = String(describing: error)
         }
     }
+
+    /// Makes `season` the active one; the previous season pauses on its current arc.
+    func activate(_ season: Season) async {
+        do {
+            try await SeasonService(database).activate(seasonId: season.id, athleteId: athleteId)
+            await load()
+        } catch {
+            self.error = String(describing: error)
+        }
+    }
+
+    // MARK: Arc form (hidden for now, #64)
 
     func newDraft() -> ArcDraft {
         ArcDraft(startDate: .today)
@@ -50,11 +75,11 @@ final class ArcsModel {
         (try? await service.reusableTemplates(athleteId: athleteId, excludingArc: arcId)) ?? []
     }
 
-    /// Returns false and keeps the error when saving fails.
+    /// New arcs go to the active season, Manutenção arcs to the free ones. Returns false on failure.
     func save(_ draft: ArcDraft) async -> Bool {
-        guard let saga else { return false }
         do {
-            try await service.save(draft, athleteId: athleteId, sagaId: saga.id)
+            try await service.save(
+                draft, athleteId: athleteId, seasonId: draft.kind == .filler ? nil : activeSeason?.id)
             await load()
             return true
         } catch {

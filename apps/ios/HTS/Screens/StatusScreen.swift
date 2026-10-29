@@ -76,7 +76,8 @@ struct StatusScreen: View {
                             Text(verbatim: String(format: "%02d/%02d", next.completed, total)).htsTextStyle(.dataSm)
                         }
                     }
-                    Text(verbatim: next.arc.name).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                    Text(verbatim: [next.seasonName, next.arc.name].compactMap { $0 }.joined(separator: " · "))
+                        .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                     if next.plan.blocks.isEmpty {
                         Text("Este treino ainda não tem exercícios.")
                             .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
