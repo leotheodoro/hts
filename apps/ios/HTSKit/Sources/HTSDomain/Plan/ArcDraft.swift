@@ -69,7 +69,9 @@ public struct ArcDraft: Hashable, Sendable {
     }
 
     public var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && !templates.isEmpty
+        // Every arc has a kanji (#79).
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && !kanji.trimmingCharacters(in: .whitespaces).isEmpty
+            && !templates.isEmpty
             && templates.allSatisfy { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }
             && (!hasDuration || (1...52).contains(weeks))
     }

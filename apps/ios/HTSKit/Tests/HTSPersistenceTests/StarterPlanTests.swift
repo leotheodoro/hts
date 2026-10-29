@@ -8,7 +8,7 @@ import Testing
     static func plan(_ jiuJitsuArcs: [String]) -> String {
         let arcs = jiuJitsuArcs.map { name in
             """
-            { "name": "\(name)", "weeks": 2, "templates": [
+            { "name": "\(name)", "kanji": "試", "weeks": 2, "templates": [
               { "name": "A", "blocks": [{ "kind": "strength", "attributes": ["strength"], "exercises": [
                 { "name": "Supino máquina", "sets": "3", "target": "8" } ] }] } ] }
             """
@@ -18,7 +18,7 @@ import Testing
               "seasons": [
                 { "name": "Jiu-Jitsu", "arcs": [\(arcs)] },
                 { "name": "Performance", "arcs": [
-                  { "name": "Adaptação", "weeks": 2, "templates": [
+                  { "name": "Adaptação", "kanji": "適", "weeks": 2, "templates": [
                     { "name": "A", "blocks": [{ "kind": "strength", "attributes": ["strength"], "exercises": [
                       { "name": "Leg press", "sets": "2", "target": "20" } ] }] } ] } ] }
               ],
@@ -86,6 +86,18 @@ import Testing
         let arcs = try await ArcService(database).summaries(athleteId: athlete.id, seasonId: season.id)
         #expect(arcs.map(\.arc.name) == ["Base volume 1", "Atual"])
         #expect(arcs.map(\.arc.status) == [.current, .queued])
+    }
+
+    @Test func everyArcNeedsAKanji() {
+        #expect(throws: DecodingError.self) {
+            try decode(#"{ "arcs": [{ "name": "Mobilidade", "templates": [] }] }"#)
+        }
+        var draft = ArcDraft(
+            name: "Base", kanji: " ", weeks: 2, startDate: LocalDate("2026-11-02")!,
+            templates: [.init(origin: .new, name: "A")])
+        #expect(!draft.isValid)
+        draft.kanji = "基"
+        #expect(draft.isValid)
     }
 }
 

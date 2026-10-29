@@ -14,7 +14,7 @@ import Testing
         let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
-                name: "Arco", weeks: 4, startDate: LocalDate("2026-11-02")!,
+                name: "Arco", kanji: "試", weeks: 4, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Treino")]),
             athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))

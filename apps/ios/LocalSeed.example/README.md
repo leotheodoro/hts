@@ -5,6 +5,7 @@ Copie esta pasta para `apps/ios/LocalSeed/` (fora do git) e edite `StarterPlan.j
 - `seasons`: temporadas em ordem, cada uma com `name` e `arcs` em ordem. A primeira temporada criada fica ativa; dentro dela, o primeiro arco não concluído é o atual e os seguintes ficam bloqueados (docs/decisions/0029).
 - `arcs` (no topo): arcos livres, fora de qualquer temporada e sempre disponíveis. São sempre Manutenção (`filler`).
 
+- `kanji`: obrigatório em todo arco, inclusive nos livres.
 - `kind` (arco de temporada): `normal`, `special` ou `filler` (Manutenção sem prazo, ignora `weeks`).
 - Blocos: `kind` (`activation`, `strength`, `combo`, `chained_combo`, `fight_round`, `conditioning`, `core`, `mobility`, `cardio`) e `attributes` (`strength`, `power`, `conditioning`, `core`, `mobility`).
 - Exercícios: `sets` ("3" ou "3 a 4"), `target` na notação da planilha ("8", "6-6-3-3", "12/12", "30-45 s", "máx"), `unit` (`reps`, `seconds`, `minutes`, `meters`; padrão `reps`) e `restSeconds` opcional.

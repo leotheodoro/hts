@@ -16,12 +16,12 @@ import Testing
         let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
-                name: "Recrutamento", weeks: weeks, startDate: LocalDate("2026-11-02")!,
+                name: "Recrutamento", kanji: "試", weeks: weeks, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "A"), .init(origin: .new, name: "B")]),
             athleteId: athlete.id, seasonId: season.id)
         try await service.save(
             ArcDraft(
-                name: "Forja", weeks: 1, startDate: LocalDate("2026-11-09")!,
+                name: "Forja", kanji: "試", weeks: 1, startDate: LocalDate("2026-11-09")!,
                 templates: [.init(origin: .new, name: "C")]),
             athleteId: athlete.id, seasonId: season.id)
         var plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
@@ -153,7 +153,7 @@ import Testing
         let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
-                name: "Torneio", weeks: 1, startDate: LocalDate("2026-11-02")!,
+                name: "Torneio", kanji: "試", weeks: 1, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Muralha")]),
             athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
