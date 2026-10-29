@@ -131,3 +131,38 @@ import Testing
         #expect(!result.sagaExists)
     }
 }
+
+@Suite struct DropEmptySeasonsMigrationTests {
+    @Test func softDeletesEmptySeasonsAndActivatesTheNextOne() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v7_saga_to_season")
+        let stamp = "2026-10-28T12:00:00.000Z"
+        try queue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO athlete (id, display_name, created_at, updated_at) VALUES ('a', 'Leo', ?, ?);
+                    INSERT INTO season (id, athlete_id, name, position, active, created_at, updated_at)
+                    VALUES ('s', 'a', 'Saga 2026', 0, 1, ?, ?), ('j', 'a', 'Jiu-Jitsu', 1, 0, ?, ?);
+                    INSERT INTO arc (id, athlete_id, season_id, name, kind, status, position, created_at, updated_at)
+                    VALUES ('b', 'a', 'j', 'Base', 'normal', 'queued', 0, ?, ?),
+                           ('m', 'a', NULL, 'Mobilidade', 'filler', 'queued', 0, ?, ?);
+                    """, arguments: StatementArguments(Array(repeating: stamp, count: 10)))
+        }
+        try AppDatabase.migrator.migrate(queue)
+        let result = try queue.read { db in
+            (
+                saga: try Row.fetchOne(db, sql: "SELECT deleted_at, updated_at, active FROM season WHERE id = 's'"),
+                jiuJitsu: try Bool.fetchOne(db, sql: "SELECT active FROM season WHERE id = 'j'"),
+                base: try String.fetchOne(db, sql: "SELECT status FROM arc WHERE id = 'b'"),
+                filler: try String.fetchOne(db, sql: "SELECT status FROM arc WHERE id = 'm'")
+            )
+        }
+        let saga = try #require(result.saga)
+        #expect((saga["deleted_at"] as String?) != nil)
+        #expect((saga["updated_at"] as String) > stamp)
+        #expect((saga["active"] as Bool) == false)
+        #expect(result.jiuJitsu == true)
+        #expect(result.base == "current")
+        #expect(result.filler == "queued")
+    }
+}
