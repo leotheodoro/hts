@@ -55,7 +55,11 @@ struct RootView: View {
 }
 
 /// Opaque `black` bar with a `line` divider: `tab-idle` for inactive tabs and `bone` for the selected one.
-private struct BrandTabBar: View {
+struct BrandTabBar: View {
+    /// Height above the home indicator. Screens add it as a bottom margin: the inset on the TabView does not
+    /// reach the tabs' scroll views.
+    static let height: CGFloat = 49 + HTSSpacing.space1
+
     @Binding var selection: AppTab
 
     var body: some View {
@@ -70,7 +74,7 @@ private struct BrandTabBar: View {
                         Text(tab.title).font(.custom(HTSFontFamily.body.postScriptName(weight: 500), size: 11))
                     }
                     .foregroundStyle(selected ? Color.hts.bone : Color.hts.tabIdle)
-                    .frame(maxWidth: .infinity, minHeight: 49)
+                    .frame(maxWidth: .infinity, minHeight: Self.height - HTSSpacing.space1)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
