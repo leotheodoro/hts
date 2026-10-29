@@ -72,7 +72,7 @@ struct ArcFormSheet: View {
         VStack(alignment: .leading, spacing: HTSSpacing.space7) {
             VStack(alignment: .leading, spacing: HTSSpacing.space4) {
                 HTSTextField(label: "NOME", text: draft.name, prompt: "Recrutamento")
-                HTSTextField(label: "KANJI (OPCIONAL)", text: draft.kanji, prompt: "募")
+                HTSTextField(label: "KANJI", text: draft.kanji, prompt: "募")
                 HTSTextField(label: "PROGRAMA DO PREPARADOR (OPCIONAL)", text: draft.program)
             }
 

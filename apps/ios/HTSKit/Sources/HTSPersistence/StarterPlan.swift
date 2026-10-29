@@ -14,7 +14,8 @@ public struct StarterPlan: Decodable, Sendable {
 
     public struct ArcSeed: Decodable, Sendable {
         public var name: String
-        public var kanji: String?
+        /// Required: every arc has a kanji (#79).
+        public var kanji: String
         public var kind: ArcKind?
         public var weeks: Int?
         public var templates: [TemplateSeed]
@@ -107,7 +108,7 @@ extension StarterPlan {
         guard exists == 0 else { return false }
 
         let draft = ArcDraft(
-            name: seed.name, kanji: seed.kanji ?? "", kind: seed.kind ?? .normal, weeks: seed.weeks ?? 1,
+            name: seed.name, kanji: seed.kanji, kind: seed.kind ?? .normal, weeks: seed.weeks ?? 1,
             startDate: today, templates: seed.templates.map { .init(origin: .new, name: $0.name, focus: $0.focus) })
         let arc = try await ArcService(database).save(draft, athleteId: athleteId, seasonId: seasonId, now: now)
         guard let plan = try await PlanRepository(database).plan(arcId: arc.id) else { return true }

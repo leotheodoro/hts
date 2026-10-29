@@ -21,11 +21,13 @@ import Testing
 
         var draft = model.newDraft()
         draft.name = "Recrutamento"
+        draft.kanji = "募"
         draft.weeks = 2
         draft.templates = ["Linha de Frente", "Trincheira"].map { .init(origin: .new, name: $0) }
         #expect(await model.save(draft))
         var filler = model.newDraft()
         filler.name = "Manutenção"
+        filler.kanji = "守"
         filler.kind = .filler
         filler.templates = [.init(origin: .new, name: "PP")]
         #expect(await model.save(filler))
@@ -52,7 +54,7 @@ import Testing
         for (name, season) in [("Base", jiuJitsu), ("Adaptação", performance)] {
             try await service.save(
                 ArcDraft(
-                    name: name, weeks: 2, startDate: .today, templates: [.init(origin: .new, name: "A")]),
+                    name: name, kanji: "試", weeks: 2, startDate: .today, templates: [.init(origin: .new, name: "A")]),
                 athleteId: athlete.id, seasonId: season.id)
         }
         let model = ArcsModel(database: database, athleteId: athlete.id)

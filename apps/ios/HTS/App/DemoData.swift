@@ -22,7 +22,7 @@
                     name: "Forja", kanji: "鍛", weeks: 2, startDate: today.adding(days: 4),
                     templates: ["Blindado", "Paraquedista", "Marcha Forçada"].map { .init(origin: .new, name: $0) }),
                 ArcDraft(
-                    name: "Manutenção", kind: .filler, startDate: today,
+                    name: "Manutenção", kanji: "守", kind: .filler, startDate: today,
                     templates: ["Patrulha", "Sentinela"].map { .init(origin: .new, name: $0) }),
                 ArcDraft(
                     name: "A Véspera", kanji: "前", kind: .special, weeks: 1, startDate: today.adding(days: 1),

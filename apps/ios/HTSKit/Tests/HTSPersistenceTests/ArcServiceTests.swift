@@ -118,7 +118,9 @@ import Testing
         #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id) == nil)
 
         let normal = try await service.save(
-            ArcDraft(name: "Recrutamento", weeks: 1, startDate: start, templates: [.init(origin: .new, name: "A")]),
+            ArcDraft(
+                name: "Recrutamento", kanji: "試", weeks: 1, startDate: start,
+                templates: [.init(origin: .new, name: "A")]),
             athleteId: athlete.id, seasonId: season.id)
         #expect(normal.status == .current)
 
