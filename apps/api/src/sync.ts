@@ -1,4 +1,4 @@
-import { gt, sql } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { getTableConfig, type PgColumn, type PgTable } from "drizzle-orm/pg-core";
 import type { Db } from "./db/client.js";
 import {
@@ -104,18 +104,26 @@ export async function push(db: Db, changes: Changes): Promise<number> {
   return applied;
 }
 
-/** Rows the server wrote after `since` (all rows when null) and the cursor for the next pull. */
+/**
+ * Rows of one athlete the server wrote after `since` (all of them when null) and the cursor for the
+ * next pull. The athlete row matches by `id`, every other table by `athlete_id`.
+ */
 export async function pull(
   db: Db,
+  athleteId: string,
   since: string | null,
 ): Promise<{ cursor: string | null; changes: Changes }> {
   const changes: Changes = {};
   let cursor = since;
   for (const table of TABLES) {
-    const query = db.select().from(table as PgTable);
-    const rows = (
-      since ? await query.where(gt(table.serverUpdatedAt, new Date(since))) : await query
-    ) as Record<string, unknown>[];
+    const owner =
+      table === athlete ? athlete.id : (table as Exclude<SyncTable, typeof athlete>).athleteId;
+    const conditions = [eq(owner, athleteId)];
+    if (since) conditions.push(gt(table.serverUpdatedAt, new Date(since)));
+    const rows = (await db
+      .select()
+      .from(table as PgTable)
+      .where(and(...conditions))) as Record<string, unknown>[];
     if (rows.length === 0) continue;
     changes[tableName(table)] = rows.map((row) => toWire(table, row));
     for (const row of rows) {

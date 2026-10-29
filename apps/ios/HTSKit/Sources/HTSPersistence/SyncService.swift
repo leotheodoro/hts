@@ -5,7 +5,7 @@ import HTSDomain
 /// How the sync reaches the API. HTSAPI implements it; tests use a fake server.
 public protocol SyncTransport: Sendable {
     func push(_ changes: SyncChanges) async throws -> Int
-    func pull(since: String?) async throws -> (cursor: String?, changes: SyncChanges)
+    func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges)
 }
 
 /// Offline-first sync with the API (docs/decisions/0026): every write lands in SQLite first; a sync pushes rows
@@ -35,8 +35,9 @@ public struct SyncService: Sendable {
         self.transport = transport
     }
 
+    /// Pushes everything changed on the device and pulls the server's rows of `athleteId` (#68).
     @discardableResult
-    public func sync() async throws -> Result {
+    public func sync(athleteId: UUID) async throws -> Result {
         let (changes, newestUpdate) = try await localChanges()
         var pushed = 0
         if !changes.isEmpty {
@@ -45,7 +46,7 @@ public struct SyncService: Sendable {
         if let newestUpdate { try await setState("last_push_at", newestUpdate) }
 
         let cursor = try await state("pull_cursor")
-        let remote = try await transport.pull(since: cursor)
+        let remote = try await transport.pull(athleteId: athleteId, since: cursor)
         let pulled = try await apply(remote.changes)
         if let next = remote.cursor { try await setState("pull_cursor", next) }
         try await setState("last_sync_at", ISO8601Millis.format(.now))

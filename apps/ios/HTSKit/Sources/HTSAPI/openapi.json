@@ -268,13 +268,22 @@
         "tags": [
           "sync"
         ],
-        "summary": "Rows written on the server after the cursor",
+        "summary": "Rows of the athlete written on the server after the cursor",
         "security": [
           {
             "bearer": []
           }
         ],
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "athleteId",
+            "in": "query"
+          },
           {
             "schema": {
               "type": "string",
@@ -292,6 +301,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SyncPull"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid athleteId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

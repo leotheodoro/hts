@@ -32,12 +32,15 @@ actor FakeSyncServer: SyncTransport {
         return applied
     }
 
-    func pull(since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
+    func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
         let after = since.flatMap(Int.init) ?? 0
+        let owner = JSONValue.string(athleteId.uuidString.lowercased())
         var changes: SyncChanges = [:]
         var cursor = after
         for (table, byId) in rows {
-            let fresh = byId.values.filter { $0.written > after }
+            let fresh = byId.values.filter {
+                $0.written > after && (table == "athlete" ? $0.row["id"] : $0.row["athlete_id"]) == owner
+            }
             guard !fresh.isEmpty else { continue }
             changes[table] = fresh.map(\.row)
             cursor = max(cursor, fresh.map(\.written).max()!)
@@ -84,11 +87,11 @@ actor FakeSyncServer: SyncTransport {
     @Test func aNewDeviceRebuildsEverythingFromTheServer() async throws {
         let server = FakeSyncServer()
         let (a, athlete) = try await deviceA()
-        let first = try await SyncService(a, transport: server).sync()
+        let first = try await SyncService(a, transport: server).sync(athleteId: athlete.id)
         #expect(first.pushed == 10)  // athlete, saga, arc, template, block, exercise, prescription, session, 2 sets
 
         let b = try AppDatabase.inMemory()
-        let pulled = try await SyncService(b, transport: server).sync()
+        let pulled = try await SyncService(b, transport: server).sync(athleteId: athlete.id)
         #expect(pulled.pulled == 10)
         #expect(try await AthleteRepository(b).localAthlete()?.id == athlete.id)
         let (sessions, history) = try await ProgressService(b).history(athleteId: athlete.id)
@@ -106,17 +109,17 @@ actor FakeSyncServer: SyncTransport {
     @Test func secondSyncOnlySendsWhatChangedAndEditsFlowBothWays() async throws {
         let server = FakeSyncServer()
         let (a, athlete) = try await deviceA()
-        try await SyncService(a, transport: server).sync()
+        try await SyncService(a, transport: server).sync(athleteId: athlete.id)
         let b = try AppDatabase.inMemory()
-        try await SyncService(b, transport: server).sync()
+        try await SyncService(b, transport: server).sync(athleteId: athlete.id)
 
         var renamed = try #require(try await AthleteRepository(b).localAthlete())
         renamed.displayName = "Leo B"
         try await AthleteRepository(b).update(renamed, now: .now.addingTimeInterval(5))
-        let fromB = try await SyncService(b, transport: server).sync()
+        let fromB = try await SyncService(b, transport: server).sync(athleteId: athlete.id)
         #expect(fromB.pushed >= 1)
 
-        try await SyncService(a, transport: server).sync()
+        try await SyncService(a, transport: server).sync(athleteId: athlete.id)
         #expect(try await AthleteRepository(a).athlete(id: athlete.id)?.displayName == "Leo B")
     }
 
@@ -130,5 +133,20 @@ actor FakeSyncServer: SyncTransport {
         old["updated_at"] = .string("2020-01-01T00:00:00.000Z")
         _ = try await SyncService(database, transport: FakeSyncServer()).apply(["athlete": [old]])
         #expect(try await AthleteRepository(database).athlete(id: athlete.id)?.displayName == "Novo")
+    }
+
+    @Test func aDeviceOnlyPullsItsOwnAthlete() async throws {
+        let server = FakeSyncServer()
+        let (a, athleteA) = try await deviceA()
+        try await SyncService(a, transport: server).sync(athleteId: athleteA.id)
+        let (other, athleteB) = try await deviceA()
+        try await SyncService(other, transport: server).sync(athleteId: athleteB.id)
+
+        let fresh = try AppDatabase.inMemory()
+        try await SyncService(fresh, transport: server).sync(athleteId: athleteA.id)
+        let owners = try await fresh.writer.read { db in
+            try String.fetchAll(db, sql: "SELECT DISTINCT athlete_id FROM arc")
+        }
+        #expect(owners == [athleteA.id.uuidString.lowercased()])
     }
 }
