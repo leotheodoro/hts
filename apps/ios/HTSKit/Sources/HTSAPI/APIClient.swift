@@ -146,14 +146,15 @@ public struct APIClient: Sendable {
     }
 
     /// Rows the server wrote after `since`, and the cursor for the next pull.
-    public func pull(since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
+    public func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
         let sinceDate = try since.map {
             try Date($0, strategy: .iso8601.year().month().day().time(includingFractionalSeconds: true))
         }
-        switch try await client.syncPull(query: .init(since: sinceDate)) {
+        switch try await client.syncPull(query: .init(athleteId: athleteId.uuidString.lowercased(), since: sinceDate)) {
         case .ok(let ok):
             let body = try ok.body.json
             return (body.cursor, try Self.convert(body.changes))
+        case .badRequest: throw APIError.unexpectedStatus(400)
         case .unauthorized: throw APIError.unexpectedStatus(401)
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }

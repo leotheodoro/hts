@@ -38,10 +38,10 @@ const pullRoute = createRoute({
   path: "/v1/sync/pull",
   operationId: "syncPull",
   tags: ["sync"],
-  summary: "Rows written on the server after the cursor",
+  summary: "Rows of the athlete written on the server after the cursor",
   security: [{ bearer: [] }],
   request: {
-    query: z.object({ since: z.iso.datetime().optional() }),
+    query: z.object({ athleteId: z.uuid(), since: z.iso.datetime().optional() }),
   },
   responses: {
     200: {
@@ -53,6 +53,10 @@ const pullRoute = createRoute({
             .openapi("SyncPull"),
         },
       },
+    },
+    400: {
+      description: "Missing or invalid athleteId",
+      content: { "application/json": { schema: ErrorSchema } },
     },
     401: {
       description: "Missing or wrong bearer token",
@@ -74,7 +78,7 @@ export function syncRoutes(db: Db) {
       }
     })
     .openapi(pullRoute, async (c) => {
-      const { since } = c.req.valid("query");
-      return c.json(await pull(db, since ?? null), 200);
+      const { athleteId, since } = c.req.valid("query");
+      return c.json(await pull(db, athleteId, since ?? null), 200);
     });
 }

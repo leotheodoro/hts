@@ -79,12 +79,12 @@ final class AppModel {
             let athlete = try await AthleteRepository(database).ensureLocalAthlete(
                 displayName: String(localized: "Atleta"))
             // Sync before the starter plan: a reinstall gets its arcs back from the server instead of a new copy.
-            await sync()
+            await sync(athleteId: athlete.id)
             if !TestHost.isRunningTests, let url = Bundle.main.url(forResource: "StarterPlan", withExtension: "json") {
                 let plan = try StarterPlan.load(from: url)
                 if try await plan.importIfNeeded(into: database, athleteId: athlete.id, today: .today) {
                     dataVersion += 1
-                    await sync()
+                    await sync(athleteId: athlete.id)
                 }
             }
             #if DEBUG
@@ -129,15 +129,15 @@ final class AppModel {
 
     /// Pushes local changes and pulls the server's (docs/decisions/0026). Needs the API URL and token; without them
     /// the app simply stays local. The timeout is long because the free Render instance takes ~1 min to wake.
-    func sync() async {
+    func sync(athleteId: UUID? = nil) async {
         guard let database, let configuration = apiConfiguration, configuration.token != nil,
-            syncState != .syncing
+            let athleteId = athleteId ?? athlete?.id, syncState != .syncing
         else { return }
         syncState = .syncing
         do {
             let result = try await SyncService(
                 database, transport: APIClient(configuration: configuration, timeout: 90)
-            ).sync()
+            ).sync(athleteId: athleteId)
             syncState = .synced(.now)
             if result.pulled > 0 { dataVersion += 1 }
             if let id = athlete?.id, let refreshed = try await AthleteRepository(database).athlete(id: id) {

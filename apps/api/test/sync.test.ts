@@ -174,11 +174,9 @@ function deviceRows() {
 const pushChanges = (changes: unknown) =>
   app.request("/v1/sync/push", { method: "POST", headers, body: JSON.stringify({ changes }) });
 
-const pullSince = async (since?: string) => {
-  const res = await app.request(
-    `/v1/sync/pull${since ? `?since=${encodeURIComponent(since)}` : ""}`,
-    { headers },
-  );
+const pullSince = async (athleteId: string, since?: string) => {
+  const query = `athleteId=${athleteId}${since ? `&since=${encodeURIComponent(since)}` : ""}`;
+  const res = await app.request(`/v1/sync/pull?${query}`, { headers });
   expect(res.status).toBe(200);
   return (await res.json()) as {
     cursor: string | null;
@@ -188,12 +186,12 @@ const pullSince = async (since?: string) => {
 
 describe("sync", () => {
   it("pushes a whole device snapshot and pulls it back in the same format", async () => {
-    const { ids, changes } = deviceRows();
+    const { athleteId, ids, changes } = deviceRows();
     const res = await pushChanges(changes);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ applied: 9 });
 
-    const pulled = await pullSince();
+    const pulled = await pullSince(athleteId);
     const set = pulled.changes.logged_set?.find((row) => row.id === ids.set);
     expect(set).toMatchObject({
       weight_kg: "62.50",
@@ -222,18 +220,37 @@ describe("sync", () => {
   it("pulls only rows written after the cursor", async () => {
     const first = deviceRows();
     await pushChanges(first.changes);
-    const { cursor } = await pullSince();
-    expect((await pullSince(cursor ?? undefined)).changes).toEqual({});
+    const { cursor } = await pullSince(first.athleteId);
+    expect((await pullSince(first.athleteId, cursor ?? undefined)).changes).toEqual({});
 
-    const second = deviceRows();
-    await pushChanges({ athlete: second.changes.athlete });
-    const after = await pullSince(cursor ?? undefined);
-    expect(after.changes.athlete?.map((row) => row.id)).toEqual([second.athleteId]);
+    const renamed = {
+      ...first.changes.athlete[0],
+      display_name: "Leo 2",
+      updated_at: iso(first.t + 60_000),
+    };
+    await pushChanges({ athlete: [renamed] });
+    const after = await pullSince(first.athleteId, cursor ?? undefined);
+    expect(after.changes.athlete?.map((row) => row.display_name)).toEqual(["Leo 2"]);
     expect(Object.keys(after.changes)).toEqual(["athlete"]);
+  });
+
+  it("never returns rows of another athlete", async () => {
+    const mine = deviceRows();
+    const other = deviceRows();
+    await pushChanges(mine.changes);
+    await pushChanges(other.changes);
+    const pulled = await pullSince(mine.athleteId);
+    for (const rows of Object.values(pulled.changes)) {
+      for (const row of rows) {
+        expect(row.athlete_id ?? row.id).toBe(mine.athleteId);
+      }
+    }
+    expect(pulled.changes.arc?.map((row) => row.id)).toEqual([mine.ids.arc]);
   });
 
   it("rejects unknown tables and requests without the token", async () => {
     expect((await pushChanges({ nope: [] })).status).toBe(400);
     expect((await app.request("/v1/sync/pull")).status).toBe(401);
+    expect((await app.request("/v1/sync/pull", { headers })).status).toBe(400);
   });
 });
