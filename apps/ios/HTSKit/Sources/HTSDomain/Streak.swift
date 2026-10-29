@@ -27,11 +27,13 @@ extension Progression {
     /// packages/fixtures/streak.json.
     public func streak(_ sessions: [StreakSession], today: LocalDate) -> Streak {
         var weeks: [LocalDate: (done: Int, goal: Int?)] = [:]
+        // Filler sessions only give XP: they never count for the week (docs/decisions/0030).
         for session in sessions {
+            guard let goal = session.weeklyGoal else { continue }
             let week = session.localDate.weekStart
             var entry = weeks[week] ?? (0, nil)
             entry.done += 1
-            if let goal = session.weeklyGoal { entry.goal = max(entry.goal ?? 0, goal) }
+            entry.goal = max(entry.goal ?? 0, goal)
             weeks[week] = entry
         }
         let current = today.weekStart

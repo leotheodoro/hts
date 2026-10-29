@@ -17,7 +17,7 @@
       "expected": { "titles": [{ "id": "first-session", "unlockedOn": "2026-11-02" }] }
     },
     {
-      "name": "perfect week, four-week streak and a filler week that keeps it",
+      "name": "perfect week and four-week streak; a filler session counts for records only",
       "input": {
         "sessions": [
           {
@@ -35,8 +35,15 @@
             "completedArc": null
           },
           {
-            "localDate": "2026-11-16",
+            "localDate": "2026-11-10",
             "weeklyGoal": null,
+            "records": 10,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-16",
+            "weeklyGoal": 1,
             "records": 0,
             "pullUpSets": 0,
             "completedArc": null
@@ -54,10 +61,32 @@
         "titles": [
           { "id": "first-session", "unlockedOn": "2026-11-02" },
           { "id": "perfect-week", "unlockedOn": "2026-11-02" },
-          { "id": "filler-survivor", "unlockedOn": "2026-11-16" },
+          { "id": "limit-broken-10", "unlockedOn": "2026-11-10" },
           { "id": "streak-lit", "unlockedOn": "2026-11-23" }
         ]
       }
+    },
+    {
+      "name": "a filler session does not complete the week",
+      "input": {
+        "sessions": [
+          {
+            "localDate": "2026-11-02",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-03",
+            "weeklyGoal": null,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          }
+        ]
+      },
+      "expected": { "titles": [{ "id": "first-session", "unlockedOn": "2026-11-02" }] }
     },
     {
       "name": "a gap week resets the run before the streak title",

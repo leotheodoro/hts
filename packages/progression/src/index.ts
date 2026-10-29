@@ -183,15 +183,17 @@ const weekStart = (day: number) => day - ((((day - 4) % 7) + 7) % 7);
 
 /**
  * Weekly streak (docs/decisions/0020): weeks run Monday to Sunday; the goal is the weekly goal of the
- * week's arc; filler sessions count and a filler-only week uses the last known goal.
+ * week's arc. Filler sessions only give XP and are left out (docs/decisions/0030); a week with no
+ * sessions uses the last known goal.
  */
 export function streak(sessions: StreakSession[], today: string): Streak {
   const weeks = new Map<number, { done: number; goal: number | null }>();
   for (const s of sessions) {
+    if (s.weeklyGoal === null) continue;
     const week = weekStart(dayNumber(s.localDate));
     const entry = weeks.get(week) ?? { done: 0, goal: null };
     entry.done += 1;
-    if (s.weeklyGoal !== null) entry.goal = Math.max(entry.goal ?? 0, s.weeklyGoal);
+    entry.goal = Math.max(entry.goal ?? 0, s.weeklyGoal);
     weeks.set(week, entry);
   }
   const current = weekStart(dayNumber(today));
@@ -226,7 +228,6 @@ export type TitleId =
   | "perfect-week"
   | "streak-lit"
   | "limit-broken-10"
-  | "filler-survivor"
   | "hundred-bars"
   | "ready-for-battle";
 
@@ -250,7 +251,8 @@ export interface UnlockedTitle {
 
 /**
  * Fixed title catalog (docs/decisions/0021). Unlocks are derived from the sessions, in unlock order;
- * titles unlocked by the same session keep the order of the checks below.
+ * titles unlocked by the same session keep the order of the checks below. Filler sessions count for
+ * records and pull-ups but not for the week (docs/decisions/0030).
  */
 export function titles(sessions: TitleSession[]): UnlockedTitle[] {
   const unlocked: UnlockedTitle[] = [];
@@ -262,44 +264,36 @@ export function titles(sessions: TitleSession[]): UnlockedTitle[] {
   };
   let records = 0;
   let pullUps = 0;
-  let lastGoal = 0;
   let week: number | null = null;
   let done = 0;
-  let goal: number | null = null;
-  let fillerOnly = true;
+  let goal = 0;
   let met = false;
   let runBefore = 0;
   for (const s of sessions) {
-    const w = weekStart(dayNumber(s.localDate));
-    if (w !== week) {
-      if (week !== null) {
-        const consecutive = w === week + 7;
-        const run = met ? runBefore + 1 : 0;
-        runBefore = consecutive ? run : 0;
-      }
-      week = w;
-      done = 0;
-      goal = null;
-      fillerOnly = true;
-      met = false;
-    }
-    done += 1;
-    if (s.weeklyGoal !== null) {
-      goal = Math.max(goal ?? 0, s.weeklyGoal);
-      lastGoal = goal;
-      fillerOnly = false;
-    }
     records += s.records;
     pullUps += s.pullUpSets;
-
     unlock("first-session", s.localDate);
     if (s.completedArc === "first") unlock("recruitment-complete", s.localDate);
     if (records >= 10) unlock("limit-broken-10", s.localDate);
-    if (!met && done >= (goal ?? lastGoal)) {
-      met = true;
-      unlock("perfect-week", s.localDate);
-      if (fillerOnly && runBefore >= 1) unlock("filler-survivor", s.localDate);
-      if (runBefore + 1 >= 4) unlock("streak-lit", s.localDate);
+    if (s.weeklyGoal !== null) {
+      const w = weekStart(dayNumber(s.localDate));
+      if (w !== week) {
+        if (week !== null) {
+          const run = met ? runBefore + 1 : 0;
+          runBefore = w === week + 7 ? run : 0;
+        }
+        week = w;
+        done = 0;
+        goal = 0;
+        met = false;
+      }
+      done += 1;
+      goal = Math.max(goal, s.weeklyGoal);
+      if (!met && done >= goal) {
+        met = true;
+        unlock("perfect-week", s.localDate);
+        if (runBefore + 1 >= 4) unlock("streak-lit", s.localDate);
+      }
     }
     if (pullUps >= 100) unlock("hundred-bars", s.localDate);
     if (s.completedArc === "special") unlock("ready-for-battle", s.localDate);

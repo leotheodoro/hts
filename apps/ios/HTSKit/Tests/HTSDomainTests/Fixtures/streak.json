@@ -36,7 +36,7 @@
       "expected": { "current": 2, "best": 2, "thisWeek": { "done": 2, "goal": 2 } }
     },
     {
-      "name": "a filler-only week keeps the streak with the last arc goal",
+      "name": "filler sessions do not count: a filler-only week breaks the streak",
       "input": {
         "today": "2026-11-18",
         "sessions": [
@@ -46,7 +46,7 @@
           { "localDate": "2026-11-12", "weeklyGoal": null }
         ]
       },
-      "expected": { "current": 2, "best": 2, "thisWeek": { "done": 0, "goal": 2 } }
+      "expected": { "current": 0, "best": 1, "thisWeek": { "done": 0, "goal": 2 } }
     },
     {
       "name": "a missed week breaks it; best keeps the longer run; across the new year",
@@ -62,6 +62,17 @@
         ]
       },
       "expected": { "current": 1, "best": 3, "thisWeek": { "done": 2, "goal": 2 } }
+    },
+    {
+      "name": "a filler session does not add to the week in progress",
+      "input": {
+        "today": "2026-11-05",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-03", "weeklyGoal": null }
+        ]
+      },
+      "expected": { "current": 0, "best": 0, "thisWeek": { "done": 1, "goal": 2 } }
     }
   ]
 }
