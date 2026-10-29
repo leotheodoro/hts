@@ -62,7 +62,7 @@ struct SessionCompleteView: View {
                         Text(verbatim: nextWorkout).htsTextStyle(.uiSection)
                     }
                 }
-                HTSButton("Voltar ao Status", action: onClose)
+                HTSButton("Voltar para Home", action: onClose)
             }
             .foregroundStyle(Color.hts.bone)
             .padding(.horizontal, HTSSpacing.space5)

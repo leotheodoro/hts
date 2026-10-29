@@ -51,6 +51,16 @@ public struct PlanRepository: Sendable {
         }
     }
 
+    /// One live template with its blocks and prescriptions, and the arc it belongs to (the workout page).
+    public func template(id: UUID) async throws -> (arc: Arc, plan: TemplatePlan)? {
+        try await database.writer.read { db in
+            guard let template = try live(WorkoutTemplate.self).filter(key: id).fetchOne(db),
+                let arc = try Arc.filter(key: template.arcId).filter(Columns.deletedAt == nil).fetchOne(db)
+            else { return nil }
+            return (arc, try Self.templatePlan(template, db))
+        }
+    }
+
     /// Copies a template, with its blocks and prescriptions, into another arc (docs/decisions/0015). The copy points
     /// back with `sourceTemplateId`; later edits to either side do not affect the other.
     @discardableResult

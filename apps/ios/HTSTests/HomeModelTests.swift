@@ -6,7 +6,7 @@ import Testing
 @testable import HTS
 
 @MainActor
-@Suite struct StatusModelTests {
+@Suite struct HomeModelTests {
     @Test func showsLevelNextWorkoutAndWeek() async throws {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
@@ -23,7 +23,7 @@ import Testing
         try await TemplateService(database).save(draft)
         let filled = try #require(try await PlanRepository(database).plan(arcId: arc.id)?.templates.first)
 
-        let model = StatusModel(database: database, athleteId: athlete.id)
+        let model = HomeModel(database: database, athleteId: athlete.id)
         await model.load(today: LocalDate("2026-11-04")!)
         #expect(model.history?.totalXp == 0)
         #expect(model.next?.plan.template.letter == "A")
@@ -45,7 +45,7 @@ import Testing
         #expect(model.weekDone == 1)
     }
 
-    @Test func fillerArcsAreAlwaysAvailableOutsideTheCurrentArc() async throws {
+    @Test func fillerArcsAreNeverTheNextWorkout() async throws {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
@@ -55,10 +55,9 @@ import Testing
                 name: "Manutenção", kanji: "守", kind: .filler, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "PP"), .init(origin: .new, name: "FB")]),
             athleteId: athlete.id, seasonId: season.id)
-        let model = StatusModel(database: database, athleteId: athlete.id)
+        let model = HomeModel(database: database, athleteId: athlete.id)
         await model.load(today: LocalDate("2026-11-04")!)
         #expect(model.next == nil)
-        #expect(model.fillers.flatMap(\.templates).map(\.template.name) == ["PP", "FB"])
 
         try await service.save(
             ArcDraft(
@@ -67,6 +66,5 @@ import Testing
             athleteId: athlete.id, seasonId: season.id)
         await model.load(today: LocalDate("2026-11-04")!)
         #expect(model.next?.arc.name == "Recrutamento")
-        #expect(model.fillers.count == 1)
     }
 }

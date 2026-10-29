@@ -51,9 +51,12 @@ struct ArcsScreen: View {
                     }
                 }
                 ForEach(entry.summaries) { summary in
-                    ArcRow(
-                        summary: summary,
-                        eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
+                    NavigationLink(value: Route.arc(summary.arc.id)) {
+                        ArcRow(
+                            summary: summary,
+                            eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
+                    }
+                    .buttonStyle(.plain)
                 }
                 if !entry.season.active {
                     HTSButton("Ativar temporada", kind: .ghost) { Task { await model.activate(entry.season) } }
@@ -63,7 +66,10 @@ struct ArcsScreen: View {
         if !model.freeArcs.isEmpty {
             VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                 Text("SEMPRE DISPONÍVEL").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
-                ForEach(model.freeArcs) { summary in ArcRow(summary: summary) }
+                ForEach(model.freeArcs) { summary in
+                    NavigationLink(value: Route.arc(summary.arc.id)) { ArcRow(summary: summary) }
+                        .buttonStyle(.plain)
+                }
             }
         }
         if let error = model.error {

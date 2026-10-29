@@ -97,6 +97,22 @@ struct PlanFixture {
         #expect(try await PlanRepository(fixture.database).currentArc(athleteId: fixture.athlete.id) == arc)
     }
 
+    @Test func readsOneTemplateWithItsArc() async throws {
+        let fixture = try await PlanFixture()
+        let arc = fixture.arc("Recrutamento", status: .current)
+        let (template, exercise) = try await fixture.seedPlan(arc: arc)
+        let repository = PlanRepository(fixture.database)
+        let found = try #require(try await repository.template(id: template.id))
+        #expect(found.arc == arc)
+        #expect(found.plan.template == template)
+        #expect(found.plan.blocks.first?.exercises.first?.exercise == exercise)
+
+        var deleted = template
+        deleted.deletedAt = fixture.now
+        try await repository.save(deleted)
+        #expect(try await repository.template(id: template.id) == nil)
+    }
+
     @Test func storesDatesAndJSONInThePostgresFormats() async throws {
         let fixture = try await PlanFixture()
         let arc = fixture.arc("Recrutamento")
