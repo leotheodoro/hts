@@ -9,10 +9,11 @@ enum Route: Hashable {
 /// Navigation stack of a tab. The system bar stays hidden like the tab bar (docs/decisions/0022); pages draw their
 /// own back button.
 struct TabStack<Content: View>: View {
+    @Binding var path: [Route]
     @ViewBuilder let content: Content
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             content
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: Route.self) { route in

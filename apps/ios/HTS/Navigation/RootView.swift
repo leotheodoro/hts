@@ -31,16 +31,27 @@ struct RootView: View {
     @State private var selection =
         UserDefaults.standard.string(forKey: "HTSInitialTab").flatMap(AppTab.init(rawValue:)) ?? .home
 
+    @State private var homePath: [Route] = []
+    @State private var arcsPath: [Route] = []
+
     var body: some View {
         // The system tab bar is hidden: Liquid Glass ignores the brand colors and adds blur, and the compatibility
         // key does not hold on every iOS version (docs/decisions/0022). TabView still keeps each tab's state.
         TabView(selection: $selection) {
-            Tab(value: AppTab.home) { TabStack { HomeScreen() }.toolbar(.hidden, for: .tabBar) }
-            Tab(value: AppTab.arcs) { TabStack { ArcsScreen() }.toolbar(.hidden, for: .tabBar) }
+            Tab(value: AppTab.home) { TabStack(path: $homePath) { HomeScreen() }.toolbar(.hidden, for: .tabBar) }
+            Tab(value: AppTab.arcs) { TabStack(path: $arcsPath) { ArcsScreen() }.toolbar(.hidden, for: .tabBar) }
             Tab(value: AppTab.journal) { JournalScreen().toolbar(.hidden, for: .tabBar) }
             Tab(value: AppTab.profile) { ProfileScreen().toolbar(.hidden, for: .tabBar) }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { BrandTabBar(selection: $selection) }
+        // A tab left behind goes back to its first page (#98).
+        .onChange(of: selection) { old, _ in
+            switch old {
+            case .home: homePath = []
+            case .arcs: arcsPath = []
+            case .journal, .profile: break
+            }
+        }
         .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: Bindable(app).showsActiveSession) {
             if let database = app.database, let session = app.activeSession {
