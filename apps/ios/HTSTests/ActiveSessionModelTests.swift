@@ -62,3 +62,12 @@ import Testing
         #expect(try await SessionRepository(database).inProgress(athleteId: athlete.id) == nil)
     }
 }
+
+@Suite struct NumberFieldTests {
+    @Test func parsesCommaAndDotDecimals() {
+        #expect(NumberField.parse("62,5") == Decimal(string: "62.5"))
+        #expect(NumberField.parse("12") == 12)
+        #expect(NumberField.parse("") == nil)
+        #expect(NumberField.parse("abc") == nil)
+    }
+}
