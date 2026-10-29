@@ -10,7 +10,7 @@ import {
   loggedRound,
   loggedSet,
   prescribedExercise,
-  saga,
+  season,
   session,
   workoutTemplate,
 } from "./db/schema.js";
@@ -22,7 +22,7 @@ import {
 /** Parents before children, so foreign keys hold when a push creates both. */
 const TABLES = [
   athlete,
-  saga,
+  season,
   arc,
   workoutTemplate,
   block,

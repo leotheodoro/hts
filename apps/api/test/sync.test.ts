@@ -9,7 +9,7 @@ import {
   exercise,
   loggedSet,
   prescribedExercise,
-  saga,
+  season,
   session,
   workoutTemplate,
 } from "../src/db/schema.js";
@@ -30,7 +30,7 @@ afterAll(async () => {
       block,
       workoutTemplate,
       arc,
-      saga,
+      season,
     ]) {
       await db.delete(table).where(inArray(table.athleteId, athletes));
     }
@@ -48,7 +48,7 @@ function deviceRows() {
   const t = Date.UTC(2026, 10, 2, 12);
   const base = { athlete_id: athleteId, created_at: iso(t), updated_at: iso(t), deleted_at: null };
   const ids = {
-    saga: uuidv7(),
+    season: uuidv7(),
     arc: uuidv7(),
     template: uuidv7(),
     block: uuidv7(),
@@ -68,12 +68,12 @@ function deviceRows() {
         deleted_at: null,
       },
     ],
-    saga: [{ ...base, id: ids.saga, year: 2026, name: "Saga 2026" }],
+    season: [{ ...base, id: ids.season, name: "Jiu-Jitsu", position: 0, active: true }],
     arc: [
       {
         ...base,
         id: ids.arc,
-        saga_id: ids.saga,
+        season_id: ids.season,
         name: "Recrutamento",
         kanji: "募",
         program: null,

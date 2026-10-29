@@ -71,22 +71,33 @@ export const blockKind = pgEnum("block_kind", [
 ]);
 export const exerciseUnit = pgEnum("exercise_unit", ["reps", "seconds", "meters", "minutes"]);
 
-/** The year-long cycle (Saga 2026). Holds arcs in order. */
-export const saga = pgTable("saga", {
-  ...owned(),
-  year: smallint("year").notNull(),
-  name: text("name").notNull(),
-  ...timestamps,
-});
+/**
+ * Temporada: a named sequence of arcs (Jiu-Jitsu, Performance). Arcs unlock in order; only one season
+ * is active per athlete (docs/decisions/0029).
+ */
+export const season = pgTable(
+  "season",
+  {
+    ...owned(),
+    name: text("name").notNull(),
+    position: integer("position").notNull().default(0),
+    active: boolean("active").notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("season_one_active_idx")
+      .on(t.athleteId)
+      .where(sql`${t.active} AND ${t.deletedAt} IS NULL`),
+  ],
+);
 
 /** A phase of the program: N workout templates × weeks. */
 export const arc = pgTable(
   "arc",
   {
     ...owned(),
-    sagaId: uuid("saga_id")
-      .notNull()
-      .references(() => saga.id),
+    /** Null for free arcs (Manutenção), which belong to no season. */
+    seasonId: uuid("season_id").references(() => season.id),
     name: text("name").notNull(),
     kanji: text("kanji"),
     /** Name of the coach's real program this arc follows. */
@@ -103,7 +114,7 @@ export const arc = pgTable(
     ...timestamps,
   },
   (t) => [
-    index("arc_saga_id_idx").on(t.sagaId),
+    index("arc_season_id_idx").on(t.seasonId),
     // Only one current arc per athlete.
     uniqueIndex("arc_one_current_idx")
       .on(t.athleteId)
@@ -289,9 +300,7 @@ export const battle = pgTable(
   "battle",
   {
     ...owned(),
-    sagaId: uuid("saga_id")
-      .notNull()
-      .references(() => saga.id),
+    seasonId: uuid("season_id").references(() => season.id),
     name: text("name").notNull(),
     /** Local calendar date of the competition. */
     date: date("date").notNull(),

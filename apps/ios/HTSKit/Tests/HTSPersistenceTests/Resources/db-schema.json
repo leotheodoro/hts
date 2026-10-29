@@ -12,8 +12,8 @@
           "notNull": true
         },
         {
-          "name": "saga_id",
-          "notNull": true
+          "name": "season_id",
+          "notNull": false
         },
         {
           "name": "name",
@@ -106,8 +106,8 @@
           "notNull": true
         },
         {
-          "name": "saga_id",
-          "notNull": true
+          "name": "season_id",
+          "notNull": false
         },
         {
           "name": "name",
@@ -385,7 +385,7 @@
       ]
     },
     {
-      "name": "saga",
+      "name": "season",
       "columns": [
         {
           "name": "id",
@@ -396,11 +396,15 @@
           "notNull": true
         },
         {
-          "name": "year",
+          "name": "name",
           "notNull": true
         },
         {
-          "name": "name",
+          "name": "position",
+          "notNull": true
+        },
+        {
+          "name": "active",
           "notNull": true
         },
         {
