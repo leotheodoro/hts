@@ -242,10 +242,11 @@ private struct BattleSettings: View {
                     .tint(Color.hts.bone)
                 }
             }
-            HTSButton(battle == nil ? "Cadastrar Batalha" : "Salvar Batalha", kind: .ghost) {
-                save(result: battle?.result)
+            if hasChanges {
+                HTSButton(battle == nil ? "Cadastrar Batalha" : "Salvar Batalha", kind: .ghost) {
+                    save(result: battle?.result)
+                }
             }
-            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         .task(id: app.athlete?.id) {
             guard let database = app.database, let athlete = app.athlete else { return }
@@ -255,6 +256,14 @@ private struct BattleSettings: View {
                 date = battle.date.date
             }
         }
+    }
+
+    /// The save button only shows when the name or the date differ from what is saved (#88).
+    private var hasChanges: Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return false }
+        guard let battle else { return true }
+        return trimmed != battle.name || LocalDate(date, in: .current) != battle.date
     }
 
     private func save(result: BattleResult?) {
