@@ -250,7 +250,7 @@ private struct SetRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             NumberField(
                 value: set.weightKg, prompt: previous?.weightKg.map(LoggedSet.format) ?? "kg",
-                keyboard: .decimalPad
+                keyboard: .decimalPad, done: set.completed
             ) { value in
                 var changed = set
                 changed.weightKg = value
@@ -259,7 +259,7 @@ private struct SetRow: View {
             .frame(width: 72)
             NumberField(
                 value: amount, prompt: SetRules.defaultAmount(for: target).map(LoggedSet.format) ?? "máx",
-                keyboard: exercise.unit == .meters ? .decimalPad : .numberPad
+                keyboard: exercise.unit == .meters ? .decimalPad : .numberPad, done: set.completed
             ) { value in
                 model.update(with(amount: value))
             }
@@ -277,7 +277,7 @@ private struct SetRow: View {
             }
             .accessibilityLabel(set.completed ? "Desmarcar série \(set.setNumber)" : "Concluir série \(set.setNumber)")
         }
-        .foregroundStyle(set.completed ? Color.hts.greyApp : Color.hts.bone)
+        .foregroundStyle(Color.hts.bone)
         .contextMenu {
             Button("Remover série", role: .destructive) { Task { await model.remove(set) } }
         }
@@ -310,6 +310,8 @@ struct NumberField: View {
     let value: Decimal?
     let prompt: String
     let keyboard: UIKeyboardType
+    /// Completed set: the value is final, shown in `bone` on `track` (#104).
+    var done = false
     let onChange: (Decimal?) -> Void
 
     @State private var text = ""
@@ -323,18 +325,25 @@ struct NumberField: View {
         .focused($focused)
         .multilineTextAlignment(.center)
         .htsTextStyle(.dataSm)
+        .fontWeight(done ? .semibold : nil)
+        .foregroundStyle(Color.hts.bone)
         .frame(minHeight: 44)
-        .background(Color.hts.surface)
+        .background(done ? Color.hts.track : Color.hts.surface)
         .onAppear { text = value.map(LoggedSet.format) ?? "" }
         .onChange(of: value) { _, newValue in
-            if !focused { text = newValue.map(LoggedSet.format) ?? "" }
+            // Also while focused: checking a set fills the empty field with its placeholder value (#104).
+            if Self.parse(text) != newValue { text = newValue.map(LoggedSet.format) ?? "" }
         }
         .onChange(of: text) { _, newText in
-            let normalized = newText.replacingOccurrences(of: ",", with: ".")
-            let parsed =
-                normalized.isEmpty ? nil : Decimal(string: normalized, locale: Locale(identifier: "en_US_POSIX"))
-            if normalized.isEmpty || parsed != nil, parsed != value { onChange(parsed) }
+            let parsed = Self.parse(newText)
+            if newText.isEmpty || parsed != nil, parsed != value { onChange(parsed) }
         }
+    }
+
+    /// "62,5" or "62.5" → 62.5; empty or invalid → nil.
+    static func parse(_ text: String) -> Decimal? {
+        let normalized = text.replacingOccurrences(of: ",", with: ".")
+        return normalized.isEmpty ? nil : Decimal(string: normalized, locale: Locale(identifier: "en_US_POSIX"))
     }
 }
 
