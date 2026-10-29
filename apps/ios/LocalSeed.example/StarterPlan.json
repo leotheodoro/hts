@@ -1,26 +1,79 @@
 {
+  "seasons": [
+    {
+      "name": "Jiu-Jitsu",
+      "arcs": [
+        {
+          "name": "Exemplo",
+          "kanji": "募",
+          "kind": "normal",
+          "weeks": 2,
+          "templates": [
+            {
+              "name": "Linha de Frente",
+              "focus": "Força",
+              "blocks": [
+                {
+                  "kind": "activation",
+                  "attributes": [
+                    "mobility"
+                  ],
+                  "exercises": [
+                    {
+                      "name": "Prancha",
+                      "unit": "seconds",
+                      "sets": "3",
+                      "target": "30-45 s"
+                    }
+                  ]
+                },
+                {
+                  "kind": "strength",
+                  "attributes": [
+                    "strength"
+                  ],
+                  "exercises": [
+                    {
+                      "name": "Zercher Squat",
+                      "sets": "4",
+                      "target": "6-6-3-3",
+                      "restSeconds": 150
+                    },
+                    {
+                      "name": "Afundo Búlgaro",
+                      "sets": "3 a 4",
+                      "target": "10/10"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "arcs": [
     {
-      "name": "Exemplo",
-      "kanji": "募",
-      "kind": "normal",
-      "weeks": 2,
+      "name": "Manutenção",
+      "kanji": "守",
+      "kind": "filler",
       "templates": [
         {
-          "name": "Linha de Frente",
-          "focus": "Força",
+          "name": "Patrulha",
           "blocks": [
             {
-              "kind": "activation",
-              "attributes": ["mobility"],
-              "exercises": [{ "name": "Prancha", "unit": "seconds", "sets": "3", "target": "30-45 s" }]
-            },
-            {
-              "kind": "strength",
-              "attributes": ["strength"],
+              "kind": "mobility",
+              "attributes": [
+                "mobility"
+              ],
               "exercises": [
-                { "name": "Zercher Squat", "sets": "4", "target": "6-6-3-3", "restSeconds": 150 },
-                { "name": "Afundo Búlgaro", "sets": "3 a 4", "target": "10/10" }
+                {
+                  "name": "Prancha",
+                  "unit": "seconds",
+                  "sets": "3",
+                  "target": "30 s"
+                }
               ]
             }
           ]

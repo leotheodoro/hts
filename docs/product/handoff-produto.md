@@ -19,7 +19,7 @@ Referências: [canvas de design](https://claude.ai/artifact/KzHW9r1MKGRutmzu1niX
 
 | Termo | Significado |
 | --- | --- |
-| Saga | O ciclo do ano inteiro (ex.: Saga 2026). Agrupa os arcos. |
+| Temporada | Uma sequência de arcos com um objetivo (ex.: Jiu-Jitsu, Performance). Só uma fica ativa; cada arco libera o próximo ao terminar. A Manutenção fica fora de qualquer temporada. |
 | Arco | Uma fase do programa, criada pelo usuário, com N treinos-modelo e uma duração em semanas. |
 | Treino-modelo | A receita de um treino dentro do arco, identificada por letra e nome (ex.: A · Linha de Frente). Antes se chamava "técnica". |
 | Treino (sessão) | Uma execução registrada de um treino-modelo, numerada (Treino 5 de 6 no arco; numeração global também existe). Antes se chamava "episódio". |
@@ -42,9 +42,9 @@ Este é um rascunho de entidades a partir das regras de produto. Nomes, tipos e 
 
 | Entidade | Campos principais | Relações |
 | --- | --- | --- |
-| Atleta | nome do personagem, descanso padrão (90 s), data da Batalha | tem sagas, sessões, recordes, títulos |
-| Saga | ano, nome | pertence ao atleta; tem arcos em ordem |
-| Arco | nome, kanji (opcional), programa real, tipo (normal, especial, filler), semanas, data de início, status (atual, concluído, na fila), contagem atual | pertence à saga; tem treinos-modelo em ordem |
+| Atleta | nome do personagem, descanso padrão (90 s), data da Batalha | tem temporadas, sessões, recordes, títulos |
+| Temporada | nome, posição, ativa | pertence ao atleta; tem arcos em ordem |
+| Arco | nome, kanji (opcional), programa real, tipo (normal, especial, filler), semanas, data de início, status (atual, concluído, na fila), contagem atual | pertence a uma temporada (ou a nenhuma, se for Manutenção); tem treinos-modelo em ordem |
 | Treino-modelo | letra, nome, foco, ordem | pertence ao arco; tem blocos em ordem |
 | Bloco | tipo (Ativação, Força, Combo, Combo Encadeado, Round de Luta, Condicionamento, Core, Mobilidade, Cardio), atributo(s), duração em min (só Round de Luta), ordem | pertence ao treino-modelo; tem exercícios prescritos |
 | Exercício (catálogo) | nome real, atributo padrão, unidade (reps, segundos, metros, minutos), por lado (sim/não) | usado por vários exercícios prescritos |
@@ -53,7 +53,7 @@ Este é um rascunho de entidades a partir das regras de produto. Nomes, tipos e 
 | Série feita | nº da série, kg, reps (ou segundos/metros), concluída, hora | pertence à sessão e ao exercício prescrito |
 | Round registrado | rounds completos, kg por exercício | pertence à sessão e ao bloco Round de Luta |
 | Recorde | exercício, kg, reps, data, sessão | pertence ao atleta |
-| Batalha | data, nome, resultado (ouro, prata, bronze, participação) | pertence ao atleta e à saga |
+| Batalha | data, nome, resultado (ouro, prata, bronze, participação) | pertence ao atleta e, opcionalmente, à temporada ativa |
 | Título | nome, condição, desbloqueado em | catálogo fixo + estado por atleta |
 
 Dado derivado (calcular ou guardar fica em aberto): XP total, nível, patente, atributos, sequência semanal, "Anterior" de cada série.

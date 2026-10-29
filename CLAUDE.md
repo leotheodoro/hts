@@ -4,7 +4,7 @@
 
 - App iOS nativo para registrar treinos de preparação física para jiu-jitsu, série por série, com timer de descanso.
 - Camada de progressão: cada série concluída vira XP, nível, patente (E a S) e atributos (FOR, EXP, GÁS, COR, MOB).
-- O atleta organiza o ano em uma saga de arcos; cada arco tem treinos-modelo e uma duração em semanas.
+- O atleta organiza os arcos em temporadas (uma ativa por vez, arcos liberados em ordem); a Manutenção fica fora delas, sempre disponível. Cada arco tem treinos-modelo e uma duração em semanas.
 - Offline-first: o app grava no SQLite local e sincroniza com a API (Postgres) depois.
 - Hoje é um atleta só, mas todo dado já é multiusuário (`athlete_id`).
 
@@ -14,7 +14,7 @@ Fontes de verdade: `docs/product/handoff-produto.md` (comportamento), `docs/desi
 
 | Produto (pt-BR) | Código |
 | --- | --- |
-| Saga | `Saga` |
+| Temporada | `Season` |
 | Arco | `Arc` |
 | Treino-modelo | `WorkoutTemplate` |
 | Bloco | `Block` |
