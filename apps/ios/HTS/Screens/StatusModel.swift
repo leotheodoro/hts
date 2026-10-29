@@ -18,6 +18,8 @@ final class StatusModel {
     private(set) var next: NextWorkout?
     private(set) var streak: Streak?
     private(set) var battle: Battle?
+    /// Filler (Manutenção) arcs: always available, outside the current arc (docs/decisions/0028).
+    private(set) var fillers: [ArcPlan] = []
     var weekDone: Int { streak?.thisWeek.done ?? 0 }
     private(set) var weekGoal = 0
 
@@ -37,6 +39,7 @@ final class StatusModel {
         history = try? await ProgressService(database).history(athleteId: athleteId).history
         streak = try? await ProgressService(database).streak(athleteId: athleteId, today: today)
         battle = try? await BattleRepository(database).current(athleteId: athleteId, today: today)
+        fillers = (try? await ArcService(database).fillerPlans(athleteId: athleteId)) ?? []
         let plans = PlanRepository(database)
         guard let arc = try? await plans.currentArc(athleteId: athleteId),
             let plan = try? await plans.plan(arcId: arc.id)

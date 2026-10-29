@@ -69,6 +69,14 @@ public final class AppDatabase: Sendable {
                 t.column("value", .text).notNull()
             }
         }
+        migrator.registerMigration("v6_filler_never_current") { db in
+            // Filler arcs stopped taking the current slot (docs/decisions/0028). Touch updated_at so the fix syncs.
+            try db.execute(
+                sql: """
+                    UPDATE arc SET status = 'queued', updated_at = ?
+                    WHERE kind = 'filler' AND status = 'current' AND deleted_at IS NULL
+                    """, arguments: [ISO8601Millis.format(.now)])
+        }
         return migrator
     }
 

@@ -96,3 +96,62 @@ import Testing
         #expect(try await sessions.sessions(athleteId: athlete.id).count == 3)
     }
 }
+
+@Suite struct FillerArcTests {
+    let start = LocalDate("2026-11-02")!
+
+    @Test func fillerNeverTakesTheCurrentSlotAndIsNeverPromoted() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let service = ArcService(database)
+        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let filler = try await service.save(
+            ArcDraft(
+                name: "Manutenção", kanji: "守", kind: .filler, startDate: start,
+                templates: [.init(origin: .new, name: "PP"), .init(origin: .new, name: "FB")]),
+            athleteId: athlete.id, sagaId: saga.id)
+        #expect(filler.status == .queued)
+        #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id) == nil)
+
+        let normal = try await service.save(
+            ArcDraft(name: "Recrutamento", weeks: 1, startDate: start, templates: [.init(origin: .new, name: "A")]),
+            athleteId: athlete.id, sagaId: saga.id)
+        #expect(normal.status == .current)
+
+        // Closing the normal arc does not promote the filler.
+        let plan = try #require(try await PlanRepository(database).plan(arcId: normal.id))
+        var draft = try #require(try await TemplateService(database).draft(templateId: plan.templates[0].template.id))
+        draft.blocks = [.init(exercises: [.init(name: "Supino", setsText: "1", targetText: "8")])]
+        try await TemplateService(database).save(draft)
+        let filled = try #require(try await PlanRepository(database).plan(arcId: normal.id)?.templates.first)
+        let sessions = SessionRepository(database)
+        let session = try await sessions.start(filled)
+        _ = try await sessions.finish(sessionId: session.id)
+        #expect(try await service.completeIfDone(arcId: normal.id) == nil)
+        #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id) == nil)
+
+        let fillers = try await service.fillerPlans(athleteId: athlete.id)
+        #expect(fillers.map(\.arc.name) == ["Manutenção"])
+        #expect(fillers[0].templates.map(\.template.name) == ["PP", "FB"])
+    }
+
+    @Test func migrationMovesAnOldCurrentFillerToTheQueue() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let saga = try await ArcService(database).saga(athleteId: athlete.id, year: 2026)
+        let old = Arc(
+            id: UUIDv7.make(), athleteId: athlete.id, sagaId: saga.id, name: "Manutenção", kind: .filler,
+            weeks: nil, startDate: nil, status: .current, position: 0, createdAt: .now.addingTimeInterval(-60))
+        try await database.writer.write { db in try old.insert(db) }
+        // Re-run the data fix the way the migrator does on an existing install.
+        try await database.writer.write { db in
+            try db.execute(
+                sql:
+                    "UPDATE arc SET status = 'queued', updated_at = ? WHERE kind = 'filler' AND status = 'current' AND deleted_at IS NULL",
+                arguments: [ISO8601Millis.format(.now)])
+        }
+        let stored = try #require(try await PlanRepository(database).arcs(athleteId: athlete.id, sagaId: saga.id).first)
+        #expect(stored.status == .queued)
+        #expect(stored.updatedAt > old.updatedAt)
+    }
+}
