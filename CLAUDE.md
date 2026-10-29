@@ -89,7 +89,7 @@ Depois de mudar tokens.json, progression.json, fixtures, rotas ou schema da API:
 - Tokens como única fonte: nunca escreva cor, tamanho ou espaçamento literal; use `Color.hts.*`, `Font.hts(...)`, `HTSSpacing`, `HTSNotch`. Mudou o visual? Mude tokens.json e rode `pnpm sync:shared`.
 - Vermelho (`blood`) só na ação principal, em alerta e em recorde. Texto vermelho é `redText`.
 - Sem sombra, sem gradiente, sem glow. Cantos retos; o canto é o entalhe (`NotchShape`).
-- Estêncil só no "HTS" do topo (`brand-app`). Números com `.monospacedDigit()`.
+- Estêncil só no wordmark HARD TO SUBMIT do topo (`brand-app`), com SUBMIT em `blood`. Números com `.monospacedDigit()`.
 - Voz: sem emoji, sem exclamação, botões começam por verbo ("Iniciar treino").
 
 ## Fluxo de tickets (GitHub Issues)
