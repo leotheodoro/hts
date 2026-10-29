@@ -55,7 +55,7 @@ import Testing
         let typed = saved.blocks.flatMap(\.exercises).map { "\($0.name) \($0.setsText) × \($0.targetText)" }
         #expect(
             typed == [
-                "Prancha 3 × 30-45 s", "Zercher Squat 4 × 6-6-3-3", "Afundo Búlgaro 3 a 4 × 10/10",
+                "Prancha 3 × 30 a 45 s", "Zercher Squat 4 × 6-6-3-3", "Afundo Búlgaro 3 a 4 × 10/10",
                 "Swing Russo 1 × máx",
             ])
         #expect(saved.blocks[1].exercises[0].restSeconds == 150)

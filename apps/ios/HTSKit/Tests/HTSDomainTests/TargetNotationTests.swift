@@ -21,7 +21,13 @@ import Testing
         .init(typed: "12/12", setsMax: 3, unit: .reps, targets: [.fixed(12)], perSide: true, shown: "12/12"),
         .init(
             typed: "10-20 s", setsMax: 3, unit: .seconds, targets: [.range(min: 10, max: 20)], perSide: false,
-            shown: "10-20 s"),
+            shown: "10 a 20 s"),
+        .init(
+            typed: "15 a 20", setsMax: 2, unit: .reps, targets: [.range(min: 15, max: 20)], perSide: false,
+            shown: "15 a 20"),
+        .init(
+            typed: "20 a 30seg", setsMax: 2, unit: .seconds, targets: [.range(min: 20, max: 30)], perSide: false,
+            shown: "20 a 30 s"),
         .init(typed: "máx", setsMax: 3, unit: .reps, targets: [.max], perSide: false, shown: "máx"),
         .init(typed: "MAX", setsMax: 1, unit: .reps, targets: [.max], perSide: false, shown: "máx"),
         .init(typed: "1,5 min", setsMax: 2, unit: .minutes, targets: [.fixed(1.5)], perSide: false, shown: "1,5 min"),
@@ -44,6 +50,8 @@ import Testing
         #expect(TargetNotation.parse("0", setsMax: 3) == nil)
         #expect(TargetNotation.parse("12/10", setsMax: 3) == nil)
         #expect(TargetNotation.parse("", setsMax: 3) == nil)
+        #expect(TargetNotation.parse("20 a 15", setsMax: 3) == nil)
+        #expect(TargetNotation.parse("8 a máx", setsMax: 3) == nil)
     }
 
     @Test func twoNumbersArePerSetWhenThereAreTwoSets() {
