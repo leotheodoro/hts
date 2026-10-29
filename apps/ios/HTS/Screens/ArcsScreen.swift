@@ -35,14 +35,36 @@ struct ArcsScreen: View {
     }
 
     @ViewBuilder private func content(_ model: ArcsModel) -> some View {
-        if let saga = model.saga {
-            Text(verbatim: saga.name.uppercased()).htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+        if model.seasons.isEmpty && model.freeArcs.isEmpty {
+            PlaceholderCard(label: "TEMPORADAS", text: "Nenhum arco ainda.")
         }
-        if model.summaries.isEmpty {
-            PlaceholderCard(label: "SAGA", text: "Nenhum arco ainda.")
+        ForEach(model.seasons) { entry in
+            VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                HStack(spacing: HTSSpacing.space2) {
+                    Text(verbatim: "TEMPORADA · \(entry.season.name.uppercased())").htsTextStyle(.label)
+                        .foregroundStyle(entry.season.active ? Color.hts.bone : Color.hts.grey)
+                    Spacer()
+                    if entry.season.active {
+                        Text("ATIVA").htsTextStyle(.label).foregroundStyle(Color.hts.oliveInk)
+                            .padding(.horizontal, HTSSpacing.space2).padding(.vertical, HTSSpacing.space1)
+                            .background(Color.hts.olive)
+                    }
+                }
+                ForEach(entry.summaries) { summary in
+                    ArcRow(
+                        summary: summary,
+                        eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
+                }
+                if !entry.season.active {
+                    HTSButton("Ativar temporada", kind: .ghost) { Task { await model.activate(entry.season) } }
+                }
+            }
         }
-        ForEach(model.summaries) { summary in
-            ArcRow(summary: summary, eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
+        if !model.freeArcs.isEmpty {
+            VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                Text("SEMPRE DISPONÍVEL").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                ForEach(model.freeArcs) { summary in ArcRow(summary: summary) }
+            }
         }
         if let error = model.error {
             Text(verbatim: error).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
@@ -92,7 +114,7 @@ struct ArcRow: View {
         if overdue { return "ATRASADO" }
         switch summary.arc.status {
         case .current: return "ATUAL"
-        case .queued: return "NA FILA"
+        case .queued: return "BLOQUEADO"
         case .completed: return "CONCLUÍDO"
         }
     }

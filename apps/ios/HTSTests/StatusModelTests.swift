@@ -11,12 +11,12 @@ import Testing
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
                 name: "Recrutamento", weeks: 2, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Linha de Frente"), .init(origin: .new, name: "Trincheira")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         var draft = try #require(try await TemplateService(database).draft(templateId: plan.templates[0].template.id))
         draft.blocks = [.init(exercises: [.init(name: "Supino", setsText: "1", targetText: "8")])]
@@ -49,12 +49,12 @@ import Testing
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         try await service.save(
             ArcDraft(
                 name: "Manutenção", kanji: "守", kind: .filler, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "PP"), .init(origin: .new, name: "FB")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         let model = StatusModel(database: database, athleteId: athlete.id)
         await model.load(today: LocalDate("2026-11-04")!)
         #expect(model.next == nil)
@@ -64,7 +64,7 @@ import Testing
             ArcDraft(
                 name: "Recrutamento", weeks: 2, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Linha de Frente")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         await model.load(today: LocalDate("2026-11-04")!)
         #expect(model.next?.arc.name == "Recrutamento")
         #expect(model.fillers.count == 1)

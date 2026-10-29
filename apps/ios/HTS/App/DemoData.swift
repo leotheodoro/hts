@@ -12,8 +12,8 @@
         static func seed(_ database: AppDatabase, athleteId: UUID) async throws {
             let service = ArcService(database)
             let today = LocalDate.today
-            let saga = try await service.saga(athleteId: athleteId, year: today.year)
-            guard try await service.summaries(athleteId: athleteId, sagaId: saga.id).isEmpty else { return }
+            let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athleteId)
+            guard try await service.summaries(athleteId: athleteId, seasonId: season.id).isEmpty else { return }
             let arcs: [ArcDraft] = [
                 ArcDraft(
                     name: "Recrutamento", kanji: "募", weeks: 2, startDate: today.adding(days: -10),
@@ -29,13 +29,19 @@
                     templates: [.init(origin: .new, name: "Fio da Navalha")]),
             ]
             for draft in arcs {
-                try await service.save(draft, athleteId: athleteId, sagaId: saga.id)
+                try await service.save(draft, athleteId: athleteId, seasonId: draft.kind == .filler ? nil : season.id)
             }
+            let performance = try await SeasonService(database).season(named: "Performance", athleteId: athleteId)
+            try await service.save(
+                ArcDraft(
+                    name: "Adaptação", kanji: "適", weeks: 2, startDate: today,
+                    templates: [.init(origin: .new, name: "Base")]),
+                athleteId: athleteId, seasonId: performance.id)
             try await BattleRepository(database).save(
                 Battle(
-                    id: UUIDv7.make(), athleteId: athleteId, sagaId: saga.id, name: "Copa Hard To Submit",
+                    id: UUIDv7.make(), athleteId: athleteId, seasonId: season.id, name: "Copa Hard To Submit",
                     date: today.adding(days: 5), createdAt: .now))
-            guard let first = try await service.summaries(athleteId: athleteId, sagaId: saga.id).first,
+            guard let first = try await service.summaries(athleteId: athleteId, seasonId: season.id).first,
                 let plan = try await PlanRepository(database).plan(arcId: first.arc.id),
                 var template = try await TemplateService(database).draft(templateId: plan.templates[0].template.id)
             else { return }

@@ -19,11 +19,11 @@ public struct SyncService: Sendable {
 
     /// Parents before children, the same order as the API.
     static let tables = [
-        "athlete", "saga", "arc", "workout_template", "block", "exercise", "prescribed_exercise", "session",
+        "athlete", "season", "arc", "workout_template", "block", "exercise", "prescribed_exercise", "session",
         "logged_set", "logged_round", "battle",
     ]
     /// SQLite stores these as 0/1; the API expects booleans.
-    static let booleanColumns: Set<String> = ["completed", "per_side"]
+    static let booleanColumns: Set<String> = ["completed", "per_side", "active"]
     /// SQLite stores these as JSON text; the API expects JSON.
     static let jsonColumns: Set<String> = ["attributes", "targets", "plan_snapshot", "weights"]
 

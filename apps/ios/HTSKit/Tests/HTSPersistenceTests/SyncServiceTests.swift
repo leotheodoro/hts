@@ -55,12 +55,12 @@ actor FakeSyncServer: SyncTransport {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
                 name: "Recrutamento", kanji: "募", weeks: 2, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Linha de Frente")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         var draft = try #require(try await TemplateService(database).draft(templateId: plan.templates[0].template.id))
         draft.blocks = [
@@ -88,7 +88,7 @@ actor FakeSyncServer: SyncTransport {
         let server = FakeSyncServer()
         let (a, athlete) = try await deviceA()
         let first = try await SyncService(a, transport: server).sync(athleteId: athlete.id)
-        #expect(first.pushed == 10)  // athlete, saga, arc, template, block, exercise, prescription, session, 2 sets
+        #expect(first.pushed == 10)  // athlete, season, arc, template, block, exercise, prescription, session, 2 sets
 
         let b = try AppDatabase.inMemory()
         let pulled = try await SyncService(b, transport: server).sync(athleteId: athlete.id)

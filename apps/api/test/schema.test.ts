@@ -11,7 +11,7 @@ import {
   loggedRound,
   loggedSet,
   prescribedExercise,
-  saga,
+  season,
   session,
   workoutTemplate,
 } from "../src/db/schema.js";
@@ -33,7 +33,7 @@ afterAll(async () => {
     await db.delete(block).where(inArray(block.athleteId, athleteIds));
     await db.delete(workoutTemplate).where(inArray(workoutTemplate.athleteId, athleteIds));
     await db.delete(arc).where(inArray(arc.athleteId, athleteIds));
-    await db.delete(saga).where(inArray(saga.athleteId, athleteIds));
+    await db.delete(season).where(inArray(season.athleteId, athleteIds));
     await db.delete(athlete).where(inArray(athlete.id, athleteIds));
   }
   await close();
@@ -43,14 +43,14 @@ async function seedAthlete() {
   const athleteId = uuidv7();
   athleteIds.push(athleteId);
   await db.insert(athlete).values({ id: athleteId, displayName: "Leo" });
-  const sagaId = uuidv7();
-  await db.insert(saga).values({ id: sagaId, athleteId, year: 2026, name: "Saga 2026" });
-  return { athleteId, sagaId };
+  const seasonId = uuidv7();
+  await db.insert(season).values({ id: seasonId, athleteId, name: "Jiu-Jitsu", active: true });
+  return { athleteId, seasonId };
 }
 
 describe("plan schema", () => {
   it("stores a full plan: arc, template, block and prescribed exercise", async () => {
-    const { athleteId, sagaId } = await seedAthlete();
+    const { athleteId, seasonId } = await seedAthlete();
     const arcId = uuidv7();
     const templateId = uuidv7();
     const blockId = uuidv7();
@@ -58,7 +58,7 @@ describe("plan schema", () => {
     await db.insert(arc).values({
       id: arcId,
       athleteId,
-      sagaId,
+      seasonId,
       name: "Recrutamento",
       kanji: "募",
       weeks: 2,
@@ -116,8 +116,8 @@ describe("plan schema", () => {
   });
 
   it("allows only one current arc per athlete", async () => {
-    const { athleteId, sagaId } = await seedAthlete();
-    const base = { athleteId, sagaId, name: "Arco", status: "current" as const };
+    const { athleteId, seasonId } = await seedAthlete();
+    const base = { athleteId, seasonId, name: "Arco", status: "current" as const };
     await db.insert(arc).values({ ...base, id: uuidv7(), position: 0 });
     await expect(db.insert(arc).values({ ...base, id: uuidv7(), position: 1 })).rejects.toThrow();
   });
@@ -169,7 +169,7 @@ describe("normalizeExerciseName (shared fixture)", () => {
 
 describe("record schema", () => {
   async function seedTemplate() {
-    const { athleteId, sagaId } = await seedAthlete();
+    const { athleteId, seasonId } = await seedAthlete();
     const ids = {
       arcId: uuidv7(),
       templateId: uuidv7(),
@@ -177,7 +177,7 @@ describe("record schema", () => {
       exerciseId: uuidv7(),
       prescribedId: uuidv7(),
     };
-    await db.insert(arc).values({ id: ids.arcId, athleteId, sagaId, name: "Arco", position: 0 });
+    await db.insert(arc).values({ id: ids.arcId, athleteId, seasonId, name: "Arco", position: 0 });
     await db.insert(workoutTemplate).values({
       id: ids.templateId,
       athleteId,

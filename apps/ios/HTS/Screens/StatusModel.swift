@@ -9,6 +9,8 @@ import Observation
 final class StatusModel {
     struct NextWorkout {
         let arc: Arc
+        /// The active season ("Jiu-Jitsu").
+        var seasonName: String?
         let plan: TemplatePlan
         let completed: Int
         let total: Int?
@@ -52,12 +54,14 @@ final class StatusModel {
         weekGoal = schedule.weeklyGoal
         let last = try? await SessionRepository(database).lastLetter(arcId: arc.id)
         let completed =
-            (try? await ArcService(database).summaries(athleteId: athleteId, sagaId: arc.sagaId))?
+            (try? await ArcService(database).summaries(athleteId: athleteId, seasonId: arc.seasonId))?
             .first { $0.arc.id == arc.id }?.completedSessions ?? 0
         if let letter = schedule.next(after: last),
             let template = plan.templates.first(where: { $0.template.letter == letter })
         {
-            next = NextWorkout(arc: arc, plan: template, completed: completed, total: schedule.totalSessions)
+            let season = try? await SeasonService(database).activeSeason(athleteId: athleteId)
+            next = NextWorkout(
+                arc: arc, seasonName: season?.name, plan: template, completed: completed, total: schedule.totalSessions)
         } else {
             next = nil
         }

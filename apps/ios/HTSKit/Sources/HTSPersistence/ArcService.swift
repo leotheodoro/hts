@@ -19,28 +19,15 @@ public struct ArcService: Sendable {
         self.database = database
     }
 
-    /// The saga of `year`, created on first use ("Saga 2026").
-    public func saga(athleteId: UUID, year: Int, now: Date = .now) async throws -> Saga {
-        try await database.writer.write { db in
-            if let saga = try Saga.filter(
-                Columns.athleteId == athleteId.sql && Column("year") == year && Columns.deletedAt == nil
-            ).fetchOne(db) {
-                return saga
-            }
-            let saga = Saga(
-                id: UUIDv7.make(at: now), athleteId: athleteId, year: year, name: "Saga \(year)", createdAt: now)
-            try saga.insert(db)
-            return saga
-        }
-    }
-
-    /// Live arcs of the saga in order, with schedule and progress.
-    public func summaries(athleteId: UUID, sagaId: UUID) async throws -> [Summary] {
+    /// Live arcs of a season in order (or the free arcs when `seasonId` is nil), with schedule and progress.
+    public func summaries(athleteId: UUID, seasonId: UUID?) async throws -> [Summary] {
         try await database.writer.read { db in
-            let arcs = try Arc.filter(
-                Columns.athleteId == athleteId.sql && Column("saga_id") == sagaId.sql && Columns.deletedAt == nil
-            ).order(Columns.position).fetchAll(db)
-            return try arcs.map { arc in
+            var request = Arc.filter(Columns.athleteId == athleteId.sql).filter(Columns.deletedAt == nil)
+            request =
+                if let seasonId { request.filter(Column("season_id") == seasonId.sql) } else {
+                    request.filter(Column("season_id") == nil)
+                }
+            return try request.order(Columns.position).fetchAll(db).map { arc in
                 let letters = try String.fetchAll(
                     db,
                     sql:
@@ -68,9 +55,10 @@ public struct ArcService: Sendable {
         }
     }
 
-    /// Saves the form. A new arc becomes current when there is none, otherwise it joins the queue.
+    /// Saves the form. A new arc of the active season becomes current when there is none; every other arc waits
+    /// its turn (docs/decisions/0029). Free arcs (no season) are Manutenção and never current.
     @discardableResult
-    public func save(_ draft: ArcDraft, athleteId: UUID, sagaId: UUID, now: Date = .now) async throws -> Arc {
+    public func save(_ draft: ArcDraft, athleteId: UUID, seasonId: UUID?, now: Date = .now) async throws -> Arc {
         precondition(draft.isValid, "save only valid drafts")
         return try await database.writer.write { db in
             let stamp = now.roundedToMilliseconds
@@ -86,14 +74,21 @@ public struct ArcService: Sendable {
                         Columns.athleteId == athleteId.sql && Column("status") == ArcStatus.current.rawValue
                             && Columns.deletedAt == nil
                     ).fetchCount(db) > 0
+                let seasonActive =
+                    try seasonId.map {
+                        try Bool.fetchOne(db, sql: "SELECT active FROM season WHERE id = ?", arguments: [$0.sql])
+                    } ?? false
                 let position =
                     (try Int.fetchOne(
-                        db, sql: "SELECT MAX(position) FROM arc WHERE saga_id = ? AND deleted_at IS NULL",
-                        arguments: [sagaId.sql]) ?? -1) + 1
+                        db,
+                        sql: """
+                            SELECT MAX(position) FROM arc WHERE athlete_id = ? AND deleted_at IS NULL
+                            AND season_id IS ?
+                            """, arguments: [athleteId.sql, seasonId?.sql]) ?? -1) + 1
                 // Filler arcs are always available and never take the current slot (docs/decisions/0028).
-                let becomesCurrent = !hasCurrent && draft.kind != .filler
+                let becomesCurrent = !hasCurrent && draft.kind != .filler && seasonActive == true
                 arc = Arc(
-                    id: UUIDv7.make(at: now), athleteId: athleteId, sagaId: sagaId, name: draft.name, weeks: nil,
+                    id: UUIDv7.make(at: now), athleteId: athleteId, seasonId: seasonId, name: draft.name, weeks: nil,
                     startDate: nil, status: becomesCurrent ? .current : .queued, position: position, createdAt: now)
             }
             arc.name = draft.name.trimmingCharacters(in: .whitespaces)
@@ -146,7 +141,7 @@ public struct ArcService: Sendable {
     }
 
     /// After a finished session: when the arc has all its sessions it becomes completed and the next queued arc of
-    /// the saga becomes current. Returns the arc that became current, if any.
+    /// the season becomes current. Returns the arc that became current, if any.
     @discardableResult
     public func completeIfDone(arcId: UUID, now: Date = .now) async throws -> Arc? {
         try await database.writer.write { db in
@@ -161,7 +156,8 @@ public struct ArcService: Sendable {
             arc.updatedAt = stamp
             try arc.update(db)
             guard
-                var next = try Arc.filter(Column("saga_id") == arc.sagaId.sql)
+                let seasonId = arc.seasonId,
+                var next = try Arc.filter(Column("season_id") == seasonId.sql)
                     .filter(Column("status") == ArcStatus.queued.rawValue).filter(Columns.deletedAt == nil)
                     .filter(Column("kind") != ArcKind.filler.rawValue)
                     .order(Columns.position).fetchOne(db)

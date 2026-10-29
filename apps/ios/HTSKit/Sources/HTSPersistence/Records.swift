@@ -2,7 +2,7 @@ import GRDB
 import HTSDomain
 
 // Domain entities are plain HTSDomain types; storage is added here so the domain stays free of GRDB.
-extension Saga: HTSRecord { public static let databaseTableName = "saga" }
+extension Season: HTSRecord { public static let databaseTableName = "season" }
 extension Arc: HTSRecord { public static let databaseTableName = "arc" }
 extension WorkoutTemplate: HTSRecord { public static let databaseTableName = "workout_template" }
 extension Block: HTSRecord { public static let databaseTableName = "block" }

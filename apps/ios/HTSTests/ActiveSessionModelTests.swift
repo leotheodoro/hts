@@ -13,12 +13,12 @@ import Testing
         await app.loadLocalAthlete()
         let athlete = try #require(app.athlete)
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
                 name: "Recrutamento", weeks: 2, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Linha de Frente")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         var template = try #require(
             try await TemplateService(database).draft(templateId: plan.templates[0].template.id))

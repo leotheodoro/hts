@@ -13,17 +13,17 @@ import Testing
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
                 name: "Recrutamento", weeks: weeks, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "A"), .init(origin: .new, name: "B")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         try await service.save(
             ArcDraft(
                 name: "Forja", weeks: 1, startDate: LocalDate("2026-11-09")!,
                 templates: [.init(origin: .new, name: "C")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         var plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         for template in plan.templates {
             var draft = try #require(try await TemplateService(database).draft(templateId: template.template.id))
@@ -91,7 +91,7 @@ import Testing
         #expect(next.name == "Forja")
         #expect(next.status == .current)
         #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id)?.id == next.id)
-        let summaries = try await service.summaries(athleteId: athlete.id, sagaId: arc.sagaId)
+        let summaries = try await service.summaries(athleteId: athlete.id, seasonId: arc.seasonId)
         #expect(summaries.map(\.arc.status) == [.completed, .current])
     }
 }
@@ -150,12 +150,12 @@ import Testing
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
         let service = ArcService(database)
-        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
         let arc = try await service.save(
             ArcDraft(
                 name: "Torneio", weeks: 1, startDate: LocalDate("2026-11-02")!,
                 templates: [.init(origin: .new, name: "Muralha")]),
-            athleteId: athlete.id, sagaId: saga.id)
+            athleteId: athlete.id, seasonId: season.id)
         let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id))
         var draft = try #require(try await TemplateService(database).draft(templateId: plan.templates[0].template.id))
         draft.blocks = [

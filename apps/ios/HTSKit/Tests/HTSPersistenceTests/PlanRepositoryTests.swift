@@ -5,23 +5,24 @@ import Testing
 
 @testable import HTSPersistence
 
-/// A migrated in-memory database with one athlete and one saga.
+/// A migrated in-memory database with one athlete and one season.
 struct PlanFixture {
     let database: AppDatabase
     let athlete: Athlete
-    let saga: Saga
+    let season: Season
     let now = Date(timeIntervalSince1970: 1_761_658_260.123)
 
     init() async throws {
         database = try AppDatabase.inMemory()
         athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
-        saga = Saga(id: UUIDv7.make(), athleteId: athlete.id, year: 2026, name: "Saga 2026", createdAt: now)
-        try await PlanRepository(database).save(saga)
+        season = Season(
+            id: UUIDv7.make(), athleteId: athlete.id, name: "Jiu-Jitsu", position: 0, active: true, createdAt: now)
+        try await PlanRepository(database).save(season)
     }
 
     func arc(_ name: String, status: ArcStatus = .queued, position: Int = 0) -> Arc {
         Arc(
-            id: UUIDv7.make(), athleteId: athlete.id, sagaId: saga.id, name: name, weeks: 2,
+            id: UUIDv7.make(), athleteId: athlete.id, seasonId: season.id, name: name, weeks: 2,
             startDate: LocalDate("2026-11-02"), status: status, position: position, createdAt: now)
     }
 
@@ -129,8 +130,8 @@ struct PlanFixture {
             try await fixture.database.writer.write { db in
                 try db.execute(
                     sql:
-                        "UPDATE saga SET name = name; INSERT INTO arc (id, athlete_id, saga_id, name, kind, status, position, created_at, updated_at) VALUES ('x', ?, ?, 'X', 'weird', 'queued', 0, '', '')",
-                    arguments: [fixture.athlete.id.uuidString.lowercased(), fixture.saga.id.uuidString.lowercased()])
+                        "UPDATE season SET name = name; INSERT INTO arc (id, athlete_id, season_id, name, kind, status, position, created_at, updated_at) VALUES ('x', ?, ?, 'X', 'weird', 'queued', 0, '', '')",
+                    arguments: [fixture.athlete.id.uuidString.lowercased(), fixture.season.id.uuidString.lowercased()])
             }
         }
     }
@@ -143,7 +144,7 @@ struct PlanFixture {
         let second = fixture.arc("Forja", position: 2)
         let first = fixture.arc("Recrutamento", position: 1)
         try await repository.saveAll([deleted, second, first])
-        let names = try await repository.arcs(athleteId: fixture.athlete.id, sagaId: fixture.saga.id).map(\.name)
+        let names = try await repository.arcs(athleteId: fixture.athlete.id, seasonId: fixture.season.id).map(\.name)
         #expect(names == ["Recrutamento", "Forja"])
     }
 
@@ -208,7 +209,7 @@ struct PlanFixture {
         let fixture = try await PlanFixture()
         let repository = BattleRepository(fixture.database)
         let past = Battle(
-            id: UUIDv7.make(), athleteId: fixture.athlete.id, sagaId: fixture.saga.id, name: "Copa A",
+            id: UUIDv7.make(), athleteId: fixture.athlete.id, seasonId: fixture.season.id, name: "Copa A",
             date: LocalDate("2026-10-10")!, createdAt: fixture.now)
         try await repository.save(past)
         #expect(
@@ -220,7 +221,7 @@ struct PlanFixture {
         #expect(try await repository.current(athleteId: fixture.athlete.id, today: LocalDate("2026-11-01")!) == nil)
 
         let next = Battle(
-            id: UUIDv7.make(), athleteId: fixture.athlete.id, sagaId: fixture.saga.id, name: "Copa B",
+            id: UUIDv7.make(), athleteId: fixture.athlete.id, seasonId: fixture.season.id, name: "Copa B",
             date: LocalDate("2026-12-12")!, createdAt: fixture.now)
         try await repository.save(next)
         #expect(

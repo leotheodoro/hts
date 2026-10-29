@@ -77,7 +77,75 @@ public final class AppDatabase: Sendable {
                     WHERE kind = 'filler' AND status = 'current' AND deleted_at IS NULL
                     """, arguments: [ISO8601Millis.format(.now)])
         }
+        migrator.registerMigration("v7_saga_to_season", migrate: sagaToSeason)
         return migrator
+    }
+
+    /// Mirrors apps/api/drizzle/0005_rename_saga_to_season.sql (docs/decisions/0029). SQLite cannot make a column
+    /// nullable, so `arc` and `battle` are rebuilt; GRDB runs migrations with foreign keys checked at the end.
+    private static func sagaToSeason(_ db: Database) throws {
+        let stamp = ISO8601Millis.format(.now)
+        try db.execute(
+            sql: """
+                ALTER TABLE saga RENAME TO season;
+                ALTER TABLE season DROP COLUMN year;
+                ALTER TABLE season ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE season ADD COLUMN active BOOLEAN NOT NULL DEFAULT 0;
+                """)
+
+        try db.create(table: "arc_new") { t in
+            owned(t)
+            t.column("season_id", .text).references("season")
+            t.column("name", .text).notNull()
+            t.column("kanji", .text)
+            t.column("program", .text)
+            t.column("kind", .text).notNull().defaults(to: ArcKind.normal.rawValue)
+                .check(sql: "kind IN (\(oneOf(ArcKind.self)))")
+            t.column("weeks", .integer)
+            t.column("start_date", .text)
+            t.column("status", .text).notNull().defaults(to: ArcStatus.queued.rawValue)
+                .check(sql: "status IN (\(oneOf(ArcStatus.self)))")
+            t.column("position", .integer).notNull()
+            t.column("count_reset_at", .text)
+            timestamps(t)
+        }
+        try db.execute(
+            sql: """
+                INSERT INTO arc_new (id, athlete_id, season_id, name, kanji, program, kind, weeks, start_date, status,
+                    position, count_reset_at, created_at, updated_at, deleted_at)
+                SELECT id, athlete_id, saga_id, name, kanji, program, kind, weeks, start_date, status,
+                    position, count_reset_at, created_at, updated_at, deleted_at FROM arc;
+                DROP TABLE arc;
+                ALTER TABLE arc_new RENAME TO arc;
+                CREATE INDEX arc_season_id_idx ON arc(season_id);
+                CREATE UNIQUE INDEX arc_one_current_idx ON arc(athlete_id) WHERE status = 'current' AND deleted_at IS NULL;
+                """)
+
+        try db.create(table: "battle_new") { t in
+            owned(t)
+            t.column("season_id", .text).references("season")
+            t.column("name", .text).notNull()
+            t.column("date", .text).notNull()
+            t.column("result", .text).check(sql: "result IN (\(oneOf(BattleResult.self)))")
+            timestamps(t)
+        }
+        try db.execute(
+            sql: """
+                INSERT INTO battle_new (id, athlete_id, season_id, name, date, result, created_at, updated_at, deleted_at)
+                SELECT id, athlete_id, saga_id, name, date, result, created_at, updated_at, deleted_at FROM battle;
+                DROP TABLE battle;
+                ALTER TABLE battle_new RENAME TO battle;
+                CREATE INDEX battle_athlete_date_idx ON battle(athlete_id, date);
+                """)
+
+        // Same data fixes as Postgres: filler arcs are free; the season holding the current arc is active.
+        try db.execute(
+            sql: """
+                UPDATE arc SET season_id = NULL, updated_at = ? WHERE kind = 'filler' AND season_id IS NOT NULL;
+                UPDATE season SET active = 1, updated_at = ?
+                WHERE id IN (SELECT season_id FROM arc WHERE status = 'current' AND deleted_at IS NULL AND season_id IS NOT NULL);
+                CREATE UNIQUE INDEX season_one_active_idx ON season(athlete_id) WHERE active AND deleted_at IS NULL;
+                """, arguments: [stamp, stamp])
     }
 
     /// Mirrors apps/api/drizzle/0001_create_plan.sql. Postgres enums become TEXT with CHECK, jsonb becomes JSON
