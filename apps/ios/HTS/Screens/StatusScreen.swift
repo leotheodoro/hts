@@ -13,6 +13,7 @@ struct StatusScreen: View {
                 athleteCard(athlete, model)
                 if let battle = model.battle, battle.daysUntil(.today) >= 0 { battleCard(battle) }
                 workoutCard(model)
+                if app.activeSession == nil, !model.fillers.isEmpty { fillerCard(model) }
                 weekCard(model)
             }
         }
@@ -113,13 +114,59 @@ struct StatusScreen: View {
         .overlay(Rectangle().strokeBorder(Color.hts.blood, lineWidth: HTSStroke.hair))
     }
 
+    /// Manutenção: every template of the filler arcs, always startable. Ghost buttons: red stays on the main action.
+    private func fillerCard(_ model: StatusModel) -> some View {
+        NotchCard {
+            VStack(alignment: .leading, spacing: HTSSpacing.space4) {
+                HStack(spacing: HTSSpacing.space2) {
+                    Text("MANUTENÇÃO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                    Spacer()
+                    Text("SEMPRE DISPONÍVEL").htsTextStyle(.label).foregroundStyle(Color.hts.greyApp)
+                }
+                ForEach(model.fillers, id: \.arc.id) { filler in
+                    ForEach(filler.templates, id: \.template.id) { plan in
+                        HStack(spacing: HTSSpacing.space3) {
+                            if let kanji = filler.arc.kanji {
+                                Text(verbatim: kanji)
+                                    .font(
+                                        .custom(
+                                            HTSFontFamily.kanji.postScriptName(weight: 900),
+                                            size: HTSTextStyle.uiSection.size)
+                                    )
+                                    .foregroundStyle(Color.hts.bone)
+                                    .accessibilityHidden(true)
+                            }
+                            Text(verbatim: "\(plan.template.letter) · \(plan.template.name)").htsTextStyle(.bodyStrong)
+                            Spacer()
+                            Button {
+                                Task { await app.startWorkout(plan) }
+                            } label: {
+                                Text("Iniciar").htsTextStyle(.bodyStrong).padding(.horizontal, HTSSpacing.space4)
+                                    .frame(minHeight: 44)
+                            }
+                            .buttonStyle(HTSButtonStyle(.ghost))
+                            .fixedSize()
+                            .disabled(plan.blocks.isEmpty)
+                            .accessibilityLabel("Iniciar \(plan.template.name)")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private func weekCard(_ model: StatusModel) -> some View {
         NotchCard {
             VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                 HStack {
                     Text("ESTA SEMANA").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
                     Spacer()
-                    Text(verbatim: String(format: "%02d/%02d", model.weekDone, model.weekGoal)).htsTextStyle(.data)
+                    Text(
+                        verbatim: model.weekGoal > 0
+                            ? String(format: "%02d/%02d", model.weekDone, model.weekGoal)
+                            : String(format: "%02d", model.weekDone)
+                    )
+                    .htsTextStyle(.data)
                 }
                 if let streak = model.streak, streak.current > 0 || streak.best > 0 {
                     HStack {

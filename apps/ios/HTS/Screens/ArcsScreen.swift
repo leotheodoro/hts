@@ -87,6 +87,7 @@ struct ArcRow: View {
     }
 
     private var statusLabel: LocalizedStringKey {
+        if summary.arc.kind == .filler { return "SEMPRE DISPONÍVEL" }
         if eve { return "A VÉSPERA · SEMANA DA BATALHA" }
         if overdue { return "ATRASADO" }
         switch summary.arc.status {

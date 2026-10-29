@@ -44,4 +44,29 @@ import Testing
         #expect(model.next?.completed == 1)
         #expect(model.weekDone == 1)
     }
+
+    @Test func fillerArcsAreAlwaysAvailableOutsideTheCurrentArc() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let service = ArcService(database)
+        let saga = try await service.saga(athleteId: athlete.id, year: 2026)
+        try await service.save(
+            ArcDraft(
+                name: "Manutenção", kanji: "守", kind: .filler, startDate: LocalDate("2026-11-02")!,
+                templates: [.init(origin: .new, name: "PP"), .init(origin: .new, name: "FB")]),
+            athleteId: athlete.id, sagaId: saga.id)
+        let model = StatusModel(database: database, athleteId: athlete.id)
+        await model.load(today: LocalDate("2026-11-04")!)
+        #expect(model.next == nil)
+        #expect(model.fillers.flatMap(\.templates).map(\.template.name) == ["PP", "FB"])
+
+        try await service.save(
+            ArcDraft(
+                name: "Recrutamento", weeks: 2, startDate: LocalDate("2026-11-02")!,
+                templates: [.init(origin: .new, name: "Linha de Frente")]),
+            athleteId: athlete.id, sagaId: saga.id)
+        await model.load(today: LocalDate("2026-11-04")!)
+        #expect(model.next?.arc.name == "Recrutamento")
+        #expect(model.fillers.count == 1)
+    }
 }

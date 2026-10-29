@@ -90,14 +90,17 @@ public struct ArcService: Sendable {
                     (try Int.fetchOne(
                         db, sql: "SELECT MAX(position) FROM arc WHERE saga_id = ? AND deleted_at IS NULL",
                         arguments: [sagaId.sql]) ?? -1) + 1
+                // Filler arcs are always available and never take the current slot (docs/decisions/0028).
+                let becomesCurrent = !hasCurrent && draft.kind != .filler
                 arc = Arc(
                     id: UUIDv7.make(at: now), athleteId: athleteId, sagaId: sagaId, name: draft.name, weeks: nil,
-                    startDate: nil, status: hasCurrent ? .queued : .current, position: position, createdAt: now)
+                    startDate: nil, status: becomesCurrent ? .current : .queued, position: position, createdAt: now)
             }
             arc.name = draft.name.trimmingCharacters(in: .whitespaces)
             arc.kanji = Self.nonEmpty(draft.kanji)
             arc.program = Self.nonEmpty(draft.program)
             arc.kind = draft.kind
+            if arc.kind == .filler && arc.status == .current { arc.status = .queued }
             arc.weeks = draft.hasDuration ? draft.weeks : nil
             arc.startDate = draft.hasDuration ? draft.startDate : nil
             arc.updatedAt = stamp
@@ -160,6 +163,7 @@ public struct ArcService: Sendable {
             guard
                 var next = try Arc.filter(Column("saga_id") == arc.sagaId.sql)
                     .filter(Column("status") == ArcStatus.queued.rawValue).filter(Columns.deletedAt == nil)
+                    .filter(Column("kind") != ArcKind.filler.rawValue)
                     .order(Columns.position).fetchOne(db)
             else { return nil }
             next.status = .current
@@ -167,6 +171,19 @@ public struct ArcService: Sendable {
             try next.update(db)
             return next
         }
+    }
+
+    /// Templates of every live filler (Manutenção) arc, always available to train (docs/decisions/0028).
+    public func fillerPlans(athleteId: UUID) async throws -> [ArcPlan] {
+        let ids = try await database.writer.read { db in
+            try Arc.filter(Columns.athleteId == athleteId.sql).filter(Column("kind") == ArcKind.filler.rawValue)
+                .filter(Columns.deletedAt == nil).order(Columns.position).fetchAll(db).map(\.id)
+        }
+        var plans: [ArcPlan] = []
+        for id in ids {
+            if let plan = try await PlanRepository(database).plan(arcId: id) { plans.append(plan) }
+        }
+        return plans
     }
 
     /// "Recomeçar contagem": progress starts over, history stays.
