@@ -64,6 +64,10 @@ import Testing
         #expect(completion.after.totalXp == 170)
         #expect(completion.leveledUp)
         #expect(!completion.rankedUp)
+        // Each session fed FOR with 3 sets.
+        #expect(completion.attributesBefore[.strength]?.xp == 30)
+        #expect(completion.attributesAfter[.strength]?.xp == 60)
+        #expect(completion.attributeGains == [.strength])
 
         let (sessions, history) = try await ProgressService(database).history(athleteId: athlete.id)
         #expect(sessions.count == 2)

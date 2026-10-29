@@ -16,6 +16,14 @@ public struct ProgressService: Sendable {
 
         /// Titles unlocked by this session.
         public let newTitles: [TitleID]
+        /// Level of each attribute before and after this session (#89).
+        public let attributesBefore: [Attribute: AttributeLevel]
+        public let attributesAfter: [Attribute: AttributeLevel]
+
+        /// Attributes this session fed, in the FOR, EXP, GÁS, COR, MOB order.
+        public var attributeGains: [Attribute] {
+            Attribute.allCases.filter { (attributesAfter[$0]?.xp ?? 0) > (attributesBefore[$0]?.xp ?? 0) }
+        }
 
         public var leveledUp: Bool { after.level > before.level }
         public var rankedUp: Bool { after.rank.id != before.rank.id }
@@ -52,39 +60,43 @@ public struct ProgressService: Sendable {
             let facts = try Self.titleSessions(sessions, history: after, db)
             let titlesBefore = Set(progression.titles(Array(facts[..<index])).map(\.id))
             let newTitles = progression.titles(Array(facts[...index])).map(\.id).filter { !titlesBefore.contains($0) }
+            let attributeSets = try sessions[...index].map { try Self.attributeSets($0, db) }
             return Completion(
                 session: session, progress: progress, before: before, after: after,
-                recordNames: progress.records.compactMap { names[$0] }, newTitles: newTitles)
+                recordNames: progress.records.compactMap { names[$0] }, newTitles: newTitles,
+                attributesBefore: progression.attributeLevels(attributeSets.dropLast().flatMap { $0 }),
+                attributesAfter: progression.attributeLevels(attributeSets.flatMap { $0 }))
         }
     }
 
     /// Level of each attribute from the sets of completed sessions; attributes come from the session snapshot.
     public func attributeLevels(athleteId: UUID) async throws -> [Attribute: AttributeLevel] {
         try await database.writer.read { db in
-            var sets: [AttributeSet] = []
-            for session in try Self.completedSessions(athleteId: athleteId, db) {
-                var attributes: [UUID: [Attribute]] = [:]
-                for block in session.planSnapshot.blocks {
-                    for exercise in block.exercises { attributes[exercise.prescribedExerciseId] = block.attributes }
-                }
-                let logged = try LoggedSet.filter(Column("session_id") == session.id.sql)
-                    .filter(Columns.deletedAt == nil).fetchAll(db)
-                sets += logged.map {
-                    AttributeSet(attributes: attributes[$0.prescribedExerciseId] ?? [], completed: $0.completed)
-                }
-                // Each complete fight round counts as a completed set of its block (docs/decisions/0027).
-                let blockAttributes = Dictionary(
-                    session.planSnapshot.blocks.map { ($0.blockId, $0.attributes) }, uniquingKeysWith: { a, _ in a })
-                for round in try LoggedRound.filter(Column("session_id") == session.id.sql)
-                    .filter(Columns.deletedAt == nil).fetchAll(db)
-                {
-                    sets += Array(
-                        repeating: AttributeSet(attributes: blockAttributes[round.blockId] ?? [], completed: true),
-                        count: max(round.roundsCompleted, 0))
-                }
-            }
+            let sets = try Self.completedSessions(athleteId: athleteId, db).flatMap { try Self.attributeSets($0, db) }
             return progression.attributeLevels(sets)
         }
+    }
+
+    /// The sets of one session as the attributes see them; attributes come from the session snapshot.
+    private static func attributeSets(_ session: Session, _ db: Database) throws -> [AttributeSet] {
+        var attributes: [UUID: [Attribute]] = [:]
+        for block in session.planSnapshot.blocks {
+            for exercise in block.exercises { attributes[exercise.prescribedExerciseId] = block.attributes }
+        }
+        var sets = try LoggedSet.filter(Column("session_id") == session.id.sql)
+            .filter(Columns.deletedAt == nil).fetchAll(db)
+            .map { AttributeSet(attributes: attributes[$0.prescribedExerciseId] ?? [], completed: $0.completed) }
+        // Each complete fight round counts as a completed set of its block (docs/decisions/0027).
+        let blockAttributes = Dictionary(
+            session.planSnapshot.blocks.map { ($0.blockId, $0.attributes) }, uniquingKeysWith: { a, _ in a })
+        for round in try LoggedRound.filter(Column("session_id") == session.id.sql)
+            .filter(Columns.deletedAt == nil).fetchAll(db)
+        {
+            sets += Array(
+                repeating: AttributeSet(attributes: blockAttributes[round.blockId] ?? [], completed: true),
+                count: max(round.roundsCompleted, 0))
+        }
+        return sets
     }
 
     /// Unlocked titles with their date, in unlock order.
