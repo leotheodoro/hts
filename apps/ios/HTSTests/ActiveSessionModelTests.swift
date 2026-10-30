@@ -61,6 +61,25 @@ import Testing
         app.endWorkout()
         #expect(try await SessionRepository(database).inProgress(athleteId: athlete.id) == nil)
     }
+
+    @Test func aBlockIsDoneWhenEverySetIsCheckedAndThePagerOpensOnTheFirstPending() async throws {
+        let (database, app) = try await setUp()
+        let athlete = try #require(app.athlete)
+        let arc = try #require(try await PlanRepository(database).currentArc(athleteId: athlete.id))
+        let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id)?.templates.first)
+        await app.startWorkout(plan)
+        let model = ActiveSessionModel(
+            database: database, session: try #require(app.activeSession), alerts: FakeRestAlerts())
+        await model.load()
+        let block = model.snapshot.blocks[0]
+        #expect(!model.isDone(block))
+        #expect(model.firstPendingPage == 0)
+
+        for set in model.rows(for: block.exercises[0]) { model.toggle(set, exercise: block.exercises[0]) }
+        #expect(model.isDone(block))
+        // Every block done: the workout opens on the finish page.
+        #expect(model.firstPendingPage == 1)
+    }
 }
 
 @Suite struct NumberFieldTests {

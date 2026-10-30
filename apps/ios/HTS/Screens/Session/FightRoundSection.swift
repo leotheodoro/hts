@@ -33,7 +33,6 @@ struct FightRoundSection: View {
                 }
             }
         }
-        .task { await model.loadRound(block) }
     }
 
     @ViewBuilder private var timer: some View {

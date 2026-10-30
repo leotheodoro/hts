@@ -4,11 +4,13 @@ import HTSPersistence
 import SwiftUI
 import UIKit
 
-/// The active workout, over everything. Header with number, name, clock and Finalizar; one table per exercise.
+/// The active workout, over everything. Header with number, name, clock and one bullet per block; one page per block
+/// and a last page to finish, like TrainHeroic (#108).
 struct ActiveSessionScreen: View {
     @Environment(AppModel.self) private var app
     @State private var model: ActiveSessionModel
     @State private var confirmingFinish = false
+    @State private var page: Int?
     @State private var completed: Completed?
 
     struct Completed {
@@ -39,27 +41,22 @@ struct ActiveSessionScreen: View {
     }
 
     private var workout: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: HTSSpacing.space7) {
-                header
-                if confirmingFinish { finishConfirmation }
-                ForEach(Array(model.snapshot.blocks.enumerated()), id: \.element.blockId) { index, block in
-                    BlockSection(model: model, block: block, index: index)
-                }
-                if let error = model.error {
-                    Text(verbatim: error).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
-                }
-            }
-            .padding(.horizontal, HTSSpacing.space5)
-            .padding(.vertical, HTSSpacing.space4)
+        VStack(spacing: 0) {
+            header
+            pager
+            pagerControls
         }
-        .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { RestFooter(model: model) }
         .background(Color.hts.black)
         .preferredColorScheme(.dark)
         .task {
             await model.load()
+            page = model.firstPendingPage
             #if DEBUG
+                // `-HTSDemoPage N` opens on page N (screenshots; the last page is Finalizar).
+                if UserDefaults.standard.object(forKey: "HTSDemoPage") != nil {
+                    page = min(UserDefaults.standard.integer(forKey: "HTSDemoPage"), finishPage)
+                }
                 // `-HTSDemoRest YES` starts a rest on the first exercise (screenshots).
                 if UserDefaults.standard.bool(forKey: "HTSDemoRest"),
                     let exercise = model.snapshot.blocks.first(where: { $0.kind != .fightRound })?.exercises.first
@@ -100,11 +97,114 @@ struct ActiveSessionScreen: View {
             Text(numberLabel).htsTextStyle(.label).foregroundStyle(Color.hts.grey)
             Text(verbatim: "\(model.snapshot.letter) · \(model.snapshot.name)")
                 .htsTextStyle(.uiTitle).foregroundStyle(Color.hts.bone)
-            HTSButton("Finalizar", kind: .ghost) {
-                if model.uncheckedCount > 0 {
-                    confirmingFinish = true
-                } else {
-                    Task { await finish() }
+            PageBullets(model: model, current: currentPage) { go(to: $0) }
+            if let error = model.error {
+                Text(verbatim: error).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
+            }
+        }
+        .padding(.horizontal, HTSSpacing.space5)
+        .padding(.top, HTSSpacing.space4)
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.hts.line).frame(height: HTSStroke.hair) }
+    }
+
+    /// One page per block and a last one to finish, swiped sideways or moved with the arrows (#108).
+    private var pager: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(0...finishPage, id: \.self) { index in
+                    ScrollView {
+                        Group {
+                            if index < finishPage {
+                                BlockSection(model: model, block: model.snapshot.blocks[index], index: index)
+                            } else {
+                                finishPageContent
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, HTSSpacing.space5)
+                        .padding(.vertical, HTSSpacing.space5)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .containerRelativeFrame(.horizontal)
+                    .id(index)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $page)
+        .scrollIndicators(.hidden)
+    }
+
+    private var pagerControls: some View {
+        HStack {
+            IconButton(symbol: "chevron.left", label: "Bloco anterior") { go(to: currentPage - 1) }
+                .disabled(currentPage == 0)
+                .opacity(currentPage == 0 ? 0.3 : 1)
+            Spacer()
+            Text(pageLabel).htsTextStyle(.label).foregroundStyle(Color.hts.grey).monospacedDigit()
+            Spacer()
+            IconButton(symbol: "chevron.right", label: "Próximo bloco") { go(to: currentPage + 1) }
+                .disabled(currentPage == finishPage)
+                .opacity(currentPage == finishPage ? 0.3 : 1)
+        }
+        .padding(.horizontal, HTSSpacing.space3)
+        .overlay(alignment: .top) { Rectangle().fill(Color.hts.line).frame(height: HTSStroke.hair) }
+    }
+
+    private var finishPage: Int { model.snapshot.blocks.count }
+    private var currentPage: Int { page ?? 0 }
+
+    private var pageLabel: LocalizedStringKey {
+        currentPage == finishPage
+            ? "FINALIZAR" : "BLOCO \(String(format: "%02d", currentPage + 1)) DE \(String(format: "%02d", finishPage))"
+    }
+
+    private func go(to index: Int) {
+        withAnimation(.easeOut(duration: 0.25)) { page = min(max(index, 0), finishPage) }
+    }
+
+    /// Last slide: what was done, then Finalizar treino. Unchecked sets ask for confirmation on the page itself.
+    private var finishPageContent: some View {
+        VStack(alignment: .leading, spacing: HTSSpacing.space5) {
+            VStack(alignment: .leading, spacing: HTSSpacing.space2) {
+                Text("FINALIZAR TREINO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                Text(
+                    "\(String(format: "%02d", model.setCount - model.uncheckedCount)) de \(String(format: "%02d", model.setCount)) séries"
+                )
+                .htsTextStyle(.uiTitle).foregroundStyle(Color.hts.bone).monospacedDigit()
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(model.snapshot.blocks.enumerated()), id: \.element.blockId) { index, block in
+                    Button {
+                        go(to: index)
+                    } label: {
+                        HStack(spacing: HTSSpacing.space3) {
+                            PageBullet(done: model.isDone(block), current: false)
+                            Text(verbatim: String(format: "%02d", index + 1)).htsTextStyle(.dataSm)
+                                .foregroundStyle(Color.hts.grey)
+                            Text(verbatim: block.exercises.map(\.name).joined(separator: " + "))
+                                .htsTextStyle(.body).foregroundStyle(Color.hts.bone).lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                            Spacer()
+                            Text(model.isDone(block) ? "Feito" : "Falta").htsTextStyle(.caption)
+                                .foregroundStyle(Color.hts.greyApp)
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .overlay(alignment: .bottom) { Rectangle().fill(Color.hts.line).frame(height: HTSStroke.hair) }
+                }
+            }
+            if confirmingFinish {
+                finishConfirmation
+            } else {
+                HTSButton("Finalizar treino") {
+                    if model.uncheckedCount > 0 {
+                        confirmingFinish = true
+                    } else {
+                        Task { await finish() }
+                    }
                 }
             }
         }
@@ -150,6 +250,62 @@ struct ActiveSessionScreen: View {
             let template = plan.templates.first(where: { $0.template.letter == letter })?.template
         else { return nil }
         return "\(template.letter) · \(template.name)"
+    }
+}
+
+/// One square per block, filled `blood` when done and outlined when pending; the flag is the finish page. The
+/// current page has a `bone` bar under it. Tapping one opens that page.
+private struct PageBullets: View {
+    let model: ActiveSessionModel
+    let current: Int
+    let select: (Int) -> Void
+
+    var body: some View {
+        let blocks = model.snapshot.blocks
+        HStack(spacing: 0) {
+            ForEach(Array(blocks.enumerated()), id: \.element.blockId) { index, block in
+                let done = model.isDone(block)
+                button(index) { PageBullet(done: done, current: index == current) }
+                    .accessibilityLabel(done ? "Bloco \(index + 1), feito" : "Bloco \(index + 1), falta")
+            }
+            button(blocks.count) {
+                Image(systemName: "flag").font(.caption2).fontWeight(.light)
+                    .foregroundStyle(current == blocks.count ? Color.hts.bone : Color.hts.grey)
+            }
+            .accessibilityLabel("Finalizar treino")
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func button(_ index: Int, @ViewBuilder label: () -> some View) -> some View {
+        Button {
+            select(index)
+        } label: {
+            label()
+                .frame(width: 28, height: 40)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(index == current ? Color.hts.bone : Color.clear)
+                        .frame(width: 14, height: HTSStroke.rule)
+                }
+                .contentShape(Rectangle())
+        }
+    }
+}
+
+struct PageBullet: View {
+    let done: Bool
+    let current: Bool
+
+    var body: some View {
+        Rectangle()
+            .fill(done ? Color.hts.blood : Color.clear)
+            .overlay(Rectangle().strokeBorder(border, lineWidth: HTSStroke.hair))
+            .frame(width: 10, height: 10)
+    }
+
+    private var border: Color {
+        if done { return Color.hts.blood }
+        return current ? Color.hts.bone : Color.hts.lineStrong
     }
 }
 
