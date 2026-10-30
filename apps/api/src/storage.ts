@@ -33,6 +33,9 @@ export function s3Storage(env: StorageEnv): AvatarStorage | undefined {
   const client = new S3Client({
     endpoint: AWS_ENDPOINT_URL_S3,
     region: env.AWS_REGION || "auto",
+    // `<endpoint>/<bucket>/<key>`: S3-compatible stores (Neon) sign one wildcard level under the endpoint, so the
+    // AWS default `<bucket>.<endpoint>` fails the TLS check (#153).
+    forcePathStyle: true,
     credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY },
   });
   const Bucket = S3_BUCKET;

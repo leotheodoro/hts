@@ -81,6 +81,7 @@ const avatarRoute = createRoute({
     400: error("Not a JPEG"),
     401: error("Missing, unknown or revoked session"),
     413: error("Larger than 2 MB"),
+    502: error("The photo storage failed"),
     503: error("Photo storage is not configured"),
   },
 });
@@ -170,7 +171,12 @@ export function accountRoutes(db: Db, storage?: AvatarStorage) {
         return c.json({ error: "not_jpeg" }, 400);
       }
       const key = `avatars/${auth.account.id}/${uuidv7()}.jpg`;
-      await storage.put(key, bytes, "image/jpeg");
+      try {
+        await storage.put(key, bytes, "image/jpeg");
+      } catch (failure) {
+        console.error("avatar upload failed", failure);
+        return c.json({ error: "storage_failed" }, 502);
+      }
       const [updated] = await db
         .update(account)
         .set({ avatarKey: key, updatedAt: new Date() })
