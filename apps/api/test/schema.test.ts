@@ -4,8 +4,10 @@ import { v7 as uuidv7 } from "uuid";
 import { afterAll, describe, expect, it } from "vitest";
 import { normalizeExerciseName } from "../src/db/exercise-name.js";
 import {
+  account,
   arc,
   athlete,
+  authSession,
   block,
   exercise,
   loggedRound,
@@ -34,6 +36,19 @@ afterAll(async () => {
     await db.delete(workoutTemplate).where(inArray(workoutTemplate.athleteId, athleteIds));
     await db.delete(arc).where(inArray(arc.athleteId, athleteIds));
     await db.delete(season).where(inArray(season.athleteId, athleteIds));
+    const accounts = await db
+      .select({ id: account.id })
+      .from(account)
+      .where(inArray(account.athleteId, athleteIds));
+    if (accounts.length > 0) {
+      await db.delete(authSession).where(
+        inArray(
+          authSession.accountId,
+          accounts.map((a) => a.id),
+        ),
+      );
+      await db.delete(account).where(inArray(account.athleteId, athleteIds));
+    }
     await db.delete(athlete).where(inArray(athlete.id, athleteIds));
   }
   await close();
@@ -293,5 +308,48 @@ describe("record schema", () => {
     await db.insert(session).values({ ...base, id: uuidv7() });
     await expect(db.insert(session).values({ ...base, id: uuidv7() })).rejects.toThrow();
     await db.insert(session).values({ ...base, id: uuidv7(), status: "completed" });
+  });
+});
+
+describe("account schema", () => {
+  it("keeps account and auth_session out of the shared schema", () => {
+    const shared = JSON.parse(
+      readFileSync(new URL("../../../packages/contracts/db-schema.json", import.meta.url), "utf8"),
+    ) as { tables: { name: string }[] };
+    const names = shared.tables.map((t) => t.name);
+    expect(names).not.toContain("account");
+    expect(names).not.toContain("auth_session");
+  });
+
+  it("makes username and e-mail unique regardless of case", async () => {
+    const { athleteId } = await seedAthlete();
+    const { athleteId: otherId } = await seedAthlete();
+    const tag = uuidv7().slice(-12);
+    const base = { name: "Leo", passwordHash: "x" };
+    await db.insert(account).values({
+      ...base,
+      id: uuidv7(),
+      athleteId,
+      username: `leo-${tag}`,
+      email: `leo-${tag}@hts.test`,
+    });
+    await expect(
+      db.insert(account).values({
+        ...base,
+        id: uuidv7(),
+        athleteId: otherId,
+        username: `LEO-${tag}`,
+        email: `other-${tag}@hts.test`,
+      }),
+    ).rejects.toThrow();
+    await expect(
+      db.insert(account).values({
+        ...base,
+        id: uuidv7(),
+        athleteId: otherId,
+        username: `other-${tag}`,
+        email: `LEO-${tag}@HTS.TEST`,
+      }),
+    ).rejects.toThrow();
   });
 });

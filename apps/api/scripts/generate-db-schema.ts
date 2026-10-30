@@ -5,10 +5,12 @@ import * as schema from "../src/db/schema.js";
 
 // Column names and nullability of every table, so the iOS tests can check that the SQLite schema
 // mirrors Postgres (docs/decisions/0009). Types differ by design (jsonb -> TEXT, enum -> TEXT).
-// Server-only `server_*` columns are left out (docs/decisions/0026).
+// Server-only `server_*` columns (docs/decisions/0026) and server-only tables (account, sessions)
+// are left out.
 const tables = (Object.values(schema) as unknown[])
   .filter((value): value is PgTable => is(value, PgTable))
   .map((table) => getTableConfig(table))
+  .filter((config) => !schema.SERVER_ONLY_TABLES.includes(config.name))
   .sort((a, b) => a.name.localeCompare(b.name))
   .map((config) => ({
     name: config.name,

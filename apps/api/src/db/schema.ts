@@ -42,6 +42,50 @@ export const athlete = pgTable("athlete", {
   ...timestamps,
 });
 
+/**
+ * Login of an athlete (docs/decisions/0031). Server-only: not synced and not mirrored in SQLite.
+ * Username and e-mail are unique ignoring case. `password_hash` is argon2id; the password never is stored.
+ */
+export const account = pgTable(
+  "account",
+  {
+    id: uuid("id").primaryKey(),
+    athleteId: uuid("athlete_id")
+      .notNull()
+      .unique()
+      .references(() => athlete.id),
+    name: text("name").notNull(),
+    username: text("username").notNull(),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    avatarUrl: text("avatar_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("account_username_idx")
+      .on(sql`lower(${t.username})`)
+      .where(sql`${t.deletedAt} IS NULL`),
+    uniqueIndex("account_email_idx").on(sql`lower(${t.email})`).where(sql`${t.deletedAt} IS NULL`),
+  ],
+);
+
+/** A logged-in device. Only the SHA-256 of the token is stored; a session lasts until revoked. */
+export const authSession = pgTable("auth_session", {
+  id: uuid("id").primaryKey(),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => account.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
+/** Tables that live only on the server: left out of the SQLite mirror (db-schema.json) and of sync. */
+export const SERVER_ONLY_TABLES = ["account", "auth_session"];
+
 const owned = () => ({
   id: uuid("id").primaryKey(),
   athleteId: uuid("athlete_id")
