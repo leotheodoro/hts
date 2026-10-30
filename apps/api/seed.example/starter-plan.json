@@ -15,9 +15,7 @@
               "blocks": [
                 {
                   "kind": "activation",
-                  "attributes": [
-                    "mobility"
-                  ],
+                  "attributes": ["mobility"],
                   "exercises": [
                     {
                       "name": "Prancha",
@@ -29,9 +27,7 @@
                 },
                 {
                   "kind": "strength",
-                  "attributes": [
-                    "strength"
-                  ],
+                  "attributes": ["strength"],
                   "exercises": [
                     {
                       "name": "Zercher Squat",
@@ -64,9 +60,7 @@
           "blocks": [
             {
               "kind": "mobility",
-              "attributes": [
-                "mobility"
-              ],
+              "attributes": ["mobility"],
               "exercises": [
                 {
                   "name": "Prancha",

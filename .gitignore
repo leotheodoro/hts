@@ -20,9 +20,9 @@ xcuserdata/
 # Machine-specific signing and API host (see apps/ios/Local.xcconfig.example)
 apps/ios/Local.xcconfig
 
-# Personal starter plan (licensed coach programs; see apps/ios/LocalSeed.example)
+# Old local copy of the coach programs (now in apps/api/seed); never in the public repo
 apps/ios/LocalSeed/
 .superpowers/
 
-# Coach programs for the API seed: licensed content, never in the public repo
+# Coach programs for the API seed (see apps/api/seed.example): licensed content, never in the public repo
 apps/api/seed/

@@ -108,6 +108,16 @@ public final class AppDatabase: Sendable {
         migrator.registerMigration("v9_exercise_video_url") { db in
             try db.alter(table: "exercise") { t in t.add(column: "video_url", .text) }
         }
+        // Accounts arrive (docs/decisions/0031): the data from before them was test data. Wipe it once so the
+        // first login pulls the account's own data into an empty database.
+        migrator.registerMigration("v10_start_fresh") { db in
+            for table in [
+                "logged_round", "logged_set", "session", "battle", "prescribed_exercise", "exercise", "block",
+                "workout_template", "arc", "season", "athlete", "local_sync_state",
+            ] {
+                try db.execute(sql: "DELETE FROM \(table)")
+            }
+        }
         return migrator
     }
 
