@@ -2,12 +2,19 @@ import HTSAPI
 import HTSDesign
 import HTSDomain
 import HTSPersistence
+import PhotosUI
 import SwiftUI
 
 /// Avatar, name, @username · patente · nível, then the list of pages and, last, Sair (#143).
 struct ProfileScreen: View {
     @Environment(AppModel.self) private var app
     @State private var history: ProgressHistory?
+    @State private var choosingPhoto = false
+    @State private var showsLibrary = false
+    @State private var showsCamera = false
+    @State private var libraryItem: PhotosPickerItem?
+    @State private var uploading = false
+    @State private var photoError: LocalizedStringKey?
 
     var body: some View {
         ScreenScaffold(title: "Perfil") {
@@ -25,13 +32,68 @@ struct ProfileScreen: View {
         let account = app.session?.account
         let name = account?.name ?? app.athlete?.displayName ?? ""
         return VStack(spacing: HTSSpacing.space3) {
-            AvatarView(url: account?.avatarUrl.flatMap(URL.init(string:)), name: name)
+            Button {
+                choosingPhoto = true
+            } label: {
+                AvatarView(url: account?.avatarUrl.flatMap(URL.init(string:)), name: name)
+                    .overlay {
+                        if uploading { ProgressView().tint(Color.hts.bone) }
+                    }
+            }
+            .disabled(uploading)
+            .accessibilityHint("Toque para trocar a foto")
+            .confirmationDialog("Foto de perfil", isPresented: $choosingPhoto) {
+                if CameraPicker.isAvailable {
+                    Button("Tirar foto") { showsCamera = true }
+                }
+                Button("Escolher da galeria") { showsLibrary = true }
+            }
+            .photosPicker(isPresented: $showsLibrary, selection: $libraryItem, matching: .images)
+            .onChange(of: libraryItem) { _, item in
+                guard let item else { return }
+                libraryItem = nil
+                Task {
+                    let data = try? await item.loadTransferable(type: Data.self)
+                    await upload(data.flatMap(UIImage.init(data:)))
+                }
+            }
+            .fullScreenCover(isPresented: $showsCamera) {
+                CameraPicker { image in
+                    showsCamera = false
+                    Task { await upload(image) }
+                }
+                .ignoresSafeArea()
+            }
+            if let photoError {
+                Text(photoError).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
+            }
             Text(verbatim: name).htsTextStyle(.uiTitle).foregroundStyle(Color.hts.bone)
                 .multilineTextAlignment(.center)
             Text(verbatim: subtitle(username: account?.username)).htsTextStyle(.caption)
                 .foregroundStyle(Color.hts.greyApp)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Reduces the photo (512 px JPEG) and sends it; the avatar shows the new link when it comes back.
+    private func upload(_ image: UIImage?) async {
+        guard let image else { return }
+        guard let jpeg = AvatarImage.jpeg(from: image) else {
+            photoError = "Não foi possível ler a foto."
+            return
+        }
+        uploading = true
+        photoError = nil
+        let error = await app.uploadAvatar(jpeg: jpeg)
+        uploading = false
+        photoError =
+            switch error {
+            case nil: nil
+            case .offline: "Sem conexão. Tente de novo com internet."
+            case .photoUnavailable: "O envio de fotos ainda não está configurado no servidor."
+            case .photoTooLarge: "A foto ficou grande demais. Tente outra."
+            default: "Não foi possível enviar a foto. Tente de novo."
+            }
     }
 
     /// "@leotheodoro · Recruta · Nível 3".
@@ -214,7 +276,7 @@ struct AccountScreen: View {
         case .emailTaken: "Esse e-mail já está em uso."
         case .wrongPassword: "Senha atual incorreta."
         case .offline: "Sem conexão. Tente de novo com internet."
-        case .other: "Não foi possível salvar. Tente de novo."
+        case .photoUnavailable, .photoTooLarge, .other: "Não foi possível salvar. Tente de novo."
         }
     }
 }

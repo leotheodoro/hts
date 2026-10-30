@@ -95,6 +95,9 @@ public enum APIError: Error, Sendable, Equatable {
     /// Minha conta: another account already uses this username or e-mail.
     case usernameTaken
     case emailTaken
+    /// Photo upload: the server has no bucket configured, or the photo is over 2 MB.
+    case storageUnavailable
+    case photoTooLarge
 }
 
 /// Short reason for a failed request, for the UI.
@@ -220,6 +223,18 @@ public struct APIClient: Sendable {
         case .unauthorized(let refused):
             throw try refused.body.json.error == "invalid_credentials"
                 ? APIError.invalidCredentials : APIError.unauthorized
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    /// Replaces the account photo with a JPEG (up to 2 MB) and returns the account with its new signed link.
+    public func uploadAvatar(jpeg: Data) async throws -> Account {
+        switch try await client.uploadAvatar(body: .jpeg(HTTPBody(jpeg))) {
+        case .ok(let ok): return try Self.account(try ok.body.json.account)
+        case .badRequest: throw APIError.unexpectedStatus(400)
+        case .unauthorized: throw APIError.unauthorized
+        case .contentTooLarge: throw APIError.photoTooLarge
+        case .serviceUnavailable: throw APIError.storageUnavailable
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
     }

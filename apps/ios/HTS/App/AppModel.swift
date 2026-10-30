@@ -30,6 +30,8 @@ final class AppModel {
         case usernameTaken
         case emailTaken
         case wrongPassword
+        case photoUnavailable
+        case photoTooLarge
         case offline
         case other(String)
     }
@@ -189,6 +191,20 @@ final class AppModel {
         }
     }
 
+    /// Sends the new photo (a JPEG already reduced by `AvatarImage`) and keeps the returned link in the session.
+    func uploadAvatar(jpeg: Data) async -> AccountError? {
+        guard let session, let client = remote(session.token) else { return .offline }
+        do {
+            var updated = session
+            updated.account = try await client.uploadAvatar(jpeg: jpeg)
+            try sessionStore.save(updated)
+            authState = .signedIn(updated)
+            return nil
+        } catch {
+            return Self.accountError(error)
+        }
+    }
+
     func changePassword(current: String, new: String) async -> AccountError? {
         guard let session, let client = remote(session.token) else { return .offline }
         do {
@@ -204,6 +220,8 @@ final class AppModel {
         case APIError.usernameTaken: .usernameTaken
         case APIError.emailTaken: .emailTaken
         case APIError.invalidCredentials: .wrongPassword
+        case APIError.storageUnavailable: .photoUnavailable
+        case APIError.photoTooLarge: .photoTooLarge
         default:
             switch APIFailure(error) {
             case .timedOut, .unreachable: .offline

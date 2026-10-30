@@ -1,3 +1,4 @@
+import Foundation
 import HTSAPI
 import HTSDomain
 import HTSPersistence
@@ -8,6 +9,7 @@ protocol RemoteAPI: SyncTransport {
     func logout() async throws
     func updateAccount(name: String?, username: String?, email: String?) async throws -> Account
     func changePassword(current: String, new: String) async throws
+    func uploadAvatar(jpeg: Data) async throws -> Account
 }
 
 // The generated API client is the sync transport. Declared here so HTSAPI and HTSPersistence stay independent.

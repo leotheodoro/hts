@@ -22,6 +22,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>HTSAPIBaseURL</key>
 	<string>$(HTS_API_BASE_URL)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>O HTS usa a câmera para tirar a sua foto de perfil.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSAppTransportSecurity</key>
