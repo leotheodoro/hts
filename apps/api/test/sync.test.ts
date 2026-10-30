@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import {
   arc,
@@ -13,14 +13,21 @@ import {
   session,
   workoutTemplate,
 } from "../src/db/schema.js";
-import { createTestDb, testApiToken } from "./db.js";
+import { createTestAccount, createTestDb, removeAccounts } from "./db.js";
 
 const { db, close } = createTestDb();
-const app = createApp({ db, apiToken: testApiToken });
-const headers = { authorization: `Bearer ${testApiToken}`, "content-type": "application/json" };
+const app = createApp({ db });
+const headers: Record<string, string> = { "content-type": "application/json" };
 const athletes: string[] = [];
 
+beforeAll(async () => {
+  const leo = await createTestAccount(db);
+  athletes.push(leo.athleteId);
+  headers.authorization = `Bearer ${leo.token}`;
+});
+
 afterAll(async () => {
+  await removeAccounts(db, athletes);
   if (athletes.length > 0) {
     for (const table of [
       loggedSet,

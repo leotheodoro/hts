@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import type { AppEnv } from "../auth/middleware.js";
 import type { Db } from "../db/client.js";
 import { pull, push, SYNC_TABLE_NAMES, UnknownTableError } from "../sync.js";
 
@@ -27,7 +28,7 @@ const pushRoute = createRoute({
     },
     400: { description: "Unknown table", content: { "application/json": { schema: ErrorSchema } } },
     401: {
-      description: "Missing or wrong bearer token",
+      description: "Missing, unknown or revoked session",
       content: { "application/json": { schema: ErrorSchema } },
     },
   },
@@ -59,14 +60,14 @@ const pullRoute = createRoute({
       content: { "application/json": { schema: ErrorSchema } },
     },
     401: {
-      description: "Missing or wrong bearer token",
+      description: "Missing, unknown or revoked session",
       content: { "application/json": { schema: ErrorSchema } },
     },
   },
 });
 
 export function syncRoutes(db: Db) {
-  return new OpenAPIHono()
+  return new OpenAPIHono<AppEnv>()
     .openapi(pushRoute, async (c) => {
       try {
         const applied = await push(db, c.req.valid("json").changes);

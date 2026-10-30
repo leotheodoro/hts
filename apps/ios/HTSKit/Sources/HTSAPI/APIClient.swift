@@ -127,6 +127,8 @@ public struct APIClient: Sendable {
             return nil
         case .unauthorized:
             throw APIError.unexpectedStatus(401)
+        case .forbidden:
+            throw APIError.unexpectedStatus(403)
         case .undocumented(let status, _):
             throw APIError.unexpectedStatus(status)
         }

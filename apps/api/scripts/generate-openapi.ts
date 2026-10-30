@@ -4,7 +4,7 @@ import { createDb } from "../src/db/client.js";
 
 // postgres-js connects lazily, so no database is needed to build the document.
 const { db, close } = createDb("postgres://unused@localhost/unused");
-const doc = openApiDocument(createApp({ db, apiToken: "unused-token-for-the-openapi-document" }));
+const doc = openApiDocument(createApp({ db }));
 await close();
 
 const out = new URL("../../../packages/contracts/openapi.json", import.meta.url);

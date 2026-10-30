@@ -1,19 +1,22 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { bearerAuth } from "./auth.js";
+import { type AppEnv, sessionAuth } from "./auth/middleware.js";
+import { LoginLimiter } from "./auth/rate-limit.js";
 import type { Db } from "./db/client.js";
 import { athleteRoutes } from "./routes/athletes.js";
+import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { syncRoutes } from "./routes/sync.js";
 import { version } from "./version.js";
 
-export function createApp({ db, apiToken }: { db: Db; apiToken: string }) {
-  const app = new OpenAPIHono();
+export function createApp({ db }: { db: Db }) {
+  const app = new OpenAPIHono<AppEnv>();
   app.openAPIRegistry.registerComponent("securitySchemes", "bearer", {
     type: "http",
     scheme: "bearer",
   });
   app.route("/", healthRoutes);
-  app.use("/v1/*", bearerAuth(apiToken));
+  app.use("/v1/*", sessionAuth(db));
+  app.route("/", authRoutes(db, new LoginLimiter()));
   app.route("/", athleteRoutes(db));
   app.route("/", syncRoutes(db));
   return app;

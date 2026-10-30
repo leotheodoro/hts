@@ -1,57 +1,56 @@
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { athlete } from "../src/db/schema.js";
-import { createTestDb, testApiToken } from "./db.js";
+import { bearer, createTestAccount, createTestDb, removeAccounts } from "./db.js";
 
 const { db, close } = createTestDb();
-const app = createApp({ db, apiToken: testApiToken });
+const app = createApp({ db });
 const created: string[] = [];
-const auth = { headers: { authorization: `Bearer ${testApiToken}` } };
 
 afterAll(async () => {
+  await removeAccounts(db, created);
   if (created.length > 0) await db.delete(athlete).where(inArray(athlete.id, created));
   await close();
 });
 
-async function insertAthlete(values: Partial<typeof athlete.$inferInsert> = {}) {
-  const id = uuidv7();
-  created.push(id);
-  const [row] = await db
-    .insert(athlete)
-    .values({ id, displayName: "Leo", ...values })
-    .returning();
-  if (!row) throw new Error("insert failed");
-  return row;
+async function signedIn() {
+  const leo = await createTestAccount(db);
+  created.push(leo.athleteId);
+  return { leo, auth: { headers: bearer(leo.token) } };
 }
 
 describe("GET /v1/athletes/:id", () => {
-  it("returns the athlete with the default rest of 90 s", async () => {
-    const row = await insertAthlete();
-    const res = await app.request(`/v1/athletes/${row.id}`, auth);
+  it("returns the session athlete with the default rest of 90 s", async () => {
+    const { leo, auth } = await signedIn();
+    const res = await app.request(`/v1/athletes/${leo.athleteId}`, auth);
     expect(res.status).toBe(200);
+    const [row] = await db.select().from(athlete).where(eq(athlete.id, leo.athleteId));
     expect(await res.json()).toEqual({
-      id: row.id,
+      id: leo.athleteId,
       displayName: "Leo",
       defaultRestSeconds: 90,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      createdAt: row?.createdAt.toISOString(),
+      updatedAt: row?.updatedAt.toISOString(),
     });
   });
 
-  it("returns 404 for a soft-deleted athlete", async () => {
-    const row = await insertAthlete({ deletedAt: new Date() });
-    const res = await app.request(`/v1/athletes/${row.id}`, auth);
-    expect(res.status).toBe(404);
+  it("refuses another athlete", async () => {
+    const { auth } = await signedIn();
+    const { leo: other } = await signedIn();
+    expect((await app.request(`/v1/athletes/${other.athleteId}`, auth)).status).toBe(403);
+    expect((await app.request(`/v1/athletes/${uuidv7()}`, auth)).status).toBe(403);
   });
 
-  it("returns 404 for an unknown id", async () => {
-    const res = await app.request(`/v1/athletes/${uuidv7()}`, auth);
-    expect(res.status).toBe(404);
+  it("returns 404 when the session athlete was deleted", async () => {
+    const { leo, auth } = await signedIn();
+    await db.update(athlete).set({ deletedAt: new Date() }).where(eq(athlete.id, leo.athleteId));
+    expect((await app.request(`/v1/athletes/${leo.athleteId}`, auth)).status).toBe(404);
   });
 
   it("rejects an id that is not a UUID", async () => {
+    const { auth } = await signedIn();
     const res = await app.request("/v1/athletes/not-a-uuid", auth);
     expect(res.status).toBe(400);
   });
