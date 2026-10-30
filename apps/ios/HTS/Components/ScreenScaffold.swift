@@ -7,6 +7,7 @@ struct ScreenScaffold<Content: View>: View {
     let title: LocalizedStringKey
     @ViewBuilder let content: Content
     @Environment(\.scrollToTopSignal) private var scrollToTopSignal
+    @Environment(AppModel.self) private var app
     @Namespace private var top
 
     var body: some View {
@@ -26,12 +27,17 @@ struct ScreenScaffold<Content: View>: View {
                         .accessibilityLabel("Hard To Submit")
                         .accessibilityAddTraits(.isHeader)
                     Spacer()
-                    Text(verbatim: "不屈")
-                        .font(
-                            .custom(HTSFontFamily.kanji.postScriptName(weight: 900), size: HTSTextStyle.brandApp.size)
-                        )
-                        .foregroundStyle(Color.hts.tabIdle)
-                        .accessibilityHidden(true)
+                    if case .offline = app.health {
+                        APIDownBadge()
+                    } else {
+                        Text(verbatim: "不屈")
+                            .font(
+                                .custom(
+                                    HTSFontFamily.kanji.postScriptName(weight: 900), size: HTSTextStyle.brandApp.size)
+                            )
+                            .foregroundStyle(Color.hts.tabIdle)
+                            .accessibilityHidden(true)
+                    }
                 }
                 .id(top)
                 Text(title)
@@ -101,6 +107,19 @@ struct PlaceholderCard: View {
                 Text(text).htsTextStyle(.body).foregroundStyle(Color.hts.bone)
             }
         }
+    }
+}
+
+/// Takes the place of the 不屈 seal while the API does not answer /health (#139). Red is an alert here.
+struct APIDownBadge: View {
+    var body: some View {
+        Text("API FORA DO AR")
+            .htsTextStyle(.label)
+            .foregroundStyle(Color.hts.onBlood)
+            .padding(.horizontal, HTSSpacing.space2)
+            .padding(.vertical, HTSSpacing.space1)
+            .background(Color.hts.blood)
+            .accessibilityLabel("A API está fora do ar. Os dados ficam no aparelho.")
     }
 }
 
