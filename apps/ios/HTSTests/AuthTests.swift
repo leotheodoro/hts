@@ -36,6 +36,14 @@ final class FakeRemote: RemoteAPI, @unchecked Sendable {
 
     func changePassword(current: String, new: String) async throws { try passwordResult.get() }
 
+    var avatarResult: Result<Account, any Error> = .failure(APIError.storageUnavailable)
+    private(set) var uploaded: Data?
+
+    func uploadAvatar(jpeg: Data) async throws -> Account {
+        uploaded = jpeg
+        return try avatarResult.get()
+    }
+
     func push(_ changes: SyncChanges) async throws -> Int { 0 }
 
     func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
@@ -250,5 +258,20 @@ final class Box<Value>: @unchecked Sendable {
         #expect(await app.changePassword(current: "old", new: "new-password") == nil)
         remote.passwordResult = .failure(APIError.invalidCredentials)
         #expect(await app.changePassword(current: "nope", new: "new-password") == .wrongPassword)
+    }
+
+    @Test func aNewPhotoGoesUpAndStaysInTheSession() async throws {
+        let remote = FakeRemote(login: .success(Self.session))
+        let store = InMemorySessionStore(Self.session)
+        let app = try model(remote, store: store)
+        await app.start()
+        var withPhoto = Self.session.account
+        withPhoto.avatarUrl = "https://b.test/a.jpg"
+        remote.avatarResult = .success(withPhoto)
+        #expect(await app.uploadAvatar(jpeg: Data([0xFF, 0xD8, 0xFF])) == nil)
+        #expect(remote.uploaded == Data([0xFF, 0xD8, 0xFF]))
+        #expect(store.load()?.account.avatarUrl == "https://b.test/a.jpg")
+        remote.avatarResult = .failure(APIError.storageUnavailable)
+        #expect(await app.uploadAvatar(jpeg: Data([0xFF])) == .photoUnavailable)
     }
 }

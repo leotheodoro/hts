@@ -148,4 +148,19 @@ let configuration = APIConfiguration(baseURL: URL(string: "http://localhost:8787
         let done = APIClient(configuration: configuration, transport: StubTransport(status: .noContent, json: ""))
         try await done.changePassword(current: "a", new: "new-password")
     }
+
+    @Test func uploadsThePhotoAndReportsStorageErrors() async throws {
+        let json = Self.meJSON.replacingOccurrences(
+            of: #""avatarUrl":null"#, with: #""avatarUrl":"https://b.test/a.jpg""#)
+        let ok = APIClient(configuration: configuration, transport: StubTransport(status: .ok, json: json))
+        #expect(try await ok.uploadAvatar(jpeg: Data([0xFF, 0xD8, 0xFF])).avatarUrl == "https://b.test/a.jpg")
+        let off = APIClient(
+            configuration: configuration,
+            transport: StubTransport(status: .serviceUnavailable, json: #"{"error":"storage_unavailable"}"#))
+        await #expect(throws: APIError.storageUnavailable) { try await off.uploadAvatar(jpeg: Data([0xFF])) }
+        let big = APIClient(
+            configuration: configuration,
+            transport: StubTransport(status: .contentTooLarge, json: #"{"error":"too_large"}"#))
+        await #expect(throws: APIError.photoTooLarge) { try await big.uploadAvatar(jpeg: Data([0xFF])) }
+    }
 }
