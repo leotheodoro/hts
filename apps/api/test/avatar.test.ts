@@ -105,4 +105,30 @@ describe("s3Storage", () => {
     expect(s3Storage(full)).toBeDefined();
     expect(s3Storage({ ...full, S3_BUCKET: undefined })).toBeUndefined();
   });
+
+  it("puts the bucket in the path, under the endpoint's certificate", async () => {
+    const storage = s3Storage({
+      AWS_ENDPOINT_URL_S3: "https://br-x.storage.c-14.us-east-1.aws.neon.tech",
+      AWS_ACCESS_KEY_ID: "id",
+      AWS_SECRET_ACCESS_KEY: "secret",
+      AWS_REGION: "us-east-1",
+      S3_BUCKET: "upload",
+    });
+    const link = await storage?.signedUrl("avatars/a.jpg");
+    expect(link).toMatch(
+      /^https:\/\/br-x\.storage\.c-14\.us-east-1\.aws\.neon\.tech\/upload\/avatars\/a\.jpg\?/,
+    );
+  });
+
+  it("answers 502 when the bucket fails", async () => {
+    const failing = new FakeStorage();
+    failing.put = async () => {
+      throw new Error("tls");
+    };
+    const app = createApp({ db, storage: failing });
+    const leo = await account();
+    const res = await upload(app, leo.token, jpeg);
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: "storage_failed" });
+  });
 });

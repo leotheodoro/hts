@@ -235,6 +235,7 @@ public struct APIClient: Sendable {
         case .unauthorized: throw APIError.unauthorized
         case .contentTooLarge: throw APIError.photoTooLarge
         case .serviceUnavailable: throw APIError.storageUnavailable
+        case .badGateway: throw APIError.unexpectedStatus(502)
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
     }
