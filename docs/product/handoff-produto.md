@@ -87,7 +87,10 @@ Nomes de treino usados nos mockups: Linha de Frente, Trincheira, Bombardeio (arc
 
 ## Execução do treino
 
-A tela de treino ativo é a mais usada e a mais crítica; segue o modelo do Hevy.
+A tela de treino ativo é a mais usada e a mais crítica. A tabela de séries segue o Hevy; a navegação segue o TrainHeroic (#108).
+
+- **Páginas:** uma por bloco (combo, exercício solo, round de luta). Troca arrastando para os lados ou pelas setas no rodapé ("BLOCO 03 DE 07"). O treino abre no primeiro bloco pendente.
+- **Bullets:** um quadrado por bloco no topo, cheio em `blood` quando o bloco foi feito (todas as séries marcadas, ou ao menos um round), só a borda quando falta; a bandeira é o slide de finalizar. Tocar num bullet leva à página.
 
 - **Abrir:** "Iniciar treino" cria uma sessão em andamento e dispara o cronômetro geral. Se já houver uma em andamento, o botão vira "Continuar".
 - **Minimizar:** o treino pode ser minimizado; aparece uma barra flutuante "Treino em andamento · 32:10" acima das abas. A sessão precisa sobreviver a fechar o app, travar a tela e perder conexão.
@@ -99,7 +102,7 @@ A tela de treino ativo é a mais usada e a mais crítica; segue o modelo do Hevy
 - **Combo:** o timer só dispara no último exercício do combo.
 - **Round de Luta:** em vez de séries, um cronômetro do round (ex.: 6 a 8 min), um contador de rounds completos e o kg de cada exercício.
 - **Timer de descanso:** fixo no rodapé, com contagem, barra, −15 s, +15 s e Pular. O padrão é 90 s, ajustável no perfil; alguns exercícios têm descanso próprio (ex.: Swing Russo 30 s). Precisa avisar (vibração ou som) mesmo com a tela bloqueada.
-- **Finalizar:** com séries não marcadas, pede confirmação na própria tela. Ao concluir: calcula XP, volume, duração, recordes e títulos e mostra a tela "Treino concluído" com a próxima ordem.
+- **Finalizar:** é o último slide, com as séries marcadas do total e a lista de blocos (feito ou falta). Com séries não marcadas, pede confirmação na própria tela. Ao concluir: calcula XP, volume, duração, recordes e títulos e mostra a tela "Treino concluído" com a próxima ordem.
 - **Histórico:** uma sessão pode ser aberta e excluída pelo Diário; excluir precisa recalcular XP, recordes e sequência.
 - **Volume:** soma de kg × reps das séries concluídas. Séries por tempo ou distância não entram.
 
@@ -134,7 +137,7 @@ O app tem quatro abas fixas (Home, Arcos, Diário, Perfil) e o treino ativo, que
 | Criar arco | Kanji, nome, início, treinos (criar ou reaproveitar), semanas; resumo com total, ritmo, grade semanal e data de término | Escreve arco e ligações com treinos |
 | Editar arco | Os mesmos campos + Recomeçar contagem | Escreve arco |
 | Criar treino | Letra, nome, blocos (tipo, atributo), exercícios (séries × alvo, descanso) | Escreve treino-modelo, blocos, prescrições, catálogo |
-| Treino ativo | Cabeçalho (nº, nome, cronômetro, Finalizar), blocos, tabela de séries, timer de descanso | Escreve sessão e séries em tempo real; lê "Anterior" |
+| Treino ativo | Cabeçalho (nº, nome, cronômetro, bullets), uma página por bloco, slide de finalizar, timer de descanso | Escreve sessão e séries em tempo real; lê "Anterior" |
 | Treino concluído | XP ganho, barra de nível, séries, volume, tempo, recordes, próximo treino | Calcula e grava XP, recordes, títulos |
 | Rank up / abertura de arco | Telas de momento: nova patente; novo arco com kanji | Lê eventos da conclusão |
 | Diário | Totais (treinos, séries, volume), recordes por exercício, lista de treinos mais recentes primeiro | Lê sessões, recordes |

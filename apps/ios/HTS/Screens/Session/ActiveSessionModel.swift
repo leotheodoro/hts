@@ -79,6 +79,9 @@ final class ActiveSessionModel {
                 .mapValues { $0.sorted { $0.setNumber < $1.setNumber } }
             previous = try await repository.previousSets(for: session)
             number = try await repository.number(of: session)
+            for block in snapshot.blocks where block.kind == .fightRound {
+                rounds[block.blockId] = try await repository.round(for: session, block: block)
+            }
         } catch {
             self.error = String(describing: error)
         }
@@ -94,6 +97,20 @@ final class ActiveSessionModel {
 
     var uncheckedCount: Int {
         sets.values.joined().filter { !$0.completed }.count
+    }
+
+    var setCount: Int { sets.values.joined().count }
+
+    /// Filled bullet in the pager (#108): every set checked, or at least one complete round.
+    func isDone(_ block: PlanSnapshot.Block) -> Bool {
+        if block.kind == .fightRound { return (rounds[block.blockId]?.roundsCompleted ?? 0) > 0 }
+        let all = block.exercises.flatMap { rows(for: $0) }
+        return !all.isEmpty && all.allSatisfy(\.completed)
+    }
+
+    /// The page the workout opens on: the first block not done, or the finish page.
+    var firstPendingPage: Int {
+        snapshot.blocks.firstIndex { !isDone($0) } ?? snapshot.blocks.count
     }
 
     func update(_ set: LoggedSet) {
