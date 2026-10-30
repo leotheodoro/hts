@@ -1,5 +1,6 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, isNull } from "drizzle-orm";
+import type { AppEnv } from "../auth/middleware.js";
 import type { Db } from "../db/client.js";
 import { athlete } from "../db/schema.js";
 
@@ -33,7 +34,11 @@ const getAthlete = createRoute({
       content: { "application/json": { schema: AthleteSchema } },
     },
     401: {
-      description: "Missing or wrong bearer token",
+      description: "Missing, unknown or revoked session",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+    403: {
+      description: "Another athlete than the session's",
       content: { "application/json": { schema: ErrorSchema } },
     },
     404: {
@@ -44,9 +49,10 @@ const getAthlete = createRoute({
 });
 
 export function athleteRoutes(db: Db) {
-  // Protected by the fixed bearer token (docs/decisions/0024); per-athlete access comes with real accounts.
-  return new OpenAPIHono().openapi(getAthlete, async (c) => {
+  // A session only reads its own athlete (docs/decisions/0031).
+  return new OpenAPIHono<AppEnv>().openapi(getAthlete, async (c) => {
     const { id } = c.req.valid("param");
+    if (id !== c.get("auth").athleteId) return c.json({ error: "forbidden" }, 403);
     const [row] = await db
       .select()
       .from(athlete)
