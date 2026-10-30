@@ -3,6 +3,7 @@ import HTSAPI
 import HTSDomain
 import HTSPersistence
 import Observation
+import UIKit
 import UserNotifications
 
 /// App-wide state: the login session, the local database, the athlete and the API client.
@@ -60,6 +61,8 @@ final class AppModel {
     let database: AppDatabase?
     private let api: APIClient?
     private let sessionStore: any SessionStoring
+    /// Only the real app: tests and previews keep their in-memory session.
+    private let resetsSessionOnFreshInstall: Bool
     /// The API with a session token (nil before login). Tests answer from a fake.
     private let remote: @Sendable (_ token: String?) -> (any RemoteAPI)?
 
@@ -69,7 +72,7 @@ final class AppModel {
 
     init(
         database: AppDatabase?, apiConfiguration: APIConfiguration?, databaseError: String? = nil,
-        sessionStore: any SessionStoring = InMemorySessionStore(),
+        sessionStore: any SessionStoring = InMemorySessionStore(), resetsSessionOnFreshInstall: Bool = false,
         remote: (@Sendable (_ token: String?) -> (any RemoteAPI)?)? = nil,
         requestNotifications: @escaping @Sendable () async -> Void = {
             guard !TestHost.isRunningTests else { return }
@@ -81,6 +84,7 @@ final class AppModel {
         self.databaseError = databaseError
         self.apiConfiguration = apiConfiguration
         self.sessionStore = sessionStore
+        self.resetsSessionOnFreshInstall = resetsSessionOnFreshInstall
         api = apiConfiguration.map { APIClient(configuration: $0) }
         // The timeout is long because the free Render instance takes ~1 min to wake.
         self.remote =
@@ -94,18 +98,22 @@ final class AppModel {
     static func live() -> AppModel {
         let configuration = APIConfiguration.fromBundle()
         let store = KeychainSessionStore()
-        store.resetIfFreshInstall()
         do {
-            return AppModel(database: try AppDatabase.onDisk(), apiConfiguration: configuration, sessionStore: store)
+            return AppModel(
+                database: try AppDatabase.onDisk(), apiConfiguration: configuration, sessionStore: store,
+                resetsSessionOnFreshInstall: true)
         } catch {
             return AppModel(
                 database: nil, apiConfiguration: configuration, databaseError: String(describing: error),
-                sessionStore: store)
+                sessionStore: store, resetsSessionOnFreshInstall: true)
         }
     }
 
     /// Opens on the saved session without touching the network (it may be offline); the sync runs behind.
     func start() async {
+        if resetsSessionOnFreshInstall {
+            sessionStore.resetIfFreshInstall(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable)
+        }
         #if DEBUG
             if DemoData.usesLocalSession {
                 await loadLocalAthlete()
@@ -134,8 +142,9 @@ final class AppModel {
             let session = try await client.login(
                 identifier: identifier.trimmingCharacters(in: .whitespaces), password: password)
             try sessionStore.save(session)
+            // The app opens only after the first pull, so Home never shows up empty.
+            await sync(session, athleteId: session.athleteId)
             authState = .signedIn(session)
-            await sync(athleteId: session.athleteId)
             await loadAthlete(session.athleteId)
             return nil
         } catch APIError.invalidCredentials {
@@ -150,12 +159,18 @@ final class AppModel {
         }
     }
 
-    /// Revokes the session on the server when it can, then forgets it here. The local data stays.
+    /// Forgets the session here at once (the local data stays), then revokes it on the server when it can.
     func signOut() async {
-        if let token = session?.token, let client = remote(token) {
+        let token = session?.token
+        signOutLocally()
+        if let token, !token.isEmpty, let client = remote(token) {
             try? await client.logout()
         }
-        signOutLocally()
+    }
+
+    /// The session is the one in use, or the one being signed in (not yet in `authState`).
+    private func isCurrent(_ session: AuthSession) -> Bool {
+        self.session.map { $0.token == session.token } ?? true
     }
 
     private func signOutLocally() {
@@ -233,21 +248,28 @@ final class AppModel {
     /// Pushes local changes and pulls the server's (docs/decisions/0026) with the session token. Without a session
     /// (or with the local one of demos) nothing is sent. A refused session signs out, keeping the local data.
     func sync(athleteId: UUID? = nil) async {
-        guard let database, let session, !session.token.isEmpty, let client = remote(session.token),
-            syncState != .syncing
+        guard let session else { return }
+        await sync(session, athleteId: athleteId ?? session.athleteId)
+    }
+
+    private func sync(_ session: AuthSession, athleteId: UUID) async {
+        guard let database, !session.token.isEmpty, let client = remote(session.token), syncState != .syncing
         else { return }
-        let athleteId = athleteId ?? session.athleteId
         syncState = .syncing
         do {
             let result = try await SyncService(database, transport: client).sync(athleteId: athleteId)
+            // A sync that outlived its session (Sair, then a new login) leaves the new state alone.
+            guard isCurrent(session) else { return }
             syncState = .synced(.now)
             if result.pulled > 0 { dataVersion += 1 }
             if let id = athlete?.id, let refreshed = try await AthleteRepository(database).athlete(id: id) {
                 athlete = refreshed
             }
         } catch APIError.unauthorized {
-            signOutLocally()
+            // Only the session that made the request: a late answer must not sign out a newer login.
+            if self.session?.token == session.token { signOutLocally() }
         } catch {
+            guard isCurrent(session) else { return }
             let host = apiConfiguration?.baseURL.host() ?? "API"
             let message =
                 switch APIFailure(error) {

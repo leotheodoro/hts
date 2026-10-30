@@ -16,9 +16,11 @@ enum SessionStore {
 
 extension SessionStoring {
     /// Deleting the app asks for the login again (Leo's call): iOS keeps Keychain items after the app is deleted,
-    /// so a launch without the install marker clears the session before anything else.
-    func resetIfFreshInstall(defaults: UserDefaults = .standard) {
-        guard !defaults.bool(forKey: SessionStore.installedKey) else { return }
+    /// so a launch without the install marker clears the session before anything else. Not while protected data is
+    /// unavailable (a prewarmed launch before the first unlock): `UserDefaults` can read empty then, and the user
+    /// would be logged out on their own.
+    func resetIfFreshInstall(defaults: UserDefaults = .standard, protectedDataAvailable: Bool) {
+        guard protectedDataAvailable, !defaults.bool(forKey: SessionStore.installedKey) else { return }
         clear()
         defaults.set(true, forKey: SessionStore.installedKey)
     }

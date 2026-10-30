@@ -1,8 +1,9 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { clientIp } from "../auth/client-ip.js";
 import type { AppEnv } from "../auth/middleware.js";
 import { verifyPassword } from "../auth/password.js";
-import type { LoginLimiter } from "../auth/rate-limit.js";
+import { ConcurrencyLimit, type LoginLimiter } from "../auth/rate-limit.js";
 import { type AccountRow, createSession, revokeSession } from "../auth/session.js";
 import type { Db } from "../db/client.js";
 import { account } from "../db/schema.js";
@@ -39,7 +40,10 @@ const loginRoute = createRoute({
     body: {
       content: {
         "application/json": {
-          schema: z.object({ identifier: z.string().min(1), password: z.string().min(1) }),
+          schema: z.object({
+            identifier: z.string().min(1).max(320),
+            password: z.string().min(1).max(1024),
+          }),
         },
       },
     },
@@ -89,11 +93,13 @@ const toAccount = (row: AccountRow) => ({
 });
 
 export function authRoutes(db: Db, limiter: LoginLimiter) {
+  // Each argon2 check takes ~19 MiB: a few at a time keep a flood from exhausting the instance.
+  const checks = new ConcurrencyLimit(4);
   return new OpenAPIHono<AppEnv>()
     .openapi(loginRoute, async (c) => {
       const { identifier, password } = c.req.valid("json");
       const id = identifier.trim().toLowerCase();
-      const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+      const ip = clientIp((name) => c.req.header(name));
       const keys = [`ip:${ip}`, `id:${id}`];
       if (limiter.isBlocked(keys)) return c.json({ error: "too_many_attempts" }, 429);
 
@@ -107,7 +113,7 @@ export function authRoutes(db: Db, limiter: LoginLimiter) {
           ),
         )
         .limit(1);
-      const valid = await verifyPassword(row?.passwordHash ?? null, password);
+      const valid = await checks.run(() => verifyPassword(row?.passwordHash ?? null, password));
       if (!row || !valid) {
         limiter.recordFailure(keys);
         return c.json({ error: "invalid_credentials" }, 401);

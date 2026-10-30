@@ -277,4 +277,39 @@ describe("importStarterPlan", () => {
       expect(changes[table]?.length ?? 0).toBeGreaterThan(0);
     }
   });
+
+  it("re-seeding reaches devices that already pulled", async () => {
+    const leo = await seeded();
+    const withoutVideos = StarterPlanFileSchema.parse(
+      JSON.parse(
+        JSON.stringify(plan)
+          .replaceAll(/"video":"[^"]*",?/g, "")
+          .replaceAll(",}", "}"),
+      ),
+    );
+    await importStarterPlan(db, leo.athleteId, withoutVideos, "2026-11-02");
+    const { token } = (await (await login(leo.username, leo.password)).json()) as { token: string };
+    const pull = async (since?: string) => {
+      const query = `athleteId=${leo.athleteId}${since ? `&since=${encodeURIComponent(since)}` : ""}`;
+      const res = await app.request(`/v1/sync/pull?${query}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      return (await res.json()) as {
+        cursor: string | null;
+        changes: Record<string, Record<string, unknown>[]>;
+      };
+    };
+    const { cursor } = await pull();
+
+    await seedAccount(db, { ...leo, name: "Leo Novo" });
+    expect(await importStarterPlan(db, leo.athleteId, plan, "2026-11-09")).toEqual({
+      arcsAdded: 0,
+      videosFilled: 1,
+    });
+    const after = await pull(cursor ?? undefined);
+    expect(after.changes.athlete?.map((row) => row.display_name)).toEqual(["Leo Novo"]);
+    expect(after.changes.exercise?.map((row) => row.video_url)).toEqual([
+      "https://www.youtube.com/shorts/B6CUO_zF32Q",
+    ]);
+  });
 });
