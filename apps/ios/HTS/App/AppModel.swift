@@ -49,6 +49,8 @@ final class AppModel {
     }
 
     private(set) var syncState: SyncState = .idle
+    /// When this device last finished a sync (kept in SQLite), shown above Sair.
+    private(set) var lastSyncedAt: Date?
     /// Bumped when data changes outside the screens (sync pulled rows, starter plan imported), so they reload.
     private(set) var dataVersion = 0
 
@@ -188,6 +190,7 @@ final class AppModel {
     private func loadAthlete(_ athleteId: UUID) async {
         guard let database else { return }
         do {
+            lastSyncedAt = try await SyncService.lastSyncAt(database)
             athlete = try await AthleteRepository(database).athlete(id: athleteId)
             activeSession = try await SessionRepository(database).inProgress(athleteId: athleteId)
         } catch {
@@ -260,6 +263,7 @@ final class AppModel {
         syncState = .syncing
         do {
             let result = try await SyncService(database, transport: client).sync(athleteId: athleteId)
+            lastSyncedAt = .now
             // A sync that outlived its session (Sair, then a new login) leaves the new state alone.
             guard isCurrent(session) else { return }
             syncState = .synced(.now)

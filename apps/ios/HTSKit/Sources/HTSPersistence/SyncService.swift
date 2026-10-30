@@ -53,6 +53,14 @@ public struct SyncService: Sendable {
         return Result(pushed: pushed, pulled: pulled)
     }
 
+    /// When the last sync finished on this device, if ever (no transport needed).
+    public static func lastSyncAt(_ database: AppDatabase) async throws -> Date? {
+        try await database.writer.read { db in
+            try String.fetchOne(db, sql: "SELECT value FROM local_sync_state WHERE key = 'last_sync_at'")
+        }
+        .flatMap(ISO8601Millis.parse)
+    }
+
     /// When the last sync finished, if ever.
     public func lastSyncAt() async throws -> Date? {
         try await state("last_sync_at").flatMap(ISO8601Millis.parse)

@@ -148,7 +148,12 @@ O app só abre com login (docs/decisions/0031). Depois de entrar, tem quatro aba
 | Rank up / abertura de arco | Telas de momento: nova patente; novo arco com kanji | Lê eventos da conclusão |
 | Diário | Totais (treinos, séries, volume), recordes por exercício, lista de treinos mais recentes primeiro | Lê sessões, recordes |
 | Detalhe do treino | Todas as séries feitas, excluir | Lê/exclui sessão |
-| Perfil | Atributos, títulos, orientações de carga, ajustes (nome, descanso padrão, data e resultado da Batalha) | Lê e escreve atleta |
+| Perfil | Avatar (foto ou iniciais, até 2 letras), nome, @username · patente · nível; lista: Minha conta, Configurações de treino, A Batalha, Conquistas, Atributos; última sincronização e Sair por último | Lê conta, atleta e progresso |
+| Minha conta | Nome, username, e-mail (únicos) e troca de senha com a atual | Escreve a conta na API |
+| Configurações de treino | Descanso padrão e orientações de carga | Escreve atleta |
+| A Batalha | Nome, data e resultado da competição | Escreve Batalha |
+| Conquistas | Títulos desbloqueados e bloqueados | Lê títulos |
+| Atributos | FOR, EXP, GÁS, COR, MOB com nível e barra | Lê atributos |
 
 Orientações de carga mostradas no Perfil e como dica em cada exercício: 1 a 3 reps = 90 a 100% RM; 4 a 6 = 70 a 85%; 8 a 12 = 60 a 75%; acima de 12 = moderada a leve. A dica de cada exercício sai da faixa de reps do alvo.
 

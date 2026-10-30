@@ -1,9 +1,14 @@
 import SwiftUI
 
-/// Pages pushed inside the Home and Arcos tabs.
+/// Pages pushed inside the Home, Arcos and Perfil tabs.
 enum Route: Hashable {
     case arc(UUID)
     case workout(templateId: UUID)
+    case account
+    case trainingSettings
+    case battle
+    case titles
+    case attributes
 }
 
 /// Navigation stack of a tab. The system bar stays hidden like the tab bar (docs/decisions/0022); pages draw their
@@ -21,6 +26,11 @@ struct TabStack<Content: View>: View {
                         switch route {
                         case .arc(let id): ArcDetailScreen(arcId: id)
                         case .workout(let id): WorkoutScreen(templateId: id)
+                        case .account: AccountScreen()
+                        case .trainingSettings: TrainingSettingsScreen()
+                        case .battle: BattleScreen()
+                        case .titles: TitlesScreen()
+                        case .attributes: AttributesScreen()
                         }
                     }
                     .toolbar(.hidden, for: .navigationBar)
