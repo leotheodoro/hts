@@ -27,6 +27,15 @@ final class FakeRemote: RemoteAPI, @unchecked Sendable {
 
     func logout() async throws { logoutCalls += 1 }
 
+    var updateResult: Result<Account, any Error> = .failure(APIError.invalidResponse)
+    var passwordResult: Result<Void, any Error> = .success(())
+
+    func updateAccount(name: String?, username: String?, email: String?) async throws -> Account {
+        try updateResult.get()
+    }
+
+    func changePassword(current: String, new: String) async throws { try passwordResult.get() }
+
     func push(_ changes: SyncChanges) async throws -> Int { 0 }
 
     func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
@@ -212,5 +221,34 @@ final class Box<Value>: @unchecked Sendable {
         store.resetIfFreshInstall(defaults: defaults, protectedDataAvailable: false)
         #expect(store.load() == Self.session)
         #expect(!defaults.bool(forKey: SessionStore.installedKey))
+    }
+
+    @Test func editingTheAccountKeepsTheNewDataInTheSession() async throws {
+        let remote = FakeRemote(login: .success(Self.session), pull: .success(Self.pulledAthlete))
+        let store = InMemorySessionStore(Self.session)
+        let app = try model(remote, store: store)
+        await app.start()
+        var renamed = Self.session.account
+        renamed.name = "Leo Novo"
+        renamed.username = "leo"
+        remote.updateResult = .success(renamed)
+        #expect(await app.updateAccount(name: "Leo Novo", username: "leo", email: nil) == nil)
+        #expect(app.session?.account == renamed)
+        #expect(store.load()?.account == renamed)
+        #expect(store.load()?.token == Self.session.token)
+
+        remote.updateResult = .failure(APIError.usernameTaken)
+        #expect(await app.updateAccount(name: nil, username: "taken", email: nil) == .usernameTaken)
+        remote.updateResult = .failure(APIError.emailTaken)
+        #expect(await app.updateAccount(name: nil, username: nil, email: "x@y.z") == .emailTaken)
+    }
+
+    @Test func changingThePasswordReportsAWrongCurrentOne() async throws {
+        let remote = FakeRemote(login: .success(Self.session))
+        let app = try model(remote, store: InMemorySessionStore(Self.session))
+        await app.start()
+        #expect(await app.changePassword(current: "old", new: "new-password") == nil)
+        remote.passwordResult = .failure(APIError.invalidCredentials)
+        #expect(await app.changePassword(current: "nope", new: "new-password") == .wrongPassword)
     }
 }

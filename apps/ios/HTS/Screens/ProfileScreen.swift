@@ -1,3 +1,4 @@
+import HTSAPI
 import HTSDesign
 import HTSDomain
 import HTSPersistence
@@ -85,20 +86,135 @@ struct ProfileScreen: View {
     }
 }
 
-/// The account, read only until #144 makes it editable.
+/// Name, username and e-mail (unique) and the password change, which asks for the current one (#144).
 struct AccountScreen: View {
     @Environment(AppModel.self) private var app
+    @State private var name = ""
+    @State private var username = ""
+    @State private var email = ""
+    @State private var saving = false
+    @State private var accountMessage: Message?
+
+    @State private var current = ""
+    @State private var new = ""
+    @State private var confirmation = ""
+    @State private var changing = false
+    @State private var passwordMessage: Message?
+
+    struct Message: Equatable {
+        let text: LocalizedStringKey
+        let isError: Bool
+    }
 
     var body: some View {
         DetailScaffold {
             Text("Minha conta").htsTextStyle(.uiTitle).foregroundStyle(Color.hts.bone)
-            if let account = app.session?.account {
-                VStack(alignment: .leading, spacing: HTSSpacing.space2) {
-                    Text(verbatim: account.name).htsTextStyle(.bodyStrong).foregroundStyle(Color.hts.bone)
-                    Text(verbatim: "@\(account.username)").htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
-                    Text(verbatim: account.email).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+            VStack(alignment: .leading, spacing: HTSSpacing.space5) {
+                HTSTextField(label: "NOME", text: $name, contentType: .name)
+                HTSTextField(label: "USERNAME", text: $username, contentType: .username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                HTSTextField(label: "E-MAIL", text: $email, contentType: .emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.emailAddress)
+                if hasChanges {
+                    HTSButton(saving ? "Salvando…" : "Salvar") { saveAccount() }
+                        .disabled(saving || !isFilled)
                 }
+                message(accountMessage)
             }
+            VStack(alignment: .leading, spacing: HTSSpacing.space5) {
+                Text("Senha").htsTextStyle(.uiSection).foregroundStyle(Color.hts.bone)
+                HTSTextField(label: "SENHA ATUAL", text: $current, secure: true, contentType: .password)
+                HTSTextField(label: "NOVA SENHA", text: $new, secure: true, contentType: .newPassword)
+                HTSTextField(
+                    label: "CONFIRMAR NOVA SENHA", text: $confirmation, secure: true, contentType: .newPassword)
+                HTSButton(changing ? "Alterando…" : "Alterar senha", kind: .ghost) { changePassword() }
+                    .disabled(changing || current.isEmpty || new.isEmpty || confirmation.isEmpty)
+                message(passwordMessage)
+            }
+        }
+        .onAppear(perform: reset)
+    }
+
+    private var account: Account? { app.session?.account }
+
+    private func trimmed(_ text: String) -> String { text.trimmingCharacters(in: .whitespaces) }
+
+    private var isFilled: Bool { [name, username, email].allSatisfy { !trimmed($0).isEmpty } }
+
+    private var hasChanges: Bool {
+        guard let account else { return false }
+        return trimmed(name) != account.name || trimmed(username) != account.username
+            || trimmed(email) != account.email
+    }
+
+    private func reset() {
+        guard let account else { return }
+        name = account.name
+        username = account.username
+        email = account.email
+    }
+
+    @ViewBuilder private func message(_ message: Message?) -> some View {
+        if let message {
+            Text(message.text).htsTextStyle(.caption)
+                .foregroundStyle(message.isError ? Color.hts.redText : Color.hts.greyApp)
+        }
+    }
+
+    private func saveAccount() {
+        guard let account else { return }
+        saving = true
+        accountMessage = nil
+        let changed = { (value: String, old: String) in self.trimmed(value) == old ? nil : self.trimmed(value) }
+        Task {
+            let error = await app.updateAccount(
+                name: changed(name, account.name), username: changed(username, account.username),
+                email: changed(email, account.email))
+            saving = false
+            if let error {
+                accountMessage = Message(text: text(for: error), isError: true)
+            } else {
+                reset()
+                accountMessage = Message(text: "Dados salvos.", isError: false)
+            }
+        }
+    }
+
+    private func changePassword() {
+        passwordMessage = nil
+        guard new.count >= 8 else {
+            passwordMessage = Message(text: "A nova senha precisa de pelo menos 8 caracteres.", isError: true)
+            return
+        }
+        guard new == confirmation else {
+            passwordMessage = Message(text: "As senhas não conferem.", isError: true)
+            return
+        }
+        changing = true
+        Task {
+            let error = await app.changePassword(current: current, new: new)
+            changing = false
+            if let error {
+                passwordMessage = Message(text: text(for: error), isError: true)
+            } else {
+                current = ""
+                new = ""
+                confirmation = ""
+                passwordMessage = Message(text: "Senha alterada. Os outros aparelhos saíram da conta.", isError: false)
+            }
+        }
+    }
+
+    private func text(for error: AppModel.AccountError) -> LocalizedStringKey {
+        switch error {
+        case .usernameTaken: "Esse username já está em uso."
+        case .emailTaken: "Esse e-mail já está em uso."
+        case .wrongPassword: "Senha atual incorreta."
+        case .offline: "Sem conexão. Tente de novo com internet."
+        case .other: "Não foi possível salvar. Tente de novo."
         }
     }
 }

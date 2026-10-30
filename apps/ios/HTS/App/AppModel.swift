@@ -25,6 +25,15 @@ final class AppModel {
         case other(String)
     }
 
+    /// What can go wrong in Minha conta (#144).
+    enum AccountError: Equatable {
+        case usernameTaken
+        case emailTaken
+        case wrongPassword
+        case offline
+        case other(String)
+    }
+
     private(set) var authState: AuthState = .checking
 
     var session: AuthSession? {
@@ -159,6 +168,46 @@ final class AppModel {
             switch APIFailure(error) {
             case .timedOut, .unreachable: return .offline
             case .other(let detail): return .other(detail)
+            }
+        }
+    }
+
+    /// Changes name, username or e-mail (nil = unchanged) and keeps the new account in the session. A new name reaches
+    /// the athlete through the next pull, which runs right away.
+    func updateAccount(name: String?, username: String?, email: String?) async -> AccountError? {
+        guard let session, let client = remote(session.token) else { return .offline }
+        do {
+            let account = try await client.updateAccount(name: name, username: username, email: email)
+            var updated = session
+            updated.account = account
+            try sessionStore.save(updated)
+            authState = .signedIn(updated)
+            if name != nil { await sync() }
+            return nil
+        } catch {
+            return Self.accountError(error)
+        }
+    }
+
+    func changePassword(current: String, new: String) async -> AccountError? {
+        guard let session, let client = remote(session.token) else { return .offline }
+        do {
+            try await client.changePassword(current: current, new: new)
+            return nil
+        } catch {
+            return Self.accountError(error)
+        }
+    }
+
+    private static func accountError(_ error: any Error) -> AccountError {
+        switch error {
+        case APIError.usernameTaken: .usernameTaken
+        case APIError.emailTaken: .emailTaken
+        case APIError.invalidCredentials: .wrongPassword
+        default:
+            switch APIFailure(error) {
+            case .timedOut, .unreachable: .offline
+            case .other(let detail): .other(detail)
             }
         }
     }

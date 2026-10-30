@@ -92,6 +92,9 @@ public enum APIError: Error, Sendable, Equatable {
     case tooManyAttempts
     /// A protected route refused the session (missing, unknown or revoked).
     case unauthorized
+    /// Minha conta: another account already uses this username or e-mail.
+    case usernameTaken
+    case emailTaken
 }
 
 /// Short reason for a failed request, for the UI.
@@ -193,6 +196,38 @@ public struct APIClient: Sendable {
         case .unauthorized: throw APIError.unauthorized
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
+    }
+
+    // MARK: Account (#141)
+
+    /// Changes the fields that are not nil and returns the account as the server keeps it.
+    public func updateAccount(name: String?, username: String?, email: String?) async throws -> Account {
+        let body = Operations.UpdateAccount.Input.Body.JsonPayload(name: name, username: username, email: email)
+        switch try await client.updateAccount(body: .json(body)) {
+        case .ok(let ok): return try Self.account(try ok.body.json.account)
+        case .conflict(let conflict):
+            throw try conflict.body.json.error == "email_taken" ? APIError.emailTaken : APIError.usernameTaken
+        case .unauthorized: throw APIError.unauthorized
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    /// The current password is required; the server signs the other devices out.
+    public func changePassword(current: String, new: String) async throws {
+        let body = Operations.ChangePassword.Input.Body.JsonPayload(currentPassword: current, newPassword: new)
+        switch try await client.changePassword(body: .json(body)) {
+        case .noContent: return
+        case .unauthorized(let refused):
+            throw try refused.body.json.error == "invalid_credentials"
+                ? APIError.invalidCredentials : APIError.unauthorized
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    private static func account(_ body: Components.Schemas.Account) throws -> Account {
+        guard let id = UUID(uuidString: body.id) else { throw APIError.invalidResponse }
+        return Account(
+            id: id, name: body.name, username: body.username, email: body.email, avatarUrl: body.avatarUrl)
     }
 
     // MARK: Sync (docs/decisions/0026)

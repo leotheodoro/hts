@@ -107,4 +107,45 @@ let configuration = APIConfiguration(baseURL: URL(string: "http://localhost:8787
         let anonymous = APIClient(configuration: configuration, transport: transport)
         await #expect(throws: APIError.unauthorized) { try await anonymous.logout() }
     }
+
+    static let meJSON = """
+        {"athleteId":"0190f2c4-0000-7000-8000-000000000001",
+         "account":{"id":"0190f2c4-0000-7000-8000-000000000002","name":"Leo Novo",
+                    "username":"leo","email":"leo@example.com","avatarUrl":null}}
+        """
+
+    @Test func updatesTheAccountAndReportsTakenValues() async throws {
+        let ok = APIClient(configuration: configuration, transport: StubTransport(status: .ok, json: Self.meJSON))
+        let account = try await ok.updateAccount(name: "Leo Novo", username: nil, email: nil)
+        #expect(account.name == "Leo Novo")
+        let username = APIClient(
+            configuration: configuration,
+            transport: StubTransport(status: .conflict, json: #"{"error":"username_taken"}"#))
+        await #expect(throws: APIError.usernameTaken) {
+            try await username.updateAccount(name: nil, username: "x", email: nil)
+        }
+        let email = APIClient(
+            configuration: configuration, transport: StubTransport(status: .conflict, json: #"{"error":"email_taken"}"#)
+        )
+        await #expect(throws: APIError.emailTaken) {
+            try await email.updateAccount(name: nil, username: nil, email: "x@y.z")
+        }
+    }
+
+    @Test func aWrongCurrentPasswordIsInvalidCredentials() async throws {
+        let wrong = APIClient(
+            configuration: configuration,
+            transport: StubTransport(status: .unauthorized, json: #"{"error":"invalid_credentials"}"#))
+        await #expect(throws: APIError.invalidCredentials) {
+            try await wrong.changePassword(current: "a", new: "new-password")
+        }
+        let revoked = APIClient(
+            configuration: configuration,
+            transport: StubTransport(status: .unauthorized, json: #"{"error":"unauthorized"}"#))
+        await #expect(throws: APIError.unauthorized) {
+            try await revoked.changePassword(current: "a", new: "new-password")
+        }
+        let done = APIClient(configuration: configuration, transport: StubTransport(status: .noContent, json: ""))
+        try await done.changePassword(current: "a", new: "new-password")
+    }
 }
