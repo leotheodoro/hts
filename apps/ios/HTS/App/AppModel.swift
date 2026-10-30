@@ -85,7 +85,8 @@ final class AppModel {
         self.apiConfiguration = apiConfiguration
         self.sessionStore = sessionStore
         self.resetsSessionOnFreshInstall = resetsSessionOnFreshInstall
-        api = apiConfiguration.map { APIClient(configuration: $0) }
+        // Long timeout: the free Render instance takes ~1 min to wake, which is not the API being down.
+        api = apiConfiguration.map { APIClient(configuration: $0, timeout: 60) }
         // The timeout is long because the free Render instance takes ~1 min to wake.
         self.remote =
             remote ?? { token in
@@ -117,10 +118,11 @@ final class AppModel {
         #if DEBUG
             if DemoData.usesLocalSession {
                 await loadLocalAthlete()
-                await checkHealth()
+                Task { await checkHealth() }
                 return
             }
         #endif
+        Task { await checkHealth() }
         guard let saved = sessionStore.load() else {
             authState = .signedOut
             return
@@ -302,7 +304,7 @@ final class AppModel {
             let host = apiConfiguration?.baseURL.host() ?? "API"
             let message =
                 switch APIFailure(error) {
-                case .timedOut: String(localized: "Sem resposta de \(host) em 10 s.")
+                case .timedOut: String(localized: "Sem resposta de \(host) em 60 s.")
                 case .unreachable: String(localized: "Não foi possível conectar a \(host).")
                 case .other(let detail): detail
                 }

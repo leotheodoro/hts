@@ -18,7 +18,10 @@ struct HTSApp: App {
                 .environment(model)
                 .task { await model.start() }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { Task { await model.sync() } }
+                    if phase == .active {
+                        Task { await model.checkHealth() }
+                        Task { await model.sync() }
+                    }
                 }
         }
     }
