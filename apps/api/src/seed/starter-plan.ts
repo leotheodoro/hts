@@ -1,4 +1,4 @@
-import { and, eq, isNull, max } from "drizzle-orm";
+import { and, eq, isNull, max, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import type { Db } from "../db/client.js";
@@ -19,7 +19,8 @@ import { parseSets, parseTarget } from "./notation.js";
 
 // The coach's programs (apps/api/seed/starter-plan.json, out of git: the content is licensed).
 // Same format and rules as the importer the app used to run (StarterPlan.swift, ArcService,
-// TemplateService): additive by name, so new arcs can be appended to the file later.
+// TemplateService): additive by name, so new arcs can be appended to the file later. Updates stamp
+// server_updated_at, the pull cursor, so devices that already synced receive them.
 
 const ExerciseSeed = z.object({
   name: z.string().min(1),
@@ -265,7 +266,12 @@ async function findOrCreateExercise(
     if (existing.unit !== unit || (perSide && !existing.perSide)) {
       await tx
         .update(exercise)
-        .set({ unit, perSide: existing.perSide || perSide, updatedAt: now })
+        .set({
+          unit,
+          perSide: existing.perSide || perSide,
+          updatedAt: now,
+          serverUpdatedAt: sql`date_trunc('milliseconds', now())`,
+        })
         .where(eq(exercise.id, existing.id));
     }
     return existing.id;
@@ -305,7 +311,11 @@ async function fillVideos(
   for (const [normalizedName, video] of videos) {
     const rows = await tx
       .update(exercise)
-      .set({ videoUrl: video, updatedAt: now })
+      .set({
+        videoUrl: video,
+        updatedAt: now,
+        serverUpdatedAt: sql`date_trunc('milliseconds', now())`,
+      })
       .where(
         and(
           eq(exercise.athleteId, athleteId),

@@ -34,7 +34,11 @@ export async function seedAccount(
         .where(eq(account.id, existing.id));
       await tx
         .update(athlete)
-        .set({ displayName: name, updatedAt: now })
+        .set({
+          displayName: name,
+          updatedAt: now,
+          serverUpdatedAt: sql`date_trunc('milliseconds', now())`,
+        })
         .where(eq(athlete.id, existing.athleteId));
       return { accountId: existing.id, athleteId: existing.athleteId };
     }

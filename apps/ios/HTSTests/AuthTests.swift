@@ -10,6 +10,8 @@ import Testing
 final class FakeRemote: RemoteAPI, @unchecked Sendable {
     var loginResult: Result<AuthSession, any Error>
     var pullResult: Result<SyncChanges, any Error>
+    /// Runs inside every pull, before it answers.
+    var onPull: (@Sendable () async -> Void)?
     private(set) var loginCalls = 0
     private(set) var logoutCalls = 0
 
@@ -28,8 +30,31 @@ final class FakeRemote: RemoteAPI, @unchecked Sendable {
     func push(_ changes: SyncChanges) async throws -> Int { 0 }
 
     func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
-        (nil, try pullResult.get())
+        await onPull?()
+        return (nil, try pullResult.get())
     }
+}
+
+/// Opens once; everyone waiting goes on.
+actor Gate {
+    private var opened = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        guard !opened else { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func open() {
+        opened = true
+        waiters.forEach { $0.resume() }
+        waiters = []
+    }
+}
+
+final class Box<Value>: @unchecked Sendable {
+    var value: Value
+    init(_ value: Value) { self.value = value }
 }
 
 @MainActor
@@ -132,11 +157,60 @@ final class FakeRemote: RemoteAPI, @unchecked Sendable {
     @Test func freshInstallClearsTheKeychain() throws {
         let defaults = try #require(UserDefaults(suiteName: "AuthTests-\(UUID().uuidString)"))
         let store = InMemorySessionStore(Self.session)
-        store.resetIfFreshInstall(defaults: defaults)
+        store.resetIfFreshInstall(defaults: defaults, protectedDataAvailable: true)
         #expect(store.load() == nil)
         #expect(defaults.bool(forKey: SessionStore.installedKey))
         try store.save(Self.session)
-        store.resetIfFreshInstall(defaults: defaults)
+        store.resetIfFreshInstall(defaults: defaults, protectedDataAvailable: true)
         #expect(store.load() == Self.session)
+    }
+
+    @Test func signInOpensTheAppOnlyAfterThePull() async throws {
+        let remote = FakeRemote(login: .success(Self.session), pull: .success(Self.pulledAthlete))
+        let app = try model(remote)
+        await app.start()
+        let seen = Box<AppModel.AuthState?>(nil)
+        remote.onPull = { await MainActor.run { seen.value = app.authState } }
+        #expect(await app.signIn(identifier: "leotheodoro", password: "secret") == nil)
+        #expect(seen.value == .signedOut)
+        #expect(app.authState == .signedIn(Self.session))
+    }
+
+    @Test func aLateUnauthorizedFromAnOldSessionKeepsTheNewLogin() async throws {
+        let old = FakeRemote(login: .success(Self.session), pull: .success(Self.pulledAthlete))
+        let newer = AuthSession(token: "tok-new", athleteId: Self.athleteId, account: Self.session.account)
+        let fresh = FakeRemote(login: .success(newer))
+        let store = InMemorySessionStore(Self.session)
+        let oldToken = Self.session.token
+        let app = AppModel(
+            database: try .inMemory(),
+            apiConfiguration: APIConfiguration(baseURL: URL(string: "http://localhost:8787")!), sessionStore: store,
+            remote: { token in token == oldToken ? old : fresh }, requestNotifications: {})
+        await app.start()
+
+        let reached = Gate()
+        let release = Gate()
+        old.pullResult = .failure(APIError.unauthorized)
+        old.onPull = {
+            await reached.open()
+            await release.wait()
+        }
+        let stale = Task { await app.sync() }
+        await reached.wait()
+        await app.signOut()
+        #expect(await app.signIn(identifier: "leotheodoro", password: "secret") == nil)
+        await release.open()
+        await stale.value
+
+        #expect(app.authState == .signedIn(newer))
+        #expect(store.load() == newer)
+    }
+
+    @Test func aPrewarmedLaunchDoesNotLookLikeAFreshInstall() throws {
+        let defaults = try #require(UserDefaults(suiteName: "AuthTests-\(UUID().uuidString)"))
+        let store = InMemorySessionStore(Self.session)
+        store.resetIfFreshInstall(defaults: defaults, protectedDataAvailable: false)
+        #expect(store.load() == Self.session)
+        #expect(!defaults.bool(forKey: SessionStore.installedKey))
     }
 }
