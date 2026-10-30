@@ -98,7 +98,7 @@ Sem link de cadastro, sem "esqueci a senha". Segue as regras de voz (sem exclama
 
 ### Seed e programas
 
-- `pnpm --filter api db:seed`: cria (ou atualiza, por username) a conta do Leo e o atleta dela, lendo de variáveis de ambiente: `SEED_NAME`, `SEED_USERNAME`, `SEED_EMAIL`, `SEED_PASSWORD`. Valores do Leo: Leonardo Theodoro, leotheodoro, simplespinheiro@gmail.com, senha no `.env` local.
+- `pnpm --filter api db:seed`: cria (ou atualiza, por username) a conta do Leo e o atleta dela, lendo de variáveis de ambiente: `SEED_NAME`, `SEED_USERNAME`, `SEED_EMAIL`, `SEED_PASSWORD`. Valores do Leo: Leonardo Theodoro, leotheodoro, e-mail pessoal (só no `.env`), senha no `.env` local.
 - Os programas vêm de `apps/api/seed/starter-plan.json`, no gitignore (mesmo formato do `StarterPlan.json` atual, que é movido para lá, com os vídeos). O seed importa de forma aditiva por nome, como o importador Swift faz hoje: temporada Jiu-Jitsu com Base Volume 1, Base Volume 2 e Novembro e Dezembro (o primeiro como atual), e os livres Manutenção, Mobilidade e Base Grip; vídeos no catálogo de exercícios.
 - Isso exige a leitura da notação do treinador ("3 a 4", "6-6-3-3", "12/12", "20 s", "máx") em TypeScript. Ela é portada do `TargetNotation` Swift com casos compartilhados em `packages/fixtures/`, como a regra do repo pede para lógica duplicada.
 - `pnpm --filter api db:reset -- --yes`: apaga todos os dados de usuário (todas as tabelas, inclusive contas e sessões). Recusa rodar sem `--yes`. Rodar contra o Render só com o ok do Leo na hora.
