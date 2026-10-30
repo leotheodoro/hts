@@ -347,7 +347,13 @@ private struct ExerciseTable: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: HTSSpacing.space2) {
-            Text(verbatim: exercise.name).htsTextStyle(.uiSection).foregroundStyle(Color.hts.bone)
+            HStack(alignment: .top, spacing: HTSSpacing.space2) {
+                Text(verbatim: exercise.name).htsTextStyle(.uiSection).foregroundStyle(Color.hts.bone)
+                Spacer(minLength: 0)
+                if let video = model.videos[exercise.exerciseId] {
+                    VideoButton(url: video, exerciseName: exercise.name).padding(.vertical, -HTSSpacing.space3)
+                }
+            }
             Text(verbatim: prescription).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
             HStack(spacing: HTSSpacing.space2) {
                 Text("SÉRIE").lineLimit(1).fixedSize().frame(width: 52, alignment: .leading)

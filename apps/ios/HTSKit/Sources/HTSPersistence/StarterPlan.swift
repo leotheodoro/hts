@@ -42,6 +42,8 @@ public struct StarterPlan: Decodable, Sendable {
         /// "8", "6-6-3-3", "12/12", "20 s", "máx".
         public var target: String
         public var restSeconds: Int?
+        /// The coach's YouTube link (#110).
+        public var video: String?
     }
 
     public var seasons: [SeasonSeed]
@@ -93,6 +95,33 @@ extension StarterPlan {
             }
         }
         return added
+    }
+
+    /// Gives each catalog exercise the plan's video when it has none yet, matched by normalized name, so arcs
+    /// imported before the links existed get them too. A link the athlete already has is kept. Returns how many
+    /// exercises changed.
+    @discardableResult
+    public func fillVideos(into database: AppDatabase, athleteId: UUID, now: Date = .now) async throws -> Int {
+        var videos: [String: String] = [:]
+        for arc in seasons.flatMap(\.arcs) + arcs {
+            for exercise in arc.templates.flatMap(\.blocks).flatMap(\.exercises) {
+                guard let video = exercise.video else { continue }
+                videos[ExerciseName.normalize(exercise.name), default: video] = video
+            }
+        }
+        let stamp = ISO8601Millis.format(now)
+        return try await database.writer.write { [videos] db in
+            var changed = 0
+            for (name, video) in videos {
+                try db.execute(
+                    sql: """
+                        UPDATE exercise SET video_url = ?, updated_at = ?
+                        WHERE athlete_id = ? AND normalized_name = ? AND video_url IS NULL AND deleted_at IS NULL
+                        """, arguments: [video, stamp, athleteId.sql, name])
+                changed += db.changesCount
+            }
+            return changed
+        }
     }
 
     private static func add(

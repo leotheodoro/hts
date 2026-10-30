@@ -11,6 +11,8 @@ final class ActiveSessionModel {
     private(set) var sets: [UUID: [LoggedSet]] = [:]
     private(set) var previous: [UUID: [Int: LoggedSet]] = [:]
     private(set) var number: SessionRepository.Number?
+    /// The coach's video per catalog exercise (#110).
+    private(set) var videos: [UUID: URL] = [:]
     private(set) var error: String?
     /// The running rest, if any, and the exercise it was started from.
     private(set) var rest: RestTimer?
@@ -79,6 +81,7 @@ final class ActiveSessionModel {
                 .mapValues { $0.sorted { $0.setNumber < $1.setNumber } }
             previous = try await repository.previousSets(for: session)
             number = try await repository.number(of: session)
+            videos = try await repository.videos(for: session)
             for block in snapshot.blocks where block.kind == .fightRound {
                 rounds[block.blockId] = try await repository.round(for: session, block: block)
             }

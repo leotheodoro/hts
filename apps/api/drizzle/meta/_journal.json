@@ -43,6 +43,13 @@
       "when": 1793277711610,
       "tag": "0005_rename_saga_to_season",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793369038831,
+      "tag": "0006_add_exercise_video_url",
+      "breakpoints": true
     }
   ]
 }

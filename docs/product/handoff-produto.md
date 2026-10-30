@@ -90,6 +90,7 @@ Nomes de treino usados nos mockups: Linha de Frente, Trincheira, Bombardeio (arc
 A tela de treino ativo é a mais usada e a mais crítica. A tabela de séries segue o Hevy; a navegação segue o TrainHeroic (#108).
 
 - **Páginas:** uma por bloco (combo, exercício solo, round de luta). Troca arrastando para os lados ou pelas setas no rodapé ("BLOCO 03 DE 07"). O treino abre no primeiro bloco pendente.
+- **Vídeo:** exercício com link do treinador mostra um botão de play ao lado do nome, no treino ativo e na página do treino; abre o YouTube numa folha do Safari, sem sair do app (#110). O link fica no catálogo (`exercise.video_url`) e vem do StarterPlan.json local.
 - **Bullets:** um quadrado por bloco no topo, cheio em `blood` quando o bloco foi feito (todas as séries marcadas, ou ao menos um round), só a borda quando falta; a bandeira é o slide de finalizar. Tocar num bullet leva à página.
 
 - **Abrir:** "Iniciar treino" cria uma sessão em andamento e dispara o cronômetro geral. Se já houver uma em andamento, o botão vira "Continuar".

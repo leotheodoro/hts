@@ -73,10 +73,17 @@ struct WorkoutScreen: View {
             NotchCard {
                 VStack(alignment: .leading, spacing: HTSSpacing.space4) {
                     ForEach(block.exercises, id: \.prescription.id) { planned in
-                        VStack(alignment: .leading, spacing: HTSSpacing.space1) {
-                            Text(verbatim: planned.exercise.name).htsTextStyle(.bodyStrong)
-                            Text(verbatim: prescription(planned)).htsTextStyle(.dataSm)
-                                .foregroundStyle(Color.hts.greyApp).monospacedDigit()
+                        HStack(alignment: .center, spacing: HTSSpacing.space2) {
+                            VStack(alignment: .leading, spacing: HTSSpacing.space1) {
+                                Text(verbatim: planned.exercise.name).htsTextStyle(.bodyStrong)
+                                Text(verbatim: prescription(planned)).htsTextStyle(.dataSm)
+                                    .foregroundStyle(Color.hts.greyApp).monospacedDigit()
+                            }
+                            Spacer(minLength: 0)
+                            if let video = planned.exercise.video {
+                                VideoButton(url: video, exerciseName: planned.exercise.name)
+                                    .padding(.vertical, -HTSSpacing.space3)
+                            }
                         }
                     }
                 }

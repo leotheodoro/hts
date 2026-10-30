@@ -104,6 +104,10 @@ public final class AppDatabase: Sendable {
                         AND c.deleted_at IS NULL);
                     """, arguments: [stamp, stamp, stamp, stamp])
         }
+        // Mirrors apps/api/drizzle/0006: the coach's video per exercise (#110).
+        migrator.registerMigration("v9_exercise_video_url") { db in
+            try db.alter(table: "exercise") { t in t.add(column: "video_url", .text) }
+        }
         return migrator
     }
 

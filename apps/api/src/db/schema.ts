@@ -172,6 +172,8 @@ export const exercise = pgTable(
     defaultAttribute: attribute("default_attribute"),
     unit: exerciseUnit("unit").notNull().default("reps"),
     perSide: boolean("per_side").notNull().default(false),
+    /** How to do it: the coach's YouTube link (#110). */
+    videoUrl: text("video_url"),
     ...timestamps,
   },
   (t) => [
