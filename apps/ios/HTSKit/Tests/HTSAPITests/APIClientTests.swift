@@ -59,7 +59,7 @@ let configuration = APIConfiguration(baseURL: URL(string: "http://localhost:8787
     static let sessionJSON = """
         {"token":"tok-123","athleteId":"0190f2c4-0000-7000-8000-000000000001",
          "account":{"id":"0190f2c4-0000-7000-8000-000000000002","name":"Leonardo Theodoro",
-                    "username":"leotheodoro","email":"simplespinheiro@gmail.com","avatarUrl":null}}
+                    "username":"leotheodoro","email":"leo@example.com","avatarUrl":null}}
         """
 
     @Test func loginReturnsTheSession() async throws {
@@ -72,7 +72,7 @@ let configuration = APIConfiguration(baseURL: URL(string: "http://localhost:8787
             session.account
                 == Account(
                     id: UUID(uuidString: "0190f2c4-0000-7000-8000-000000000002")!, name: "Leonardo Theodoro",
-                    username: "leotheodoro", email: "simplespinheiro@gmail.com", avatarUrl: nil))
+                    username: "leotheodoro", email: "leo@example.com", avatarUrl: nil))
     }
 
     @Test func wrongCredentialsAndTooManyAttempts() async throws {

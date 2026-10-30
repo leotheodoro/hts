@@ -64,7 +64,7 @@ final class Box<Value>: @unchecked Sendable {
         token: "tok-123", athleteId: athleteId,
         account: Account(
             id: UUID(uuidString: "0190f2c4-0000-7000-8000-000000000002")!, name: "Leonardo Theodoro",
-            username: "leotheodoro", email: "simplespinheiro@gmail.com", avatarUrl: nil))
+            username: "leotheodoro", email: "leo@example.com", avatarUrl: nil))
 
     /// What the server answers on the first pull: the athlete of the account.
     static let pulledAthlete: SyncChanges = [
