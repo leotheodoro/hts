@@ -72,10 +72,22 @@ function toWire(table: SyncTable, record: Record<string, unknown>): Row {
 
 export class UnknownTableError extends Error {}
 
-/** Upserts every row; a row only replaces the stored one when its `updated_at` is not older. */
-export async function push(db: Db, changes: Changes): Promise<number> {
+/** A pushed row belongs to another athlete than the session's (docs/decisions/0031). */
+export class ForeignAthleteError extends Error {}
+
+/**
+ * Upserts every row of `athleteId`; a row only replaces the stored one when its `updated_at` is not
+ * older and the stored row has the same owner, so an id of another athlete is never taken over.
+ */
+export async function push(db: Db, changes: Changes, athleteId: string): Promise<number> {
   for (const name of Object.keys(changes)) {
     if (!SYNC_TABLE_NAMES.includes(name)) throw new UnknownTableError(name);
+  }
+  for (const table of TABLES) {
+    const owner = table === athlete ? "id" : "athlete_id";
+    for (const row of changes[tableName(table)] ?? []) {
+      if (row[owner] !== athleteId) throw new ForeignAthleteError(tableName(table));
+    }
   }
   let applied = 0;
   await db.transaction(async (tx) => {
@@ -95,7 +107,10 @@ export async function push(db: Db, changes: Changes): Promise<number> {
         .onConflictDoUpdate({
           target: table.id,
           set: set as never,
-          setWhere: sql`${table.updatedAt} <= excluded.updated_at`,
+          setWhere:
+            table === athlete
+              ? sql`${table.updatedAt} <= excluded.updated_at`
+              : sql`${table.updatedAt} <= excluded.updated_at AND ${(table as Exclude<SyncTable, typeof athlete>).athleteId} = excluded.athlete_id`,
         })
         .returning({ id: table.id });
       applied += result.length;

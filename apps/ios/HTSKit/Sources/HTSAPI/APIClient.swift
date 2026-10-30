@@ -143,6 +143,7 @@ public struct APIClient: Sendable {
         case .ok(let ok): return try ok.body.json.applied
         case .badRequest: throw APIError.unexpectedStatus(400)
         case .unauthorized: throw APIError.unexpectedStatus(401)
+        case .forbidden: throw APIError.unexpectedStatus(403)
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
     }
@@ -158,6 +159,7 @@ public struct APIClient: Sendable {
             return (body.cursor, try Self.convert(body.changes))
         case .badRequest: throw APIError.unexpectedStatus(400)
         case .unauthorized: throw APIError.unexpectedStatus(401)
+        case .forbidden: throw APIError.unexpectedStatus(403)
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
     }

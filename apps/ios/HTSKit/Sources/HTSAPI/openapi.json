@@ -464,6 +464,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Rows or athlete of another athlete than the session's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -523,6 +533,16 @@
           },
           "401": {
             "description": "Missing, unknown or revoked session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rows or athlete of another athlete than the session's",
             "content": {
               "application/json": {
                 "schema": {
