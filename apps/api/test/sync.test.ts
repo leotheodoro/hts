@@ -284,6 +284,30 @@ describe("sync", () => {
     expect(stored?.name).not.toBe("Roubada");
   });
 
+  it("refuses rows that point to a parent of another athlete", async () => {
+    const leo = await signedIn();
+    const other = await signedIn();
+    const theirs = deviceRows(other.athleteId);
+    await pushChanges(other.token, theirs.changes);
+    const mine = deviceRows(leo.athleteId);
+    await pushChanges(leo.token, mine.changes);
+
+    const intruder = {
+      ...mine.changes.logged_set[0],
+      id: uuidv7(),
+      session_id: theirs.ids.session,
+    };
+    const res = await pushChanges(leo.token, { logged_set: [intruder] });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "forbidden" });
+    expect(await db.select().from(loggedSet).where(eq(loggedSet.id, intruder.id))).toEqual([]);
+
+    // A parent that exists only in the same push, or nowhere yet, is not someone else's.
+    const newcomer = await signedIn();
+    const fresh = deviceRows(newcomer.athleteId);
+    expect((await pushChanges(newcomer.token, fresh.changes)).status).toBe(200);
+  });
+
   it("pull only serves the session athlete", async () => {
     const leo = await signedIn();
     const other = await signedIn();

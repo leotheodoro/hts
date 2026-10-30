@@ -1,4 +1,4 @@
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { getTableConfig, type PgColumn, type PgTable } from "drizzle-orm/pg-core";
 import type { Db } from "./db/client.js";
 import {
@@ -76,6 +76,33 @@ export class UnknownTableError extends Error {}
 export class ForeignAthleteError extends Error {}
 
 /**
+ * A foreign key satisfied by another athlete's row would hang my rows under their tree (#136): every
+ * parent id a push points to must be mine or not exist yet (then the foreign key decides).
+ */
+async function refuseForeignParents(db: Pick<Db, "select">, changes: Changes, athleteId: string) {
+  for (const table of TABLES) {
+    const rows = changes[tableName(table)] ?? [];
+    if (rows.length === 0) continue;
+    for (const foreignKey of getTableConfig(table).foreignKeys) {
+      const { columns, foreignTable } = foreignKey.reference();
+      const [column] = columns;
+      if (foreignTable === athlete || !column) continue;
+      const ids = [...new Set(rows.map((row) => row[column.name]))].filter(
+        (id): id is string => typeof id === "string",
+      );
+      if (ids.length === 0) continue;
+      const parent = foreignTable as Exclude<SyncTable, typeof athlete>;
+      const [foreign] = await db
+        .select({ id: parent.id })
+        .from(parent)
+        .where(and(inArray(parent.id, ids), ne(parent.athleteId, athleteId)))
+        .limit(1);
+      if (foreign) throw new ForeignAthleteError(tableName(table));
+    }
+  }
+}
+
+/**
  * Upserts every row of `athleteId`; a row only replaces the stored one when its `updated_at` is not
  * older and the stored row has the same owner, so an id of another athlete is never taken over.
  */
@@ -91,6 +118,7 @@ export async function push(db: Db, changes: Changes, athleteId: string): Promise
   }
   let applied = 0;
   await db.transaction(async (tx) => {
+    await refuseForeignParents(tx, changes, athleteId);
     for (const table of TABLES) {
       const rows = changes[tableName(table)] ?? [];
       if (rows.length === 0) continue;
