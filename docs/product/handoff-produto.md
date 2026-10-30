@@ -127,10 +127,15 @@ Toda a progressão vem só de treinar de verdade. Séries concluídas geram XP, 
 
 ## Telas e fluxos
 
-O app tem quatro abas fixas (Home, Arcos, Diário, Perfil) e o treino ativo, que abre por cima de tudo.
+O app só abre com login (docs/decisions/0031). Depois de entrar, tem quatro abas fixas (Home, Arcos, Diário, Perfil) e o treino ativo, que abre por cima de tudo.
+
+- **Login:** 不屈 e o wordmark no centro, "USERNAME OU E-MAIL", "SENHA" e "Entrar". Sem cadastro e sem "esqueci a senha": as contas são criadas no servidor (`pnpm --filter api db:seed`). Erro: "Usuário ou senha incorretos." (não diz qual dos dois). O login é o único momento que precisa de internet.
+- **Sessão:** fica no Keychain e não expira. Só sai com "Sair" no Perfil (os dados ficam no aparelho) ou apagando o app (reinstalar pede login). Se o servidor recusar a sessão, o app volta ao login sem apagar os dados.
+- **Dados:** tudo vive no servidor e chega pela sincronização depois do login, inclusive os programas do treinador, que não vão mais dentro do app.
 
 | Tela | O que mostra | Dados que lê / escreve |
 | --- | --- | --- |
+| Login | 不屈, wordmark, username ou e-mail, senha, Entrar | Cria a sessão e puxa os dados da conta |
 | Home | Nome, patente, nível, barra de XP, próximo treino com "Ver treino", progresso do arco (4/6), dias até a Batalha, semana atual e sequência | Lê atleta, arco atual, última sessão, Batalha |
 | Arcos | Temporadas com seus arcos e os arcos livres; kanji, nome, "3 treinos × 2 semanas", progresso. Tocar abre o arco | Lê temporadas e arcos |
 | Arco | Kanji, nome, situação e os treinos; tocar abre o treino | Lê o arco |

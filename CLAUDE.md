@@ -6,7 +6,7 @@
 - Camada de progressão: cada série concluída vira XP, nível, patente (E a S) e atributos (FOR, EXP, GÁS, COR, MOB).
 - O atleta organiza os arcos em temporadas (uma ativa por vez, arcos liberados em ordem); a Manutenção fica fora delas, sempre disponível. Cada arco tem treinos-modelo e uma duração em semanas.
 - Offline-first: o app grava no SQLite local e sincroniza com a API (Postgres) depois.
-- Hoje é um atleta só, mas todo dado já é multiusuário (`athlete_id`).
+- Só entra quem tem conta (login por username ou e-mail; contas criadas pelo seed, sem cadastro no app). Hoje é uma conta só, mas todo dado já é multiusuário (`athlete_id`) e a API só serve o atleta da sessão (ADR 0031).
 
 Fontes de verdade: `docs/product/handoff-produto.md` (comportamento), `docs/design/design-system.md` (visual e voz), `packages/design-tokens/tokens.json` (tokens), `docs/decisions/` (ADRs).
 
@@ -63,6 +63,8 @@ pnpm --filter api db:generate    nova migration a partir de src/db/schema.ts
 pnpm --filter api db:migrate     aplica as migrations
 pnpm --filter api contracts:generate   openapi.json + db-schema.json em packages/contracts
 docker compose up -d             Postgres local (porta 5442 no host)
+pnpm --filter api db:seed        cria/atualiza a conta (SEED_* no apps/api/.env) e importa apps/api/seed/starter-plan.json
+pnpm --filter api db:reset -- --yes   apaga todos os dados (nunca no Render sem o ok do Leo)
 make ios-generate | make ios-test | make ios-build
 ```
 

@@ -17,20 +17,11 @@ struct ScreenScaffold<Content: View>: View {
         }
     }
 
-    /// HARD TO in `bone`, SUBMIT in `blood` (#87).
-    private static var wordmark: AttributedString {
-        var hard = AttributedString("HARD TO ")
-        hard.foregroundColor = Color.hts.bone
-        var submit = AttributedString("SUBMIT")
-        submit.foregroundColor = Color.hts.blood
-        return hard + submit
-    }
-
     private var scroll: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: HTSSpacing.space7) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(Self.wordmark)
+                    Text(Wordmark.text)
                         .htsTextStyle(.brandApp)
                         .accessibilityLabel("Hard To Submit")
                         .accessibilityAddTraits(.isHeader)
@@ -110,5 +101,16 @@ struct PlaceholderCard: View {
                 Text(text).htsTextStyle(.body).foregroundStyle(Color.hts.bone)
             }
         }
+    }
+}
+
+/// HARD TO in `bone`, SUBMIT in `blood` (#87). The stencil appears only in this wordmark.
+enum Wordmark {
+    static var text: AttributedString {
+        var hard = AttributedString("HARD TO ")
+        hard.foregroundColor = Color.hts.bone
+        var submit = AttributedString("SUBMIT")
+        submit.foregroundColor = Color.hts.blood
+        return hard + submit
     }
 }

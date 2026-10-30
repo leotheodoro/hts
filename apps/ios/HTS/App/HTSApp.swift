@@ -14,7 +14,7 @@ struct HTSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            AuthGate()
                 .environment(model)
                 .task { await model.start() }
                 .onChange(of: scenePhase) { _, phase in
