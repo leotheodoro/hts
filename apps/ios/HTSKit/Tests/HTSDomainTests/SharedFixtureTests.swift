@@ -51,16 +51,37 @@ struct RankOutput: Decodable, Sendable { let id: String, name: String }
         #expect(progression.xp(for: c.input) == c.expected)
     }
 
+    /// The seed of the API reads the coach's notation with the same rules (apps/api/src/seed/notation.ts).
+    @Test(arguments: Fixture<NotationInput, NotationOutput?>.load("target-notation"))
+    func targetNotation(_ c: Fixture<NotationInput, NotationOutput?>.Case) {
+        let sets = TargetNotation.parseSets(c.input.sets)
+        let parsed = sets.flatMap { TargetNotation.parse(c.input.target, setsMax: $0.max) }
+        let actual = sets.flatMap { sets in
+            parsed.map {
+                NotationOutput(setsMin: sets.min, setsMax: sets.max, targets: $0.targets, perSide: $0.perSide)
+            }
+        }
+        #expect(actual == c.expected)
+    }
+
     @Test func everyFixtureFileIsCovered() throws {
         let urls = Bundle.module.urls(forResourcesWithExtension: "json", subdirectory: "Fixtures") ?? []
         let names = Set(urls.map { $0.deletingPathExtension().lastPathComponent })
         #expect(
             names == [
                 "attribute-levels", "level-for-xp", "normalize-exercise-name", "progress-history", "rank-for-level",
-                "streak",
+                "streak", "target-notation",
                 "titles", "xp-for-session",
             ])
     }
+}
+
+struct NotationInput: Decodable, Sendable { let sets: String, target: String }
+struct NotationOutput: Decodable, Sendable, Equatable {
+    let setsMin: Int
+    let setsMax: Int
+    let targets: [SetTarget]
+    let perSide: Bool
 }
 
 struct HistoryInput: Decodable, Sendable {
