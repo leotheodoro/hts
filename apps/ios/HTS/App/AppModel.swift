@@ -257,7 +257,7 @@ final class AppModel {
     private func loadAthlete(_ athleteId: UUID) async {
         guard let database else { return }
         do {
-            lastSyncedAt = try await SyncService.lastSyncAt(database)
+            lastSyncedAt = try await SyncService.lastSyncAt(database, athleteId: athleteId)
             athlete = try await AthleteRepository(database).athlete(id: athleteId)
             activeSession = try await SessionRepository(database).inProgress(athleteId: athleteId)
         } catch {

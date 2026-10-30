@@ -10,9 +10,11 @@ actor FakeSyncServer: SyncTransport {
     private var rows: [String: [String: (row: [String: JSONValue], written: Int)]] = [:]
     private var clock = 0
     private(set) var pushes = 0
+    private(set) var pushed: [SyncChanges] = []
 
     func push(_ changes: SyncChanges) async throws -> Int {
         pushes += 1
+        pushed.append(changes)
         var applied = 0
         for (table, incoming) in changes {
             for row in incoming {
@@ -30,6 +32,10 @@ actor FakeSyncServer: SyncTransport {
             }
         }
         return applied
+    }
+
+    func displayName(of athleteId: UUID) -> JSONValue? {
+        rows["athlete"]?[athleteId.uuidString.lowercased()]?.row["display_name"]
     }
 
     func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges) {
@@ -148,5 +154,34 @@ actor FakeSyncServer: SyncTransport {
             try String.fetchAll(db, sql: "SELECT DISTINCT athlete_id FROM arc")
         }
         #expect(owners == [athleteA.id.uuidString.lowercased()])
+    }
+
+    /// Signing out and in with another account on the same device (#135): each athlete pushes only its rows and
+    /// keeps its own cursor, so the new one gets its whole tree and the old one's unsent edits wait for it.
+    @Test func eachAthleteOnTheDeviceKeepsItsOwnSync() async throws {
+        let server = FakeSyncServer()
+        let (other, athleteB) = try await deviceA()
+        try await SyncService(other, transport: server).sync(athleteId: athleteB.id)
+        let (device, athleteA) = try await deviceA()
+        try await SyncService(device, transport: server).sync(athleteId: athleteA.id)
+        var renamed = try #require(try await AthleteRepository(device).athlete(id: athleteA.id))
+        renamed.displayName = "Leo offline"
+        try await AthleteRepository(device).update(renamed, now: .now.addingTimeInterval(5))
+
+        let before = await server.pushes
+        let asB = try await SyncService(device, transport: server).sync(athleteId: athleteB.id)
+        #expect(asB.pulled == 10)
+        #expect(asB.pushed == 0)
+        // A second sync as B pushes back only B's pulled rows, never A's offline edit.
+        try await SyncService(device, transport: server).sync(athleteId: athleteB.id)
+        let owners = await server.pushed.dropFirst(before).flatMap { changes in
+            changes.flatMap { table, rows in rows.map { table == "athlete" ? $0["id"] : $0["athlete_id"] } }
+        }
+        #expect(owners.allSatisfy { $0 == .string(athleteB.id.uuidString.lowercased()) })
+
+        let asA = try await SyncService(device, transport: server).sync(athleteId: athleteA.id)
+        #expect(asA.pushed >= 1)
+        #expect(await server.displayName(of: athleteA.id) == .string("Leo offline"))
+        #expect(try await SyncService.lastSyncAt(device, athleteId: athleteA.id) != nil)
     }
 }
