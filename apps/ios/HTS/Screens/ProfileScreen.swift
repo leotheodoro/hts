@@ -12,6 +12,7 @@ struct ProfileScreen: View {
 
     var body: some View {
         ScreenScaffold(title: "Perfil") {
+            accountSection
             settings
             loadGuide
             syncSection
@@ -103,6 +104,24 @@ struct ProfileScreen: View {
                     Rectangle().strokeBorder(unlocked != nil ? Color.clear : Color.hts.line, lineWidth: HTSStroke.hair)
                 )
                 .accessibilityElement(children: .combine)
+            }
+        }
+    }
+
+    /// The logged-in account, read only (docs/decisions/0031), and Sair. Leaving keeps the data on the device.
+    @ViewBuilder private var accountSection: some View {
+        if let account = app.session?.account {
+            NotchCard {
+                VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                    Text("CONTA").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                    VStack(alignment: .leading, spacing: HTSSpacing.space1) {
+                        Text(verbatim: account.name).htsTextStyle(.bodyStrong).foregroundStyle(Color.hts.bone)
+                        Text(verbatim: "@\(account.username)").htsTextStyle(.caption)
+                            .foregroundStyle(Color.hts.greyApp)
+                        Text(verbatim: account.email).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                    }
+                    HTSButton("Sair", kind: .ghost) { Task { await app.signOut() } }
+                }
             }
         }
     }

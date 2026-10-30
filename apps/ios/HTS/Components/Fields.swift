@@ -1,6 +1,7 @@
 import HTSDesign
 import HTSDomain
 import SwiftUI
+import UIKit
 
 /// Mono caps label above a form control.
 struct FieldLabel: View {
@@ -16,17 +17,27 @@ struct HTSTextField: View {
     let label: LocalizedStringKey
     @Binding var text: String
     var prompt: LocalizedStringKey = ""
+    /// Hides the text (password) and lets iOS offer saved passwords.
+    var secure = false
+    var contentType: UITextContentType?
 
     var body: some View {
         VStack(alignment: .leading, spacing: HTSSpacing.space2) {
             FieldLabel(text: label)
-            TextField(text: $text, prompt: Text(prompt).foregroundStyle(Color.hts.tabIdle)) { Text(label) }
-                .htsTextStyle(.body)
-                .foregroundStyle(Color.hts.bone)
-                .padding(.horizontal, HTSSpacing.space4)
-                .frame(minHeight: 52)
-                .background(Color.hts.surface)
-                .overlay(Rectangle().strokeBorder(Color.hts.line, lineWidth: HTSStroke.hair))
+            Group {
+                if secure {
+                    SecureField(text: $text, prompt: Text(prompt).foregroundStyle(Color.hts.tabIdle)) { Text(label) }
+                } else {
+                    TextField(text: $text, prompt: Text(prompt).foregroundStyle(Color.hts.tabIdle)) { Text(label) }
+                }
+            }
+            .textContentType(contentType)
+            .htsTextStyle(.body)
+            .foregroundStyle(Color.hts.bone)
+            .padding(.horizontal, HTSSpacing.space4)
+            .frame(minHeight: 52)
+            .background(Color.hts.surface)
+            .overlay(Rectangle().strokeBorder(Color.hts.line, lineWidth: HTSStroke.hair))
         }
     }
 }

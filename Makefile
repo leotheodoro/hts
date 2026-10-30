@@ -4,8 +4,11 @@ PROJECT := $(IOS_DIR)/HTS.xcodeproj
 SIMULATOR ?= iPhone 17 Pro Max
 SIMULATOR_ID = $(shell scripts/ios-simulator-id.sh "$(SIMULATOR)")
 DESTINATION = platform=iOS Simulator,id=$(SIMULATOR_ID)
+# Simulator builds are signed ad hoc ("-"): without a signature the app has no entitlements and the Keychain,
+# where the login session lives, refuses it (errSecMissingEntitlement, docs/decisions/0031).
 XCODEBUILD_FLAGS = -project $(PROJECT) -scheme HTS -destination "$(DESTINATION)" \
-	-skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO
+	-skipPackagePluginValidation -skipMacroValidation CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual \
+	DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
 
 .PHONY: ios-generate ios-test ios-kit-test ios-kit-test-sim ios-app-test ios-build ios-format ios-lint ios-device ios-team-id ios-mac-host
 
