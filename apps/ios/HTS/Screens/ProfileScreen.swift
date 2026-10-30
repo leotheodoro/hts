@@ -225,6 +225,7 @@ private struct BattleSettings: View {
     @State private var battle: Battle?
     @State private var name = ""
     @State private var date = Date.now
+    @State private var error: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: HTSSpacing.space4) {
@@ -246,6 +247,9 @@ private struct BattleSettings: View {
                 HTSButton(battle == nil ? "Cadastrar Batalha" : "Salvar Batalha", kind: .ghost) {
                     save(result: battle?.result)
                 }
+            }
+            if let error {
+                Text(verbatim: error).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
             }
         }
         .task(id: app.athlete?.id) {
@@ -269,18 +273,23 @@ private struct BattleSettings: View {
     private func save(result: BattleResult?) {
         guard let database = app.database, let athlete = app.athlete else { return }
         Task {
-            let localDate = LocalDate(date, in: .current)
-            let season = try await SeasonService(database).activeSeason(athleteId: athlete.id)
-            var updated =
-                battle
-                ?? Battle(
-                    id: UUIDv7.make(), athleteId: athlete.id, seasonId: season?.id, name: name, date: localDate,
-                    createdAt: .now)
-            updated.name = name.trimmingCharacters(in: .whitespaces)
-            updated.date = localDate
-            updated.result = result
-            try await BattleRepository(database).save(updated)
-            battle = updated
+            do {
+                let localDate = LocalDate(date, in: .current)
+                let season = try await SeasonService(database).activeSeason(athleteId: athlete.id)
+                var updated =
+                    battle
+                    ?? Battle(
+                        id: UUIDv7.make(), athleteId: athlete.id, seasonId: season?.id, name: name, date: localDate,
+                        createdAt: .now)
+                updated.name = name.trimmingCharacters(in: .whitespaces)
+                updated.date = localDate
+                updated.result = result
+                try await BattleRepository(database).save(updated)
+                battle = updated
+                error = nil
+            } catch {
+                self.error = String(describing: error)
+            }
         }
     }
 }

@@ -17,12 +17,20 @@ struct ScreenScaffold<Content: View>: View {
         }
     }
 
+    /// HARD TO in `bone`, SUBMIT in `blood` (#87).
+    private static var wordmark: AttributedString {
+        var hard = AttributedString("HARD TO ")
+        hard.foregroundColor = Color.hts.bone
+        var submit = AttributedString("SUBMIT")
+        submit.foregroundColor = Color.hts.blood
+        return hard + submit
+    }
+
     private var scroll: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: HTSSpacing.space7) {
                 HStack(alignment: .firstTextBaseline) {
-                    (Text(verbatim: "HARD TO ").foregroundStyle(Color.hts.bone)
-                        + Text(verbatim: "SUBMIT").foregroundStyle(Color.hts.blood))
+                    Text(Self.wordmark)
                         .htsTextStyle(.brandApp)
                         .accessibilityLabel("Hard To Submit")
                         .accessibilityAddTraits(.isHeader)

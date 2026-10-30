@@ -113,8 +113,6 @@ private struct SafariView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> SFSafariViewController {
         let controller = SFSafariViewController(url: url)
-        controller.preferredControlTintColor = UIColor(Color.hts.bone)
-        controller.preferredBarTintColor = UIColor(Color.hts.black)
         controller.overrideUserInterfaceStyle = .dark
         return controller
     }
