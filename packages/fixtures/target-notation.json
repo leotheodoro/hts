@@ -1,0 +1,322 @@
+{
+  "function": "parseTargetNotation",
+  "cases": [
+    {
+      "name": "one fixed target for every set",
+      "input": {
+        "sets": "3",
+        "target": "8"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 3,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 8
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "a list with one target per set",
+      "input": {
+        "sets": "4",
+        "target": "6-6-3-3"
+      },
+      "expected": {
+        "setsMin": 4,
+        "setsMax": 4,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 6
+          },
+          {
+            "type": "fixed",
+            "value": 6
+          },
+          {
+            "type": "fixed",
+            "value": 3
+          },
+          {
+            "type": "fixed",
+            "value": 3
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "two rising numbers are a range",
+      "input": {
+        "sets": "3",
+        "target": "10-20"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 3,
+        "targets": [
+          {
+            "type": "range",
+            "min": 10,
+            "max": 20
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "two numbers with two sets are a list",
+      "input": {
+        "sets": "2",
+        "target": "10-20"
+      },
+      "expected": {
+        "setsMin": 2,
+        "setsMax": 2,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 10
+          },
+          {
+            "type": "fixed",
+            "value": 20
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "\" a \" is always a range",
+      "input": {
+        "sets": "2",
+        "target": "15 a 20"
+      },
+      "expected": {
+        "setsMin": 2,
+        "setsMax": 2,
+        "targets": [
+          {
+            "type": "range",
+            "min": 15,
+            "max": 20
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "per side",
+      "input": {
+        "sets": "2",
+        "target": "12/12"
+      },
+      "expected": {
+        "setsMin": 2,
+        "setsMax": 2,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 12
+          }
+        ],
+        "perSide": true
+      }
+    },
+    {
+      "name": "max",
+      "input": {
+        "sets": "1",
+        "target": "máx"
+      },
+      "expected": {
+        "setsMin": 1,
+        "setsMax": 1,
+        "targets": [
+          {
+            "type": "max"
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "max in capitals",
+      "input": {
+        "sets": "3",
+        "target": "MÁX"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 3,
+        "targets": [
+          {
+            "type": "max"
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "unit suffix seconds is ignored",
+      "input": {
+        "sets": "3",
+        "target": "20 s"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 3,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 20
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "unit suffix minutes is ignored",
+      "input": {
+        "sets": "1",
+        "target": "1 min"
+      },
+      "expected": {
+        "setsMin": 1,
+        "setsMax": 1,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 1
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "range with a unit",
+      "input": {
+        "sets": "3",
+        "target": "20 a 30"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 3,
+        "targets": [
+          {
+            "type": "range",
+            "min": 20,
+            "max": 30
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "decimal comma",
+      "input": {
+        "sets": "3",
+        "target": "2,5"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 3,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 2.5
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "sets as a range",
+      "input": {
+        "sets": "3 a 4",
+        "target": "6"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 4,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 6
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "sets as a dash range",
+      "input": {
+        "sets": "3-4",
+        "target": "8"
+      },
+      "expected": {
+        "setsMin": 3,
+        "setsMax": 4,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 8
+          }
+        ],
+        "perSide": false
+      }
+    },
+    {
+      "name": "zero sets is invalid",
+      "input": {
+        "sets": "0",
+        "target": "8"
+      },
+      "expected": null
+    },
+    {
+      "name": "falling sets range is invalid",
+      "input": {
+        "sets": "4 a 3",
+        "target": "8"
+      },
+      "expected": null
+    },
+    {
+      "name": "uneven sides are invalid",
+      "input": {
+        "sets": "3",
+        "target": "12/10"
+      },
+      "expected": null
+    },
+    {
+      "name": "a list that does not match the sets is invalid",
+      "input": {
+        "sets": "3",
+        "target": "6-6"
+      },
+      "expected": null
+    },
+    {
+      "name": "falling \" a \" range is invalid",
+      "input": {
+        "sets": "3",
+        "target": "20 a 10"
+      },
+      "expected": null
+    },
+    {
+      "name": "text is invalid",
+      "input": {
+        "sets": "3",
+        "target": "pesado"
+      },
+      "expected": null
+    }
+  ]
+}
