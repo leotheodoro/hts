@@ -8,7 +8,7 @@ import { type AccountRow, createSession, revokeSession } from "../auth/session.j
 import type { Db } from "../db/client.js";
 import { account } from "../db/schema.js";
 
-const AccountSchema = z
+export const AccountSchema = z
   .object({
     id: z.uuid(),
     name: z.string().openapi({ example: "Leonardo Theodoro" }),
@@ -22,10 +22,10 @@ const SessionSchema = z
   .object({ token: z.string(), athleteId: z.uuid(), account: AccountSchema })
   .openapi("AuthSession");
 
-const MeSchema = z.object({ athleteId: z.uuid(), account: AccountSchema }).openapi("Me");
+export const MeSchema = z.object({ athleteId: z.uuid(), account: AccountSchema }).openapi("Me");
 
 const ErrorSchema = z.object({ error: z.string() }).openapi("Error");
-const error = (description: string) => ({
+export const error = (description: string) => ({
   description,
   content: { "application/json": { schema: ErrorSchema } },
 });
@@ -84,7 +84,7 @@ const logoutRoute = createRoute({
   },
 });
 
-const toAccount = (row: AccountRow) => ({
+export const toAccount = (row: AccountRow) => ({
   id: row.id,
   name: row.name,
   username: row.username,

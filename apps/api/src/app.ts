@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { type AppEnv, sessionAuth } from "./auth/middleware.js";
 import { LoginLimiter } from "./auth/rate-limit.js";
 import type { Db } from "./db/client.js";
+import { accountRoutes } from "./routes/account.js";
 import { athleteRoutes } from "./routes/athletes.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
@@ -17,6 +18,7 @@ export function createApp({ db }: { db: Db }) {
   app.route("/", healthRoutes);
   app.use("/v1/*", sessionAuth(db));
   app.route("/", authRoutes(db, new LoginLimiter()));
+  app.route("/", accountRoutes(db));
   app.route("/", athleteRoutes(db));
   app.route("/", syncRoutes(db));
   return app;
