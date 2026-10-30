@@ -7,9 +7,10 @@ import { athleteRoutes } from "./routes/athletes.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { syncRoutes } from "./routes/sync.js";
+import type { AvatarStorage } from "./storage.js";
 import { version } from "./version.js";
 
-export function createApp({ db }: { db: Db }) {
+export function createApp({ db, storage }: { db: Db; storage?: AvatarStorage | undefined }) {
   const app = new OpenAPIHono<AppEnv>();
   app.openAPIRegistry.registerComponent("securitySchemes", "bearer", {
     type: "http",
@@ -17,8 +18,8 @@ export function createApp({ db }: { db: Db }) {
   });
   app.route("/", healthRoutes);
   app.use("/v1/*", sessionAuth(db));
-  app.route("/", authRoutes(db, new LoginLimiter()));
-  app.route("/", accountRoutes(db));
+  app.route("/", authRoutes(db, new LoginLimiter(), storage));
+  app.route("/", accountRoutes(db, storage));
   app.route("/", athleteRoutes(db));
   app.route("/", syncRoutes(db));
   return app;

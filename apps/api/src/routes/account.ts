@@ -1,9 +1,11 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
+import { v7 as uuidv7 } from "uuid";
 import type { AppEnv } from "../auth/middleware.js";
 import { hashPassword, verifyPassword } from "../auth/password.js";
 import type { Db } from "../db/client.js";
 import { account, athlete, authSession } from "../db/schema.js";
+import type { AvatarStorage } from "../storage.js";
 import { error, MeSchema, toAccount } from "./auth.js";
 
 // The account edits itself ("Minha conta", #141). Username and e-mail stay unique ignoring case.
@@ -58,7 +60,32 @@ const passwordRoute = createRoute({
   },
 });
 
-export function accountRoutes(db: Db) {
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+const avatarRoute = createRoute({
+  method: "put",
+  path: "/v1/account/avatar",
+  operationId: "uploadAvatar",
+  tags: ["account"],
+  summary: "Replace the account photo (JPEG up to 2 MB)",
+  security: [{ bearer: [] }],
+  request: {
+    body: {
+      content: {
+        "image/jpeg": { schema: z.string().openapi({ type: "string", format: "binary" }) },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Updated account", content: { "application/json": { schema: MeSchema } } },
+    400: error("Not a JPEG"),
+    401: error("Missing, unknown or revoked session"),
+    413: error("Larger than 2 MB"),
+    503: error("Photo storage is not configured"),
+  },
+});
+
+export function accountRoutes(db: Db, storage?: AvatarStorage) {
   return new OpenAPIHono<AppEnv>()
     .openapi(updateRoute, async (c) => {
       const auth = c.get("auth");
@@ -102,7 +129,7 @@ export function accountRoutes(db: Db) {
         return row;
       });
       if (!updated) return c.json({ error: "unauthorized" }, 401);
-      return c.json({ athleteId: auth.athleteId, account: toAccount(updated) }, 200);
+      return c.json({ athleteId: auth.athleteId, account: await toAccount(updated, storage) }, 200);
     })
     .openapi(passwordRoute, async (c) => {
       const auth = c.get("auth");
@@ -129,5 +156,30 @@ export function accountRoutes(db: Db) {
           );
       });
       return c.body(null, 204);
+    })
+    .openapi(avatarRoute, async (c) => {
+      if (!storage) return c.json({ error: "storage_unavailable" }, 503);
+      const auth = c.get("auth");
+      if (c.req.header("content-type")?.split(";")[0]?.trim() !== "image/jpeg") {
+        return c.json({ error: "not_jpeg" }, 400);
+      }
+      const bytes = new Uint8Array(await c.req.arrayBuffer());
+      if (bytes.length > MAX_AVATAR_BYTES) return c.json({ error: "too_large" }, 413);
+      // JPEG files start with FF D8 FF.
+      if (bytes.length < 3 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
+        return c.json({ error: "not_jpeg" }, 400);
+      }
+      const key = `avatars/${auth.account.id}/${uuidv7()}.jpg`;
+      await storage.put(key, bytes, "image/jpeg");
+      const [updated] = await db
+        .update(account)
+        .set({ avatarKey: key, updatedAt: new Date() })
+        .where(eq(account.id, auth.account.id))
+        .returning();
+      if (!updated) return c.json({ error: "unauthorized" }, 401);
+      // The old photo goes away; a failure only leaves an orphan object behind.
+      if (auth.account.avatarKey)
+        await storage.delete(auth.account.avatarKey).catch(() => undefined);
+      return c.json({ athleteId: auth.athleteId, account: await toAccount(updated, storage) }, 200);
     });
 }
