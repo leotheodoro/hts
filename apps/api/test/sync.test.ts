@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import {
   arc,
@@ -17,13 +17,18 @@ import { createTestAccount, createTestDb, removeAccounts } from "./db.js";
 
 const { db, close } = createTestDb();
 const app = createApp({ db });
-const headers: Record<string, string> = { "content-type": "application/json" };
 const athletes: string[] = [];
 
-beforeAll(async () => {
+/** An athlete with an account and a session, as after logging in on the device. */
+async function signedIn() {
   const leo = await createTestAccount(db);
   athletes.push(leo.athleteId);
-  headers.authorization = `Bearer ${leo.token}`;
+  return leo;
+}
+
+const headersFor = (token: string) => ({
+  authorization: `Bearer ${token}`,
+  "content-type": "application/json",
 });
 
 afterAll(async () => {
@@ -49,9 +54,7 @@ afterAll(async () => {
 const iso = (ms: number) => new Date(ms).toISOString();
 
 /** A device-side snapshot: one athlete, plan and session, as the app sends it. */
-function deviceRows() {
-  const athleteId = uuidv7();
-  athletes.push(athleteId);
+function deviceRows(athleteId: string) {
   const t = Date.UTC(2026, 10, 2, 12);
   const base = { athlete_id: athleteId, created_at: iso(t), updated_at: iso(t), deleted_at: null };
   const ids = {
@@ -178,12 +181,18 @@ function deviceRows() {
   return { athleteId, ids, changes, t };
 }
 
-const pushChanges = (changes: unknown) =>
-  app.request("/v1/sync/push", { method: "POST", headers, body: JSON.stringify({ changes }) });
+const pushChanges = (token: string, changes: unknown) =>
+  app.request("/v1/sync/push", {
+    method: "POST",
+    headers: headersFor(token),
+    body: JSON.stringify({ changes }),
+  });
 
-const pullSince = async (athleteId: string, since?: string) => {
-  const query = `athleteId=${athleteId}${since ? `&since=${encodeURIComponent(since)}` : ""}`;
-  const res = await app.request(`/v1/sync/pull?${query}`, { headers });
+const pullQuery = (athleteId: string, since?: string) =>
+  `/v1/sync/pull?athleteId=${athleteId}${since ? `&since=${encodeURIComponent(since)}` : ""}`;
+
+const pullSince = async (token: string, athleteId: string, since?: string) => {
+  const res = await app.request(pullQuery(athleteId, since), { headers: headersFor(token) });
   expect(res.status).toBe(200);
   return (await res.json()) as {
     cursor: string | null;
@@ -193,12 +202,13 @@ const pullSince = async (athleteId: string, since?: string) => {
 
 describe("sync", () => {
   it("pushes a whole device snapshot and pulls it back in the same format", async () => {
-    const { athleteId, ids, changes } = deviceRows();
-    const res = await pushChanges(changes);
+    const leo = await signedIn();
+    const { ids, changes } = deviceRows(leo.athleteId);
+    const res = await pushChanges(leo.token, changes);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ applied: 9 });
 
-    const pulled = await pullSince(athleteId);
+    const pulled = await pullSince(leo.token, leo.athleteId);
     const set = pulled.changes.logged_set?.find((row) => row.id === ids.set);
     expect(set).toMatchObject({
       weight_kg: "62.50",
@@ -214,50 +224,80 @@ describe("sync", () => {
   });
 
   it("keeps the newer row: last write wins by updated_at", async () => {
-    const { athleteId, changes, t } = deviceRows();
-    await pushChanges(changes);
+    const leo = await signedIn();
+    const { changes, t } = deviceRows(leo.athleteId);
+    await pushChanges(leo.token, changes);
     const newer = { ...changes.athlete[0], display_name: "Leo Novo", updated_at: iso(t + 10_000) };
-    await pushChanges({ athlete: [newer] });
+    await pushChanges(leo.token, { athlete: [newer] });
     const older = { ...changes.athlete[0], display_name: "Leo Velho", updated_at: iso(t + 5_000) };
-    await pushChanges({ athlete: [older] });
-    const [stored] = await db.select().from(athlete).where(eq(athlete.id, athleteId));
+    await pushChanges(leo.token, { athlete: [older] });
+    const [stored] = await db.select().from(athlete).where(eq(athlete.id, leo.athleteId));
     expect(stored?.displayName).toBe("Leo Novo");
   });
 
   it("pulls only rows written after the cursor", async () => {
-    const first = deviceRows();
-    await pushChanges(first.changes);
-    const { cursor } = await pullSince(first.athleteId);
-    expect((await pullSince(first.athleteId, cursor ?? undefined)).changes).toEqual({});
+    const leo = await signedIn();
+    const first = deviceRows(leo.athleteId);
+    await pushChanges(leo.token, first.changes);
+    const { cursor } = await pullSince(leo.token, leo.athleteId);
+    expect((await pullSince(leo.token, leo.athleteId, cursor ?? undefined)).changes).toEqual({});
 
     const renamed = {
       ...first.changes.athlete[0],
       display_name: "Leo 2",
       updated_at: iso(first.t + 60_000),
     };
-    await pushChanges({ athlete: [renamed] });
-    const after = await pullSince(first.athleteId, cursor ?? undefined);
+    await pushChanges(leo.token, { athlete: [renamed] });
+    const after = await pullSince(leo.token, leo.athleteId, cursor ?? undefined);
     expect(after.changes.athlete?.map((row) => row.display_name)).toEqual(["Leo 2"]);
     expect(Object.keys(after.changes)).toEqual(["athlete"]);
   });
 
-  it("never returns rows of another athlete", async () => {
-    const mine = deviceRows();
-    const other = deviceRows();
-    await pushChanges(mine.changes);
-    await pushChanges(other.changes);
-    const pulled = await pullSince(mine.athleteId);
-    for (const rows of Object.values(pulled.changes)) {
-      for (const row of rows) {
-        expect(row.athlete_id ?? row.id).toBe(mine.athleteId);
-      }
-    }
-    expect(pulled.changes.arc?.map((row) => row.id)).toEqual([mine.ids.arc]);
+  it("refuses rows of another athlete", async () => {
+    const leo = await signedIn();
+    const other = await signedIn();
+    const theirs = deviceRows(other.athleteId);
+    const res = await pushChanges(leo.token, { season: theirs.changes.season });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "forbidden" });
+    const stored = await db.select().from(season).where(eq(season.id, theirs.ids.season));
+    expect(stored).toEqual([]);
+    expect((await pushChanges(leo.token, { athlete: theirs.changes.athlete })).status).toBe(403);
   });
 
-  it("rejects unknown tables and requests without the token", async () => {
-    expect((await pushChanges({ nope: [] })).status).toBe(400);
+  it("cannot take over a row of another athlete by id", async () => {
+    const leo = await signedIn();
+    const other = await signedIn();
+    const theirs = deviceRows(other.athleteId);
+    await pushChanges(other.token, { season: theirs.changes.season });
+    const hijack = {
+      ...theirs.changes.season[0],
+      athlete_id: leo.athleteId,
+      name: "Roubada",
+      updated_at: iso(theirs.t + 60_000),
+    };
+    const res = await pushChanges(leo.token, { season: [hijack] });
+    expect([200, 403]).toContain(res.status);
+    if (res.status === 200) expect(await res.json()).toEqual({ applied: 0 });
+    const [stored] = await db.select().from(season).where(eq(season.id, theirs.ids.season));
+    expect(stored?.athleteId).toBe(other.athleteId);
+    expect(stored?.name).not.toBe("Roubada");
+  });
+
+  it("pull only serves the session athlete", async () => {
+    const leo = await signedIn();
+    const other = await signedIn();
+    await pushChanges(other.token, deviceRows(other.athleteId).changes);
+    const res = await app.request(pullQuery(other.athleteId), { headers: headersFor(leo.token) });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects unknown tables and requests without a session", async () => {
+    const leo = await signedIn();
+    expect((await pushChanges(leo.token, { nope: [] })).status).toBe(400);
     expect((await app.request("/v1/sync/pull")).status).toBe(401);
-    expect((await app.request("/v1/sync/pull", { headers })).status).toBe(400);
+    expect((await app.request("/v1/sync/pull", { headers: headersFor(leo.token) })).status).toBe(
+      400,
+    );
   });
 });
