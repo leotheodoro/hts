@@ -99,6 +99,35 @@ import Testing
         draft.kanji = "基"
         #expect(draft.isValid)
     }
+
+    @Test func videosFillExercisesImportedBeforeTheLinksAndKeepExistingOnes() async throws {
+        let (database, athlete) = try await setUp()
+        let plan = Self.plan(["Base volume 1"])
+        try await decode(plan).importMissing(into: database, athleteId: athlete.id, today: LocalDate("2026-10-29")!)
+        try await database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE exercise SET video_url = 'https://youtu.be/own' WHERE normalized_name = 'leg press'")
+        }
+
+        let withVideos =
+            plan
+            .replacingOccurrences(of: #""target": "8" }"#, with: #""target": "8", "video": "https://youtu.be/a" }"#)
+            .replacingOccurrences(of: #""target": "20" }"#, with: #""target": "20", "video": "https://youtu.be/b" }"#)
+            .replacingOccurrences(
+                of: #""target": "15/15" }"#, with: #""target": "15/15", "video": "https://youtu.be/c" }"#
+            )
+            // "ROTAÇÃO Externa" is the same catalog exercise as "Rotação externa de ombros".
+            .replacingOccurrences(of: "Rotação externa", with: "ROTAÇÃO Externa")
+        #expect(try await decode(withVideos).fillVideos(into: database, athleteId: athlete.id) == 2)
+        #expect(try await decode(withVideos).fillVideos(into: database, athleteId: athlete.id) == 0)
+
+        let videos = try await database.writer.read { db in
+            try Dictionary(uniqueKeysWithValues: Exercise.fetchAll(db).map { ($0.normalizedName, $0.videoUrl) })
+        }
+        #expect(videos["supino maquina"] == "https://youtu.be/a")
+        #expect(videos["leg press"] == "https://youtu.be/own")
+        #expect(videos["rotacao externa de ombros"] == "https://youtu.be/c")
+    }
 }
 
 @Suite struct SeasonServiceTests {

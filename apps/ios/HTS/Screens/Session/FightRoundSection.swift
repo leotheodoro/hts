@@ -24,6 +24,9 @@ struct FightRoundSection: View {
                             .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                         }
                         Spacer()
+                        if let video = model.videos[exercise.exerciseId] {
+                            VideoButton(url: video, exerciseName: exercise.name)
+                        }
                         NumberField(
                             value: model.roundWeight(exercise: exercise, block: block), prompt: "kg",
                             keyboard: .decimalPad

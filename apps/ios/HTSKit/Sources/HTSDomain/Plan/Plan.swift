@@ -148,13 +148,15 @@ public struct Exercise: Identifiable, Hashable, Sendable, Codable {
     public var defaultAttribute: Attribute?
     public var unit: ExerciseUnit
     public var perSide: Bool
+    /// How to do it: the coach's YouTube link (#110).
+    public var videoUrl: String?
     public var createdAt: Date
     public var updatedAt: Date
     public var deletedAt: Date?
 
     public init(
         id: UUID, athleteId: UUID, name: String, defaultAttribute: Attribute? = nil, unit: ExerciseUnit = .reps,
-        perSide: Bool = false, createdAt: Date, updatedAt: Date? = nil, deletedAt: Date? = nil
+        perSide: Bool = false, videoUrl: String? = nil, createdAt: Date, updatedAt: Date? = nil, deletedAt: Date? = nil
     ) {
         self.id = id
         self.athleteId = athleteId
@@ -163,9 +165,15 @@ public struct Exercise: Identifiable, Hashable, Sendable, Codable {
         self.defaultAttribute = defaultAttribute
         self.unit = unit
         self.perSide = perSide
+        self.videoUrl = videoUrl
         self.createdAt = createdAt.roundedToMilliseconds
         self.updatedAt = (updatedAt ?? createdAt).roundedToMilliseconds
         self.deletedAt = deletedAt?.roundedToMilliseconds
+    }
+
+    /// The link as a URL, when it is a valid web address.
+    public var video: URL? {
+        videoUrl.flatMap(URL.init(string:)).flatMap { ["http", "https"].contains($0.scheme) ? $0 : nil }
     }
 }
 

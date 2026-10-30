@@ -64,6 +64,16 @@ public struct SessionRepository: Sendable {
         }
     }
 
+    /// The catalog video of each exercise in the session, by catalog exercise id (#110).
+    public func videos(for session: Session) async throws -> [UUID: URL] {
+        let ids = session.planSnapshot.blocks.flatMap(\.exercises).map(\.exerciseId.sql)
+        return try await database.writer.read { db in
+            let exercises = try Exercise.filter(ids.contains(Column("id"))).fetchAll(db)
+            return Dictionary(exercises.compactMap { exercise in exercise.video.map { (exercise.id, $0) } }) { a, _ in a
+            }
+        }
+    }
+
     /// "Anterior": completed sets of the last completed session of the same workout template, by catalog exercise
     /// and set number.
     public func previousSets(for session: Session) async throws -> [UUID: [Int: LoggedSet]] {
