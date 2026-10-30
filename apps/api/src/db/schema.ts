@@ -58,7 +58,8 @@ export const account = pgTable(
     username: text("username").notNull(),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
-    avatarUrl: text("avatar_url"),
+    /** Object key of the photo in the private bucket; the API answers a signed link (#142). */
+    avatarKey: text("avatar_key"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

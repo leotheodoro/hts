@@ -7,6 +7,7 @@ import { ConcurrencyLimit, type LoginLimiter } from "../auth/rate-limit.js";
 import { type AccountRow, createSession, revokeSession } from "../auth/session.js";
 import type { Db } from "../db/client.js";
 import { account } from "../db/schema.js";
+import type { AvatarStorage } from "../storage.js";
 
 export const AccountSchema = z
   .object({
@@ -84,15 +85,18 @@ const logoutRoute = createRoute({
   },
 });
 
-export const toAccount = (row: AccountRow) => ({
-  id: row.id,
-  name: row.name,
-  username: row.username,
-  email: row.email,
-  avatarUrl: row.avatarUrl,
-});
+/** The account as the app sees it: the photo as a temporary signed link, or null. */
+export async function toAccount(row: AccountRow, storage: AvatarStorage | undefined) {
+  return {
+    id: row.id,
+    name: row.name,
+    username: row.username,
+    email: row.email,
+    avatarUrl: row.avatarKey && storage ? await storage.signedUrl(row.avatarKey) : null,
+  };
+}
 
-export function authRoutes(db: Db, limiter: LoginLimiter) {
+export function authRoutes(db: Db, limiter: LoginLimiter, storage?: AvatarStorage) {
   // Each argon2 check takes ~19 MiB: a few at a time keep a flood from exhausting the instance.
   const checks = new ConcurrencyLimit(4);
   return new OpenAPIHono<AppEnv>()
@@ -120,11 +124,17 @@ export function authRoutes(db: Db, limiter: LoginLimiter) {
       }
       limiter.reset(`id:${id}`);
       const token = await createSession(db, row.id);
-      return c.json({ token, athleteId: row.athleteId, account: toAccount(row) }, 200);
+      return c.json(
+        { token, athleteId: row.athleteId, account: await toAccount(row, storage) },
+        200,
+      );
     })
-    .openapi(meRoute, (c) => {
+    .openapi(meRoute, async (c) => {
       const auth = c.get("auth");
-      return c.json({ athleteId: auth.athleteId, account: toAccount(auth.account) }, 200);
+      return c.json(
+        { athleteId: auth.athleteId, account: await toAccount(auth.account, storage) },
+        200,
+      );
     })
     .openapi(logoutRoute, async (c) => {
       await revokeSession(db, c.get("auth").sessionId);
