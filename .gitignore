@@ -22,3 +22,4 @@ apps/ios/Local.xcconfig
 
 # Personal starter plan (licensed coach programs; see apps/ios/LocalSeed.example)
 apps/ios/LocalSeed/
+.superpowers/

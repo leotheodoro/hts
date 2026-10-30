@@ -50,6 +50,13 @@
       "when": 1793369038831,
       "tag": "0006_add_exercise_video_url",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793377331697,
+      "tag": "0007_add_account_and_auth_session",
+      "breakpoints": true
     }
   ]
 }
