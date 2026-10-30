@@ -114,7 +114,7 @@ import Testing
                     VALUES ('b', 'a', 's', 'Copa', '2026-12-12', ?, ?);
                     """, arguments: [stamp, stamp, stamp, stamp, stamp, stamp, stamp, stamp, stamp, stamp])
         }
-        try AppDatabase.migrator.migrate(queue)
+        try AppDatabase.migrator.migrate(queue, upTo: "v9_exercise_video_url")
         let result = try queue.read { db in
             (
                 normal: try String.fetchOne(db, sql: "SELECT season_id FROM arc WHERE id = 'r'"),
@@ -148,7 +148,7 @@ import Testing
                            ('m', 'a', NULL, 'Mobilidade', 'filler', 'queued', 0, ?, ?);
                     """, arguments: StatementArguments(Array(repeating: stamp, count: 10)))
         }
-        try AppDatabase.migrator.migrate(queue)
+        try AppDatabase.migrator.migrate(queue, upTo: "v9_exercise_video_url")
         let result = try queue.read { db in
             (
                 saga: try Row.fetchOne(db, sql: "SELECT deleted_at, updated_at, active FROM season WHERE id = 's'"),
@@ -164,5 +164,32 @@ import Testing
         #expect(result.jiuJitsu == true)
         #expect(result.base == "current")
         #expect(result.filler == "queued")
+    }
+}
+
+@Suite struct StartFreshMigrationTests {
+    /// Test data from before accounts is wiped once, so the first login starts clean (#122).
+    @Test func deletesTheTestDataAndTheSyncState() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v9_exercise_video_url")
+        let stamp = "2026-10-29T12:00:00.000Z"
+        try queue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO athlete (id, display_name, created_at, updated_at) VALUES ('a', 'Atleta', ?, ?);
+                    INSERT INTO season (id, athlete_id, name, position, active, created_at, updated_at)
+                    VALUES ('j', 'a', 'Jiu-Jitsu', 0, 1, ?, ?);
+                    INSERT INTO arc (id, athlete_id, season_id, name, kind, status, position, created_at, updated_at)
+                    VALUES ('b', 'a', 'j', 'Base', 'normal', 'current', 0, ?, ?);
+                    INSERT INTO local_sync_state (key, value) VALUES ('pull_cursor', ?);
+                    """, arguments: StatementArguments(Array(repeating: stamp, count: 7)))
+        }
+        try AppDatabase.migrator.migrate(queue)
+        let counts = try queue.read { db in
+            try ["athlete", "season", "arc", "local_sync_state"].map {
+                try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM \($0)") ?? -1
+            }
+        }
+        #expect(counts == [0, 0, 0, 0])
     }
 }

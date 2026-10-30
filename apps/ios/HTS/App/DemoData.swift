@@ -6,6 +6,11 @@
     /// Sample arcs for screenshots and manual checks: launch with `-HTSSeedDemo YES`. Only when there are no arcs.
     enum DemoData {
         static var isRequested: Bool { UserDefaults.standard.bool(forKey: "HTSSeedDemo") }
+        /// `-HTSFakeSession YES` (implied by the demo flags) opens with a local athlete and a session that never
+        /// reaches the API, so screenshots skip the login.
+        static var usesLocalSession: Bool {
+            UserDefaults.standard.bool(forKey: "HTSFakeSession") || isRequested || startsWorkout
+        }
         /// `-HTSStartDemoWorkout YES` starts the suggested workout on launch (screenshots).
         static var startsWorkout: Bool { UserDefaults.standard.bool(forKey: "HTSStartDemoWorkout") }
 

@@ -5,10 +5,31 @@ import HTSPersistence
 import Observation
 import UserNotifications
 
-/// App-wide state: the local database, the local athlete and the API client.
+/// App-wide state: the login session, the local database, the athlete and the API client.
 @MainActor
 @Observable
 final class AppModel {
+    /// Whether someone is logged in on this device (docs/decisions/0031).
+    enum AuthState: Equatable {
+        /// Reading the saved session on launch.
+        case checking
+        case signedOut
+        case signedIn(AuthSession)
+    }
+
+    enum SignInError: Equatable {
+        case invalidCredentials
+        case offline
+        case tooManyAttempts
+        case other(String)
+    }
+
+    private(set) var authState: AuthState = .checking
+
+    var session: AuthSession? {
+        if case .signedIn(let session) = authState { session } else { nil }
+    }
+
     enum HealthState: Equatable {
         case unknown
         case checking
@@ -38,6 +59,9 @@ final class AppModel {
     let apiConfiguration: APIConfiguration?
     let database: AppDatabase?
     private let api: APIClient?
+    private let sessionStore: any SessionStoring
+    /// The API with a session token (nil before login). Tests answer from a fake.
+    private let remote: @Sendable (_ token: String?) -> (any RemoteAPI)?
 
     /// Asks for notification permission when a workout starts. Tests pass a no-op: the system prompt never answers
     /// in the test host.
@@ -45,6 +69,8 @@ final class AppModel {
 
     init(
         database: AppDatabase?, apiConfiguration: APIConfiguration?, databaseError: String? = nil,
+        sessionStore: any SessionStoring = InMemorySessionStore(),
+        remote: (@Sendable (_ token: String?) -> (any RemoteAPI)?)? = nil,
         requestNotifications: @escaping @Sendable () async -> Void = {
             guard !TestHost.isRunningTests else { return }
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
@@ -54,40 +80,116 @@ final class AppModel {
         self.database = database
         self.databaseError = databaseError
         self.apiConfiguration = apiConfiguration
+        self.sessionStore = sessionStore
         api = apiConfiguration.map { APIClient(configuration: $0) }
+        // The timeout is long because the free Render instance takes ~1 min to wake.
+        self.remote =
+            remote ?? { token in
+                apiConfiguration.map {
+                    APIClient(configuration: APIConfiguration(baseURL: $0.baseURL, token: token), timeout: 90)
+                }
+            }
     }
 
     static func live() -> AppModel {
         let configuration = APIConfiguration.fromBundle()
+        let store = KeychainSessionStore()
+        store.resetIfFreshInstall()
         do {
-            return AppModel(database: try AppDatabase.onDisk(), apiConfiguration: configuration)
+            return AppModel(database: try AppDatabase.onDisk(), apiConfiguration: configuration, sessionStore: store)
         } catch {
-            return AppModel(database: nil, apiConfiguration: configuration, databaseError: String(describing: error))
+            return AppModel(
+                database: nil, apiConfiguration: configuration, databaseError: String(describing: error),
+                sessionStore: store)
         }
     }
 
+    /// Opens on the saved session without touching the network (it may be offline); the sync runs behind.
     func start() async {
-        await loadLocalAthlete()
         #if DEBUG
-            await checkHealth()
+            if DemoData.usesLocalSession {
+                await loadLocalAthlete()
+                await checkHealth()
+                return
+            }
         #endif
+        guard let saved = sessionStore.load() else {
+            authState = .signedOut
+            return
+        }
+        authState = .signedIn(saved)
+        await loadAthlete(saved.athleteId)
+        if athlete == nil {
+            await sync(athleteId: saved.athleteId)
+            await loadAthlete(saved.athleteId)
+        } else {
+            Task { await sync() }
+        }
     }
 
+    /// Logs in, keeps the session and pulls the account's data before opening the app. Nil when it worked.
+    func signIn(identifier: String, password: String) async -> SignInError? {
+        guard let client = remote(nil) else { return .offline }
+        do {
+            let session = try await client.login(
+                identifier: identifier.trimmingCharacters(in: .whitespaces), password: password)
+            try sessionStore.save(session)
+            authState = .signedIn(session)
+            await sync(athleteId: session.athleteId)
+            await loadAthlete(session.athleteId)
+            return nil
+        } catch APIError.invalidCredentials {
+            return .invalidCredentials
+        } catch APIError.tooManyAttempts {
+            return .tooManyAttempts
+        } catch {
+            switch APIFailure(error) {
+            case .timedOut, .unreachable: return .offline
+            case .other(let detail): return .other(detail)
+            }
+        }
+    }
+
+    /// Revokes the session on the server when it can, then forgets it here. The local data stays.
+    func signOut() async {
+        if let token = session?.token, let client = remote(token) {
+            try? await client.logout()
+        }
+        signOutLocally()
+    }
+
+    private func signOutLocally() {
+        sessionStore.clear()
+        authState = .signedOut
+        athlete = nil
+        activeSession = nil
+        showsActiveSession = false
+        syncState = .idle
+    }
+
+    /// The athlete of the session from SQLite (after a sync it is the server's) and the workout in progress.
+    private func loadAthlete(_ athleteId: UUID) async {
+        guard let database else { return }
+        do {
+            athlete = try await AthleteRepository(database).athlete(id: athleteId)
+            activeSession = try await SessionRepository(database).inProgress(athleteId: athleteId)
+        } catch {
+            databaseError = String(describing: error)
+        }
+    }
+
+    /// A local athlete and a session that never reaches the API: DEBUG demos, screenshots and tests.
     func loadLocalAthlete() async {
         guard let database else { return }
         do {
             let athlete = try await AthleteRepository(database).ensureLocalAthlete(
                 displayName: String(localized: "Atleta"))
-            // Sync before the starter plan: a reinstall gets its arcs back from the server instead of a new copy.
-            await sync(athleteId: athlete.id)
-            if !TestHost.isRunningTests, let url = Bundle.main.url(forResource: "StarterPlan", withExtension: "json") {
-                let plan = try StarterPlan.load(from: url)
-                let added = try await plan.importMissing(into: database, athleteId: athlete.id, today: .today)
-                if try await plan.fillVideos(into: database, athleteId: athlete.id) + added > 0 {
-                    dataVersion += 1
-                    await sync(athleteId: athlete.id)
-                }
-            }
+            authState = .signedIn(
+                AuthSession(
+                    token: "", athleteId: athlete.id,
+                    account: Account(
+                        id: athlete.id, name: athlete.displayName, username: "local", email: "local@hts.local",
+                        avatarUrl: nil)))
             #if DEBUG
                 if DemoData.isRequested { try await DemoData.seed(database, athleteId: athlete.id) }
             #endif
@@ -128,24 +230,25 @@ final class AppModel {
         Task { await sync() }
     }
 
-    /// Pushes local changes and pulls the server's (docs/decisions/0026). Needs the API URL and token; without them
-    /// the app simply stays local. The timeout is long because the free Render instance takes ~1 min to wake.
+    /// Pushes local changes and pulls the server's (docs/decisions/0026) with the session token. Without a session
+    /// (or with the local one of demos) nothing is sent. A refused session signs out, keeping the local data.
     func sync(athleteId: UUID? = nil) async {
-        guard let database, let configuration = apiConfiguration, configuration.token != nil,
-            let athleteId = athleteId ?? athlete?.id, syncState != .syncing
+        guard let database, let session, !session.token.isEmpty, let client = remote(session.token),
+            syncState != .syncing
         else { return }
+        let athleteId = athleteId ?? session.athleteId
         syncState = .syncing
         do {
-            let result = try await SyncService(
-                database, transport: APIClient(configuration: configuration, timeout: 90)
-            ).sync(athleteId: athleteId)
+            let result = try await SyncService(database, transport: client).sync(athleteId: athleteId)
             syncState = .synced(.now)
             if result.pulled > 0 { dataVersion += 1 }
             if let id = athlete?.id, let refreshed = try await AthleteRepository(database).athlete(id: id) {
                 athlete = refreshed
             }
+        } catch APIError.unauthorized {
+            signOutLocally()
         } catch {
-            let host = configuration.baseURL.host() ?? "API"
+            let host = apiConfiguration?.baseURL.host() ?? "API"
             let message =
                 switch APIFailure(error) {
                 case .timedOut: String(localized: "Sem resposta de \(host).")
