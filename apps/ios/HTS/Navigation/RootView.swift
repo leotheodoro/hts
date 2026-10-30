@@ -33,6 +33,7 @@ struct RootView: View {
 
     @State private var homePath: [Route] = []
     @State private var arcsPath: [Route] = []
+    @State private var profilePath: [Route] = []
     /// Bumped when the selected tab is tapped on its first page: that page scrolls to the top (#106).
     @State private var scrollToTop: [AppTab: Int] = [:]
 
@@ -52,7 +53,8 @@ struct RootView: View {
                 JournalScreen().scrollToTopSignal(scrollToTop[.journal]).toolbar(.hidden, for: .tabBar)
             }
             Tab(value: AppTab.profile) {
-                ProfileScreen().scrollToTopSignal(scrollToTop[.profile]).toolbar(.hidden, for: .tabBar)
+                TabStack(path: $profilePath) { ProfileScreen() }.scrollToTopSignal(scrollToTop[.profile])
+                    .toolbar(.hidden, for: .tabBar)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { BrandTabBar(selection: $selection, onReselect: reselect) }
@@ -61,7 +63,8 @@ struct RootView: View {
             switch old {
             case .home: homePath = []
             case .arcs: arcsPath = []
-            case .journal, .profile: break
+            case .profile: profilePath = []
+            case .journal: break
             }
         }
         .preferredColorScheme(.dark)
@@ -83,6 +86,7 @@ extension RootView {
         switch tab {
         case .home where !homePath.isEmpty: homePath = []
         case .arcs where !arcsPath.isEmpty: arcsPath = []
+        case .profile where !profilePath.isEmpty: profilePath = []
         default: scrollToTop[tab, default: 0] += 1
         }
     }
