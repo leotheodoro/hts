@@ -35,46 +35,52 @@ public struct SyncService: Sendable {
         self.transport = transport
     }
 
-    /// Pushes everything changed on the device and pulls the server's rows of `athleteId` (#68).
+    /// Pushes the rows of `athleteId` changed on the device and pulls the server's rows of `athleteId` (#68). Each
+    /// athlete on the device has its own push stamp and cursor (#135): signing in with another account sends none of
+    /// the old one's rows (the API refuses them) and pulls the new one's whole tree.
     @discardableResult
     public func sync(athleteId: UUID) async throws -> Result {
-        let (changes, newestUpdate) = try await localChanges()
+        let (changes, newestUpdate) = try await localChanges(athleteId: athleteId)
         var pushed = 0
         if !changes.isEmpty {
             pushed = try await transport.push(changes)
         }
-        if let newestUpdate { try await setState("last_push_at", newestUpdate) }
+        if let newestUpdate { try await setState(Self.key("last_push_at", athleteId), newestUpdate) }
 
-        let cursor = try await state("pull_cursor")
+        let cursor = try await state(Self.key("pull_cursor", athleteId))
         let remote = try await transport.pull(athleteId: athleteId, since: cursor)
         let pulled = try await apply(remote.changes)
-        if let next = remote.cursor { try await setState("pull_cursor", next) }
-        try await setState("last_sync_at", ISO8601Millis.format(.now))
+        if let next = remote.cursor { try await setState(Self.key("pull_cursor", athleteId), next) }
+        try await setState(Self.key("last_sync_at", athleteId), ISO8601Millis.format(.now))
         return Result(pushed: pushed, pulled: pulled)
     }
 
-    /// When the last sync finished on this device, if ever (no transport needed).
-    public static func lastSyncAt(_ database: AppDatabase) async throws -> Date? {
+    /// When the last sync of `athleteId` finished on this device, if ever (no transport needed).
+    public static func lastSyncAt(_ database: AppDatabase, athleteId: UUID) async throws -> Date? {
         try await database.writer.read { db in
-            try String.fetchOne(db, sql: "SELECT value FROM local_sync_state WHERE key = 'last_sync_at'")
+            try String.fetchOne(
+                db, sql: "SELECT value FROM local_sync_state WHERE key = ?",
+                arguments: [key("last_sync_at", athleteId)])
         }
         .flatMap(ISO8601Millis.parse)
     }
 
-    /// When the last sync finished, if ever.
-    public func lastSyncAt() async throws -> Date? {
-        try await state("last_sync_at").flatMap(ISO8601Millis.parse)
-    }
+    /// `local_sync_state` key of one athlete's value.
+    static func key(_ name: String, _ athleteId: UUID) -> String { "\(name):\(athleteId.sql)" }
 
-    /// Rows with `updated_at` at or after the last push (all rows on the first sync), and the newest stamp seen.
-    func localChanges() async throws -> (SyncChanges, String?) {
-        let since = try await state("last_push_at")
+    /// Rows of `athleteId` with `updated_at` at or after its last push (all of them on its first sync), and the
+    /// newest stamp seen.
+    func localChanges(athleteId: UUID) async throws -> (SyncChanges, String?) {
+        let since = try await state(Self.key("last_push_at", athleteId))
         return try await database.writer.read { db in
             var changes: SyncChanges = [:]
             var newest = since
             for table in Self.tables {
+                let owner = table == "athlete" ? "id" : "athlete_id"
                 let rows = try Row.fetchAll(
-                    db, sql: "SELECT * FROM \(table) WHERE ? IS NULL OR updated_at >= ?", arguments: [since, since])
+                    db,
+                    sql: "SELECT * FROM \(table) WHERE \(owner) = ? AND (? IS NULL OR updated_at >= ?)",
+                    arguments: [athleteId.sql, since, since])
                 guard !rows.isEmpty else { continue }
                 changes[table] = rows.map(Self.wire)
                 for row in rows {
