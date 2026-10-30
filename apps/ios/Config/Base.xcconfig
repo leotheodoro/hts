@@ -11,6 +11,3 @@ HTS_PRODUCTION_API_BASE_URL = https:/$()/hts-api-nrrk.onrender.com
 // to test it against `pnpm dev`, set HTS_DEVICE_API_BASE_URL to the Mac's address in Local.xcconfig.
 HTS_LOCAL_API_BASE_URL = http:/$()/localhost:8787
 HTS_DEVICE_API_BASE_URL = $(HTS_PRODUCTION_API_BASE_URL)
-
-// Fixed bearer token for the API (docs/decisions/0024). Set it in Local.xcconfig, never here.
-HTS_API_TOKEN =

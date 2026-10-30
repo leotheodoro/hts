@@ -8,7 +8,7 @@ import OpenAPIURLSession
 /// project.yml (Debug: http://localhost:8787).
 public struct APIConfiguration: Sendable, Hashable {
     public var baseURL: URL
-    /// Fixed bearer token for /v1 (docs/decisions/0024). Nil when not configured.
+    /// Session token from the login (docs/decisions/0031). Nil before logging in.
     public var token: String?
 
     public init(baseURL: URL, token: String? = nil) {
@@ -17,16 +17,42 @@ public struct APIConfiguration: Sendable, Hashable {
     }
 
     public static let infoPlistKey = "HTSAPIBaseURL"
-    public static let tokenInfoPlistKey = "HTSAPIToken"
 
     public static func fromBundle(_ bundle: Bundle = .main) -> APIConfiguration? {
         guard let value = bundle.object(forInfoDictionaryKey: infoPlistKey) as? String,
             let url = URL(string: value), url.scheme != nil
         else { return nil }
-        let token = (bundle.object(forInfoDictionaryKey: tokenInfoPlistKey) as? String).flatMap {
-            $0.isEmpty || $0.hasPrefix("$(") ? nil : $0
-        }
-        return APIConfiguration(baseURL: url, token: token)
+        return APIConfiguration(baseURL: url)
+    }
+}
+
+/// The logged-in account (docs/decisions/0031).
+public struct Account: Codable, Sendable, Hashable {
+    public var id: UUID
+    public var name: String
+    public var username: String
+    public var email: String
+    public var avatarUrl: String?
+
+    public init(id: UUID, name: String, username: String, email: String, avatarUrl: String?) {
+        self.id = id
+        self.name = name
+        self.username = username
+        self.email = email
+        self.avatarUrl = avatarUrl
+    }
+}
+
+/// What a login returns and the device keeps: the token, the athlete it reaches and the account.
+public struct AuthSession: Codable, Sendable, Hashable {
+    public var token: String
+    public var athleteId: UUID
+    public var account: Account
+
+    public init(token: String, athleteId: UUID, account: Account) {
+        self.token = token
+        self.athleteId = athleteId
+        self.account = account
     }
 }
 
@@ -57,9 +83,15 @@ public struct RemoteAthlete: Sendable, Hashable {
     public let updatedAt: Date
 }
 
-public enum APIError: Error, Sendable {
+public enum APIError: Error, Sendable, Equatable {
     case unexpectedStatus(Int)
     case invalidResponse
+    /// Login: unknown user or wrong password (the API does not say which).
+    case invalidCredentials
+    /// Login: too many failed attempts; try again in a few minutes.
+    case tooManyAttempts
+    /// A protected route refused the session (missing, unknown or revoked).
+    case unauthorized
 }
 
 /// Short reason for a failed request, for the UI.
@@ -126,11 +158,40 @@ public struct APIClient: Sendable {
         case .notFound:
             return nil
         case .unauthorized:
-            throw APIError.unexpectedStatus(401)
+            throw APIError.unauthorized
         case .forbidden:
             throw APIError.unexpectedStatus(403)
         case .undocumented(let status, _):
             throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    // MARK: Auth (docs/decisions/0031)
+
+    /// Logs in with username or e-mail. The returned session lasts until `logout()`.
+    public func login(identifier: String, password: String) async throws -> AuthSession {
+        switch try await client.login(body: .json(.init(identifier: identifier, password: password))) {
+        case .ok(let ok):
+            let body = try ok.body.json
+            guard let athleteId = UUID(uuidString: body.athleteId), let accountId = UUID(uuidString: body.account.id)
+            else { throw APIError.invalidResponse }
+            return AuthSession(
+                token: body.token, athleteId: athleteId,
+                account: Account(
+                    id: accountId, name: body.account.name, username: body.account.username,
+                    email: body.account.email, avatarUrl: body.account.avatarUrl))
+        case .unauthorized: throw APIError.invalidCredentials
+        case .tooManyRequests: throw APIError.tooManyAttempts
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    /// Revokes the session of this client's token.
+    public func logout() async throws {
+        switch try await client.logout() {
+        case .noContent: return
+        case .unauthorized: throw APIError.unauthorized
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
     }
 
@@ -142,7 +203,7 @@ public struct APIClient: Sendable {
         switch try await client.syncPush(body: .json(body)) {
         case .ok(let ok): return try ok.body.json.applied
         case .badRequest: throw APIError.unexpectedStatus(400)
-        case .unauthorized: throw APIError.unexpectedStatus(401)
+        case .unauthorized: throw APIError.unauthorized
         case .forbidden: throw APIError.unexpectedStatus(403)
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
@@ -158,7 +219,7 @@ public struct APIClient: Sendable {
             let body = try ok.body.json
             return (body.cursor, try Self.convert(body.changes))
         case .badRequest: throw APIError.unexpectedStatus(400)
-        case .unauthorized: throw APIError.unexpectedStatus(401)
+        case .unauthorized: throw APIError.unauthorized
         case .forbidden: throw APIError.unexpectedStatus(403)
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }

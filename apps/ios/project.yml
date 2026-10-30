@@ -63,7 +63,6 @@ targets:
         UIDesignRequiresCompatibility: true
         ITSAppUsesNonExemptEncryption: false
         HTSAPIBaseURL: $(HTS_API_BASE_URL)
-        HTSAPIToken: $(HTS_API_TOKEN)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: O HTS acessa a rede local só em builds de desenvolvimento, para falar com a API no seu Mac.
