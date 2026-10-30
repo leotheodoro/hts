@@ -43,7 +43,7 @@ targets:
     info:
       path: HTS/Info.plist
       properties:
-        CFBundleDisplayName: HTS
+        CFBundleDisplayName: Hard To Submit
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDevelopmentRegion: pt-BR
