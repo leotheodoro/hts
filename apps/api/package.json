@@ -13,7 +13,9 @@
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "db:schema": "tsx scripts/generate-db-schema.ts",
-    "contracts:generate": "pnpm openapi:generate && pnpm db:schema"
+    "contracts:generate": "pnpm openapi:generate && pnpm db:schema",
+    "db:seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
+    "db:reset": "tsx --env-file-if-exists=.env scripts/reset.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
