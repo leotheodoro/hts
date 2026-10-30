@@ -216,11 +216,13 @@
                 "properties": {
                   "identifier": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 320
                   },
                   "password": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1024
                   }
                 },
                 "required": [
