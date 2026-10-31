@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  type ActivityXp,
   type Attribute,
   type AttributeSet,
+  activityXp,
   attributeLevels,
+  type HistoryActivity,
   type HistorySession,
+  isActivityLinked,
   levelForXp,
   type ProgressHistory,
   progressHistory,
@@ -52,9 +56,12 @@ describe("xpForSession", () => {
 });
 
 describe("progressHistory", () => {
-  const fixture = load<{ sessions: HistorySession[] }, ProgressHistory>("progress-history.json");
+  const fixture = load<
+    { sessions: HistorySession[]; activities?: HistoryActivity[] },
+    ProgressHistory
+  >("progress-history.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
-    expect(progressHistory(input.sessions)).toEqual(expected);
+    expect(progressHistory(input.sessions, undefined, input.activities)).toEqual(expected);
   });
 });
 
@@ -73,10 +80,33 @@ describe("titles", () => {
 });
 
 describe("attributeLevels", () => {
-  const fixture = load<{ sets: AttributeSet[] }, Record<Attribute, { xp: number; level: number }>>(
-    "attribute-levels.json",
+  const fixture = load<
+    { sets: AttributeSet[]; activities?: { attributes: Attribute[]; attributeXp: number }[] },
+    Record<Attribute, { xp: number; level: number }>
+  >("attribute-levels.json");
+  it.each(fixture.cases)("$name", ({ input, expected }) => {
+    expect(attributeLevels(input.sets, undefined, input.activities)).toEqual(expected);
+  });
+});
+
+describe("activityXp", () => {
+  const fixture = load<{ activityType: string; durationSeconds: number }, ActivityXp>(
+    "activity-xp.json",
   );
   it.each(fixture.cases)("$name", ({ input, expected }) => {
-    expect(attributeLevels(input.sets)).toEqual(expected);
+    expect(activityXp(input)).toEqual(expected);
+  });
+});
+
+describe("isActivityLinked", () => {
+  const fixture = load<
+    {
+      activity: { startedAt: string; durationSeconds: number };
+      sessions: { startedAt: string; finishedAt: string }[];
+    },
+    { linked: boolean }
+  >("activity-link.json");
+  it.each(fixture.cases)("$name", ({ input, expected }) => {
+    expect(isActivityLinked(input.activity, input.sessions)).toBe(expected.linked);
   });
 });

@@ -1,0 +1,108 @@
+{
+  "function": "isActivityLinked",
+  "cases": [
+    {
+      "name": "inside the workout is linked",
+      "input": {
+        "activity": {
+          "startedAt": "2026-11-02T10:10:00.000Z",
+          "durationSeconds": 1800
+        },
+        "sessions": [
+          {
+            "startedAt": "2026-11-02T10:00:00.000Z",
+            "finishedAt": "2026-11-02T11:00:00.000Z"
+          }
+        ]
+      },
+      "expected": {
+        "linked": true
+      }
+    },
+    {
+      "name": "more than half overlap is linked",
+      "input": {
+        "activity": {
+          "startedAt": "2026-11-02T09:40:00.000Z",
+          "durationSeconds": 3000
+        },
+        "sessions": [
+          {
+            "startedAt": "2026-11-02T10:00:00.000Z",
+            "finishedAt": "2026-11-02T11:00:00.000Z"
+          }
+        ]
+      },
+      "expected": {
+        "linked": true
+      }
+    },
+    {
+      "name": "exactly half is not linked",
+      "input": {
+        "activity": {
+          "startedAt": "2026-11-02T09:40:00.000Z",
+          "durationSeconds": 2400
+        },
+        "sessions": [
+          {
+            "startedAt": "2026-11-02T10:00:00.000Z",
+            "finishedAt": "2026-11-02T11:00:00.000Z"
+          }
+        ]
+      },
+      "expected": {
+        "linked": false
+      }
+    },
+    {
+      "name": "less than half overlap is not linked",
+      "input": {
+        "activity": {
+          "startedAt": "2026-11-02T09:40:00.000Z",
+          "durationSeconds": 1800
+        },
+        "sessions": [
+          {
+            "startedAt": "2026-11-02T10:00:00.000Z",
+            "finishedAt": "2026-11-02T11:00:00.000Z"
+          }
+        ]
+      },
+      "expected": {
+        "linked": false
+      }
+    },
+    {
+      "name": "no workouts",
+      "input": {
+        "activity": {
+          "startedAt": "2026-11-02T10:10:00.000Z",
+          "durationSeconds": 1800
+        },
+        "sessions": []
+      },
+      "expected": {
+        "linked": false
+      }
+    },
+    {
+      "name": "zero duration is never linked",
+      "input": {
+        "activity": {
+          "startedAt": "2026-11-02T10:10:00.000Z",
+          "durationSeconds": 0
+        },
+        "sessions": [
+          {
+            "startedAt": "2026-11-02T10:00:00.000Z",
+            "finishedAt": "2026-11-02T11:00:00.000Z"
+          }
+        ]
+      },
+      "expected": {
+        "linked": false
+      }
+    }
+  ]
+}

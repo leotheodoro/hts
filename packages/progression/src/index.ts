@@ -16,6 +16,14 @@ export interface ProgressionRules {
     volume: { kgPerXp: number; maxXp: number };
   };
   level: { base: number; exponent: number };
+  activity: {
+    xpPerMinute: number;
+    maxMinutes: number;
+    attributeXp: number;
+    minutesPerAttributeXp: number;
+    /** Garmin activity type (upper case) → attributes it feeds; unknown types feed none. */
+    attributes: Record<string, Attribute[]>;
+  };
   ranks: Rank[];
 }
 
@@ -114,6 +122,13 @@ export interface HistorySession {
   rounds?: HistoryRound[];
 }
 
+/** An imported activity (Garmin). Linked ones overlap an HTS workout and give no XP of their own. */
+export interface HistoryActivity {
+  activityType: string;
+  durationSeconds: number;
+  linked: boolean;
+}
+
 /**
  * Derived progress of completed sessions in chronological order (docs/decisions/0010, 0019, 0027).
  * Volume is kg × reps of completed rep sets plus kg × rounds of fight rounds. Each complete round
@@ -123,6 +138,7 @@ export interface HistorySession {
 export function progressHistory(
   sessions: HistorySession[],
   r: ProgressionRules = rules,
+  activities: HistoryActivity[] = [],
 ): ProgressHistory {
   const best = new Map<string, bigint>();
   const result: SessionProgress[] = [];
@@ -157,6 +173,9 @@ export function progressHistory(
     ).total;
     totalXp += xp;
     result.push({ completedSets, volumeKg, records, xp });
+  }
+  for (const activity of activities) {
+    if (!activity.linked) totalXp += activityXp(activity, r).xp;
   }
   const level = levelForXp(totalXp, r);
   return { sessions: result, totalXp, level, rank: rankForLevel(level, r).id };
@@ -317,13 +336,64 @@ export interface AttributeSet {
 export function attributeLevels(
   sets: AttributeSet[],
   r: ProgressionRules = rules,
+  activities: { attributes: Attribute[]; attributeXp: number }[] = [],
 ): Record<Attribute, { xp: number; level: number }> {
   const xp = Object.fromEntries(ATTRIBUTES.map((a) => [a, 0])) as Record<Attribute, number>;
   for (const set of sets) {
     if (!set.completed) continue;
     for (const attribute of new Set(set.attributes)) xp[attribute] += r.xp.setCompleted;
   }
+  for (const activity of activities) {
+    for (const attribute of new Set(activity.attributes)) xp[attribute] += activity.attributeXp;
+  }
   return Object.fromEntries(
     ATTRIBUTES.map((a) => [a, { xp: xp[a], level: levelForXp(xp[a], r) }]),
   ) as Record<Attribute, { xp: number; level: number }>;
+}
+
+export interface ActivityXp {
+  /** Whole minutes that count, up to the cap. */
+  minutes: number;
+  xp: number;
+  /** XP each of `attributes` gets. */
+  attributeXp: number;
+  attributes: Attribute[];
+}
+
+/**
+ * XP of an imported activity (Garmin): only time counts, up to `maxMinutes`; each attribute of its type
+ * gets `attributeXp` every `minutesPerAttributeXp` minutes, rounded half up.
+ */
+export function activityXp(
+  activity: { activityType: string; durationSeconds: number },
+  r: ProgressionRules = rules,
+): ActivityXp {
+  const a = r.activity;
+  const minutes = Math.min(Math.floor(Math.max(activity.durationSeconds, 0) / 60), a.maxMinutes);
+  return {
+    minutes,
+    xp: minutes * a.xpPerMinute,
+    attributeXp: Math.round((minutes * a.attributeXp) / a.minutesPerAttributeXp),
+    attributes: a.attributes[activity.activityType] ?? [],
+  };
+}
+
+/**
+ * An activity is linked to the HTS workouts it overlaps for more than half of its duration: it then gives
+ * no XP and shows inside the workout (spec 2026-10-31). Workouts do not overlap each other.
+ */
+export function isActivityLinked(
+  activity: { startedAt: string; durationSeconds: number },
+  sessions: { startedAt: string; finishedAt: string }[],
+): boolean {
+  if (activity.durationSeconds <= 0) return false;
+  const start = Date.parse(activity.startedAt);
+  const end = start + activity.durationSeconds * 1000;
+  let overlap = 0;
+  for (const session of sessions) {
+    const from = Math.max(start, Date.parse(session.startedAt));
+    const to = Math.min(end, Date.parse(session.finishedAt));
+    if (to > from) overlap += to - from;
+  }
+  return 2 * overlap > activity.durationSeconds * 1000;
 }

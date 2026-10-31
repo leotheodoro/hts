@@ -19,8 +19,19 @@ public struct ProgressionRules: Sendable, Decodable {
         public let exponent: Double
     }
 
+    /// Imported activities (Garmin): XP by time, attributes by type.
+    public struct Activity: Sendable, Decodable {
+        public let xpPerMinute: Int
+        public let maxMinutes: Int
+        public let attributeXp: Int
+        public let minutesPerAttributeXp: Int
+        /// Garmin activity type (upper case) → attributes it feeds; unknown types feed none.
+        public let attributes: [String: [Attribute]]
+    }
+
     public let xp: XP
     public let level: Level
+    public let activity: Activity
     public let ranks: [Rank]
 
     /// The bundled rules. A missing or invalid file is a build error, so this traps.
