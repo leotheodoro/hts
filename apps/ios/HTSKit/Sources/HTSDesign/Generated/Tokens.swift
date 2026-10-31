@@ -33,6 +33,10 @@ public struct HTSColors: Sendable {
     public let onBlood = Color(.sRGB, red: 0.929, green: 0.902, blue: 0.855) // #EDE6DA
     /// Fundo do card de alerta (alvo de competição) com borda `blood`.
     public let bloodDeep = Color(.sRGB, red: 0.102, green: 0.043, blue: 0.051) // #1A0B0D
+    /// Azul do Garmin. Só no botão Conectar Garmin e no selo GARMIN das atividades importadas: exceção às cores da marca (spec 2026-10-31).
+    public let garmin = Color(.sRGB, red: 0, green: 0.486, blue: 0.765) // #007CC3
+    /// Texto sobre `garmin` (4.6:1).
+    public let onGarmin = Color(.sRGB, red: 1, green: 1, blue: 1) // #FFFFFF
     /// Vermelho texto. Texto vermelho sobre `black` (4.65:1) e sobre `blood-deep` (4.5:1). Sobre `charcoal` e `surface` cai para 4.3:1: lá, só em 19px negrito ou maior.
     public let redText = Color(.sRGB, red: 0.898, green: 0.22, blue: 0.231) // #E5383B
     /// Oliva. Só em tags e fundo de patente.

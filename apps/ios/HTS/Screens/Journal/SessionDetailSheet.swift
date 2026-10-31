@@ -24,6 +24,7 @@ struct SessionDetailSheet: View {
                         Text(verbatim: "+\(entry.progress.xp) XP · \(LoggedSet.format(entry.progress.volumeKg)) kg")
                             .htsTextStyle(.dataSm).foregroundStyle(Color.hts.greyApp)
                     }
+                    if let garmin = model.linkedActivities[entry.session.id] { linked(garmin) }
                     ForEach(entry.session.planSnapshot.blocks, id: \.blockId) { block in
                         ForEach(block.exercises, id: \.prescribedExerciseId) { exercise in
                             exerciseSets(exercise)
@@ -46,6 +47,26 @@ struct SessionDetailSheet: View {
         .task {
             let all = (try? await SessionRepository(model.database).sets(sessionId: entry.session.id)) ?? []
             sets = Dictionary(grouping: all, by: \.prescribedExerciseId)
+        }
+    }
+
+    /// The watch recorded this workout too: its heart rate and calories show here, with no XP of their own.
+    private func linked(_ activity: ImportedActivity) -> some View {
+        HStack(spacing: HTSSpacing.space5) {
+            if let heartRate = activity.averageHeartRate {
+                VStack(alignment: .leading, spacing: HTSSpacing.space1) {
+                    Text("FC MÉDIA").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                    Text(verbatim: "\(heartRate) bpm").htsTextStyle(.data)
+                }
+            }
+            if let calories = activity.calories {
+                VStack(alignment: .leading, spacing: HTSSpacing.space1) {
+                    Text("CALORIAS").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                    Text(verbatim: "\(calories) kcal").htsTextStyle(.data)
+                }
+            }
+            Spacer()
+            GarminBadge()
         }
     }
 

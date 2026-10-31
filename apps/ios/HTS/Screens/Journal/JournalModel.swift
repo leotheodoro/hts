@@ -15,7 +15,31 @@ final class JournalModel {
         var id: UUID { session.id }
     }
 
+    /// One line of the journal: a workout or an activity imported from Garmin (spec 2026-10-31).
+    enum Item: Identifiable {
+        case session(Entry)
+        case activity(ProgressService.ActivityEntry)
+
+        var id: UUID {
+            switch self {
+            case .session(let entry): entry.session.id
+            case .activity(let entry): entry.activity.id
+            }
+        }
+
+        var startedAt: Date {
+            switch self {
+            case .session(let entry): entry.session.startedAt
+            case .activity(let entry): entry.activity.startedAt
+            }
+        }
+    }
+
     private(set) var entries: [Entry] = []
+    /// Workouts and unlinked activities, newest first.
+    private(set) var items: [Item] = []
+    /// Activities recorded inside a workout, by the workout's id: they show in its detail, not as items.
+    private(set) var linkedActivities: [UUID: ImportedActivity] = [:]
     private(set) var records: [ProgressService.Record] = []
     private(set) var totalSets = 0
     private(set) var totalVolume: Decimal = 0
@@ -35,6 +59,13 @@ final class JournalModel {
         entries = zip(sessions, history.sessions).enumerated()
             .map { Entry(session: $1.0, progress: $1.1, number: $0 + 1) }
             .reversed()
+        let activities = (try? await ProgressService(database).activities(athleteId: athleteId)) ?? []
+        linkedActivities = Dictionary(
+            activities.compactMap { entry in entry.linkedSessionId.map { ($0, entry.activity) } },
+            uniquingKeysWith: { first, _ in first })
+        items = (entries.map(Item.session) + activities.filter { $0.linkedSessionId == nil }.map(Item.activity))
+            .sorted { $0.startedAt > $1.startedAt }
+        // The totals stay about the HTS workouts.
         totalSets = history.sessions.reduce(0) { $0 + $1.completedSets }
         totalVolume = history.sessions.reduce(0) { $0 + $1.volumeKg }
         records = (try? await ProgressService(database).records(athleteId: athleteId)) ?? []
