@@ -109,6 +109,8 @@ public enum HTSOpacity {
     public static let grain: CGFloat = 0.09
     /// Bloco seguinte ainda não iniciado, no treino ativo.
     public static let next: CGFloat = 0.55
+    /// `black` sobre a foto fora da moldura, no recorte da foto de perfil.
+    public static let scrim: CGFloat = 0.7
 }
 
 /// Família tipográfica, pela chave de tokens.json.
