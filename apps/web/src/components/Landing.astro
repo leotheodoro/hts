@@ -1,0 +1,304 @@
+---
+import { copy, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = copy[lang];
+const rankIds = ["E", "D", "C", "B", "A", "S"];
+---
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <span class="kanji hero-kanji" aria-hidden="true">不屈</span>
+      <h1 class="stencil hero-title">
+        {t.hero.title.map((line) => <span>{line}</span>)}
+      </h1>
+      <p class="hero-lead">{t.hero.lead}</p>
+      <p class="soon">
+        <img src="/icon.png" alt="" width="28" height="28" />
+        {t.soon}
+      </p>
+    </div>
+    <figure class="phone hero-phone">
+      <img src={t.hero.image} alt={t.hero.imageAlt} width="660" height="1434" />
+    </figure>
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2 class="label">{t.how.label}</h2>
+  <div class="how">
+    {
+      t.how.items.map((item, index) => (
+        <article class="card">
+          <div class="card-body">
+            <span class="label num">{String(index + 1).padStart(2, "0")}</span>
+            <h3 class="ui-title how-title">{item.title}</h3>
+            <p class="muted">{item.body}</p>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</section>
+
+<section class="wrap section ladder">
+  <div>
+    <h2 class="label">{t.ranks.label}</h2>
+    <ol class="ranks">
+      {
+        t.ranks.list.map((name, index) => (
+          <li>
+            <span class="display rank-id">{rankIds[index]}</span>
+            <span class="label">{name}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+  <div>
+    <h2 class="label">{t.attributes.label}</h2>
+    <ul class="attributes">
+      {
+        t.attributes.list.map(([code, name]) => (
+          <li>
+            <span class="display attr-code">{code}</span>
+            <span class="muted">{name}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2 class="label">{t.screens.label}</h2>
+  <div class="screens">
+    {
+      t.screens.items.map((screen) => (
+        <figure class="phone">
+          <img src={screen.src} alt={screen.alt} width="660" height="1434" loading="lazy" />
+        </figure>
+      ))
+    }
+  </div>
+</section>
+
+<section class="wrap section">
+  <h2 class="label">{t.more.label}</h2>
+  <dl class="more">
+    {
+      t.more.items.map(([title, body]) => (
+        <div>
+          <dt class="ui-title">{title}</dt>
+          <dd class="muted">{body}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>
+
+<section class="wrap section">
+  <h2 class="label">{t.integrations.label}</h2>
+  <p class="integration">{t.integrations.body}</p>
+</section>
+
+<section class="wrap closing">
+  <p class="stencil closing-line">{t.closing}</p>
+  <p class="soon">
+    <img src="/icon.png" alt="" width="28" height="28" />
+    {t.soon}
+  </p>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border-bottom: var(--stroke-hair) solid var(--line);
+  }
+
+  /* Monochrome grain over black: allowed on banners and heroes, never in the app. */
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: var(--opacity-grain);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .hero-grid {
+    position: relative;
+    display: grid;
+    gap: var(--space-12);
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-16);
+    align-items: center;
+  }
+
+  @media (min-width: 900px) {
+    .hero-grid {
+      grid-template-columns: 1.2fr 0.8fr;
+      padding-top: var(--space-16);
+      padding-bottom: var(--space-20);
+    }
+  }
+
+  .hero-kanji {
+    display: block;
+    font-size: 40px;
+    color: var(--tab-idle);
+    margin-bottom: var(--space-5);
+  }
+
+  .hero-title {
+    margin: 0;
+    font-size: clamp(64px, 14vw, 132px);
+  }
+
+  .hero-title span {
+    display: block;
+  }
+
+  .hero-lead {
+    max-width: 30em;
+    margin: var(--space-6) 0 var(--space-8);
+    font-size: 18px;
+    color: var(--bone);
+  }
+
+  .phone {
+    margin: 0;
+    border: var(--stroke-hair) solid var(--line-strong);
+    background: var(--black);
+    padding: var(--space-2);
+    max-width: 320px;
+    justify-self: center;
+  }
+
+  .phone img {
+    width: 100%;
+    height: auto;
+  }
+
+  .section {
+    padding-top: var(--space-16);
+  }
+
+  .section h2 {
+    margin: 0 0 var(--space-6);
+  }
+
+  .how {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 720px) {
+    .how {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1040px) {
+    .how {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .how-title {
+    font-size: 20px;
+    margin: var(--space-3) 0 var(--space-2);
+  }
+
+  .how p {
+    margin: 0;
+  }
+
+  .ladder {
+    display: grid;
+    gap: var(--space-12);
+  }
+
+  @media (min-width: 900px) {
+    .ladder {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .ranks,
+  .attributes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: var(--stroke-hair) solid var(--line);
+  }
+
+  .ranks li,
+  .attributes li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-5);
+    padding: var(--space-3) 0;
+    border-bottom: var(--stroke-hair) solid var(--line);
+  }
+
+  .rank-id,
+  .attr-code {
+    font-size: 28px;
+    min-width: 2.6em;
+    color: var(--bone);
+  }
+
+  .screens {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 720px) {
+    .screens {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .more {
+    display: grid;
+    gap: var(--space-6);
+    margin: 0;
+  }
+
+  @media (min-width: 720px) {
+    .more {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .more dt {
+    font-size: 18px;
+  }
+
+  .more dd {
+    margin: var(--space-1) 0 0;
+  }
+
+  .integration {
+    margin: 0;
+    max-width: 36em;
+    font-size: 18px;
+  }
+
+  .closing {
+    padding-top: var(--space-20);
+    text-align: center;
+  }
+
+  .closing-line {
+    font-size: clamp(48px, 10vw, 96px);
+    margin: 0 0 var(--space-8);
+  }
+</style>

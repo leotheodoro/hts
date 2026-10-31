@@ -1,0 +1,176 @@
+---
+import { CONTACT_EMAIL, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+// Must match what the app and the API do (docs/product/handoff-landing-page.md). Change the date when the
+// text changes. The URLs of this page go to Garmin and never change (#159).
+const { lang } = Astro.props;
+const mail = `mailto:${CONTACT_EMAIL}`;
+---
+
+{
+  lang === "pt" ? (
+    <article class="wrap doc">
+      <h1>Política de privacidade</h1>
+      <p class="label updated">Atualizada em 31.10.2026</p>
+
+      <p>
+        Esta política explica quais dados o app Hard To Submit coleta, por que, onde eles ficam e como
+        pedir a exclusão. O responsável pelo app e pelos dados é Leonardo Theodoro (Hard To Submit),
+        contato: <a href={mail}>{CONTACT_EMAIL}</a>.
+      </p>
+
+      <h2>Dados da conta</h2>
+      <ul>
+        <li>Nome, nome de usuário, e-mail e senha.</li>
+        <li>A senha é guardada só como hash (argon2id), nunca em texto.</li>
+        <li>As contas são criadas pelo responsável; o app não tem cadastro aberto.</li>
+      </ul>
+
+      <h2>Foto de perfil</h2>
+      <p>
+        Opcional. A foto que você tira ou escolhe é reduzida no aparelho e guardada num armazenamento
+        privado compatível com S3 (Neon, EUA). Ela só é mostrada por links temporários.
+      </p>
+
+      <h2>Dados de treino</h2>
+      <p>
+        Temporadas, arcos, treinos, séries (carga, repetições, tempo, distância), datas e horários,
+        recordes e competições cadastradas. Eles ficam no seu iPhone e são sincronizados com o servidor
+        para não se perderem e para aparecerem em outro aparelho.
+      </p>
+
+      <h2>Garmin</h2>
+      <p>Só quando você conecta sua conta Garmin no app:</p>
+      <ul>
+        <li>
+          Com a sua autorização no Garmin Connect, o app recebe o resumo de cada atividade nova: tipo,
+          data e hora, duração, distância, frequência cardíaca média e calorias.
+        </li>
+        <li>Os tokens de acesso ficam só no servidor, nunca no aparelho.</li>
+        <li>
+          Os dados servem apenas para mostrar a atividade no seu histórico e calcular sua progressão
+          no app.
+        </li>
+        <li>
+          Desconectar encerra o acesso e apaga os tokens. As atividades já importadas ficam no
+          histórico até você pedir a exclusão.
+        </li>
+      </ul>
+
+      <h2>Onde os dados ficam</h2>
+      <ul>
+        <li>API no Render (EUA, Virgínia) e banco de dados Postgres no Neon (EUA).</li>
+        <li>Toda conexão com o servidor usa HTTPS.</li>
+        <li>A sessão de login fica no Keychain do iPhone.</li>
+        <li>As notificações (fim do descanso) são locais, sem serviço de push de terceiros.</li>
+      </ul>
+
+      <h2>O que não fazemos</h2>
+      <ul>
+        <li>Sem anúncios.</li>
+        <li>Sem venda de dados nem compartilhamento com terceiros para marketing.</li>
+        <li>Sem analytics ou rastreamento de terceiros.</li>
+      </ul>
+
+      <h2>Seus direitos</h2>
+      <p>
+        Pela LGPD, você pode pedir acesso, correção ou exclusão da sua conta e de todos os seus dados,
+        inclusive a foto e as atividades importadas, pelo e-mail <a href={mail}>{CONTACT_EMAIL}</a>.
+        Respondemos em até 15 dias.
+      </p>
+
+      <h2>Menores</h2>
+      <p>O app não é destinado a menores de 13 anos.</p>
+
+      <h2>Mudanças</h2>
+      <p>
+        A data no topo mostra a última atualização. Mudanças relevantes são avisadas no app antes de
+        valer.
+      </p>
+    </article>
+  ) : (
+    <article class="wrap doc">
+      <h1>Privacy policy</h1>
+      <p class="label updated">Updated 31.10.2026</p>
+
+      <p>
+        This policy explains what data the Hard To Submit app collects, why, where it is stored and how
+        to ask for its deletion. The app and the data are the responsibility of Leonardo Theodoro (Hard
+        To Submit), contact: <a href={mail}>{CONTACT_EMAIL}</a>.
+      </p>
+
+      <h2>Account data</h2>
+      <ul>
+        <li>Name, username, email address and password.</li>
+        <li>The password is stored only as a hash (argon2id), never as text.</li>
+        <li>Accounts are created by the owner of the app; there is no open sign-up.</li>
+      </ul>
+
+      <h2>Profile photo</h2>
+      <p>
+        Optional. The photo you take or choose is reduced on the device and stored in private
+        S3-compatible storage (Neon, USA). It is only shown through temporary links.
+      </p>
+
+      <h2>Training data</h2>
+      <p>
+        Seasons, arcs, workouts, sets (load, reps, time, distance), dates and times, personal records
+        and competitions you enter. They are kept on your iPhone and synced to the server so they are
+        not lost and show up on another device.
+      </p>
+
+      <h2>Garmin</h2>
+      <p>Only when you connect your Garmin account in the app:</p>
+      <ul>
+        <li>
+          With your authorization in Garmin Connect, the app receives the summary of each new
+          activity: type, date and time, duration, distance, average heart rate and calories.
+        </li>
+        <li>Access tokens are kept on the server only, never on the device.</li>
+        <li>
+          The data is used only to show the activity in your history and to calculate your progress
+          in the app.
+        </li>
+        <li>
+          Disconnecting ends the access and deletes the tokens. Activities already imported stay in
+          your history until you ask for their deletion.
+        </li>
+      </ul>
+
+      <h2>Where the data is stored</h2>
+      <ul>
+        <li>API on Render (USA, Virginia) and Postgres database on Neon (USA).</li>
+        <li>Every connection to the server uses HTTPS.</li>
+        <li>The login session is kept in the iPhone Keychain.</li>
+        <li>Notifications (end of rest) are local, with no third-party push service.</li>
+      </ul>
+
+      <h2>What we do not do</h2>
+      <ul>
+        <li>No ads.</li>
+        <li>No sale of data and no sharing with third parties for marketing.</li>
+        <li>No third-party analytics or tracking.</li>
+      </ul>
+
+      <h2>Your rights</h2>
+      <p>
+        You can ask for access to, correction of or deletion of your account and all your data,
+        including the photo and imported activities, by email at{" "}
+        <a href={mail}>{CONTACT_EMAIL}</a>. We answer within 15 days.
+      </p>
+
+      <h2>Children</h2>
+      <p>The app is not intended for children under 13.</p>
+
+      <h2>Changes</h2>
+      <p>
+        The date at the top shows the last update. Relevant changes are announced in the app before
+        they take effect.
+      </p>
+    </article>
+  )
+}
