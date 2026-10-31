@@ -32,7 +32,8 @@ struct IntegrationsScreen: View {
                 }
             }
         }
-        .task(id: app.dataVersion) {
+        // Keyed by the athlete too: the page can open before the athlete loads.
+        .task(id: "\(app.athlete?.id.uuidString ?? "")-\(app.dataVersion)") {
             await app.loadIntegrations()
             guard let athlete = app.athlete, let database = app.database else { return }
             let activities = (try? await ActivityRepository(database).activities(athleteId: athlete.id)) ?? []

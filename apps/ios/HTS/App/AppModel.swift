@@ -329,6 +329,9 @@ final class AppModel {
                         avatarUrl: nil)))
             #if DEBUG
                 if DemoData.isRequested { try await DemoData.seed(database, athleteId: athlete.id) }
+                if DemoData.activitiesRequested {
+                    try await DemoData.seedActivities(database, athleteId: athlete.id)
+                }
             #endif
             self.athlete = athlete
             activeSession = try await SessionRepository(database).inProgress(athleteId: athlete.id)

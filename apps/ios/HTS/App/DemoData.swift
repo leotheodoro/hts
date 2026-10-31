@@ -9,10 +9,13 @@
         /// `-HTSFakeSession YES` (implied by the demo flags) opens with a local athlete and a session that never
         /// reaches the API, so screenshots skip the login.
         static var usesLocalSession: Bool {
-            UserDefaults.standard.bool(forKey: "HTSFakeSession") || isRequested || startsWorkout
+            UserDefaults.standard.bool(forKey: "HTSFakeSession") || isRequested || startsWorkout || activitiesRequested
         }
         /// `-HTSStartDemoWorkout YES` starts the suggested workout on launch (screenshots).
         static var startsWorkout: Bool { UserDefaults.standard.bool(forKey: "HTSStartDemoWorkout") }
+        /// `-HTSDemoActivities YES` adds Garmin activities to the local athlete (#167): Diário and Integrações
+        /// without the Garmin access.
+        static var activitiesRequested: Bool { UserDefaults.standard.bool(forKey: "HTSDemoActivities") }
 
         static func seed(_ database: AppDatabase, athleteId: UUID) async throws {
             let service = ArcService(database)
@@ -87,6 +90,33 @@
                 try await sessions.save(set)
             }
             _ = try await sessions.finish(sessionId: past.id, now: started.addingTimeInterval(3_900))
+        }
+
+        /// A run yesterday at 07:00, yoga three days ago and, when there is a finished workout, a strength session
+        /// recorded inside it (linked: no XP of its own). Only when the athlete has no activities yet.
+        static func seedActivities(_ database: AppDatabase, athleteId: UUID) async throws {
+            guard try await ActivityRepository(database).activities(athleteId: athleteId).isEmpty else { return }
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: .now)
+            var activities: [(type: String, start: Date, seconds: Int, meters: Decimal?, heartRate: Int, kcal: Int)] = [
+                ("RUNNING", today.addingTimeInterval(-86_400 + 7 * 3_600), 2_400, 8_200, 152, 520),
+                ("YOGA", today.addingTimeInterval(-3 * 86_400 + 19 * 3_600), 1_500, nil, 98, 110),
+            ]
+            if let workout = try await ProgressService(database).history(athleteId: athleteId).sessions.last {
+                activities.append(
+                    ("STRENGTH_TRAINING", workout.startedAt.addingTimeInterval(300), 3_300, nil, 128, 410))
+            }
+            let seeds = activities
+            try await database.writer.write { db in
+                for activity in seeds {
+                    try ImportedActivity(
+                        id: UUIDv7.make(at: activity.start), athleteId: athleteId, source: "garmin",
+                        externalId: "demo-\(activity.type)", activityType: activity.type, startedAt: activity.start,
+                        durationSeconds: activity.seconds, distanceMeters: activity.meters,
+                        averageHeartRate: activity.heartRate, calories: activity.kcal, createdAt: activity.start
+                    ).insert(db)
+                }
+            }
         }
     }
 #endif
