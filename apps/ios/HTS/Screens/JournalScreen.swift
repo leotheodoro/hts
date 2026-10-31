@@ -7,6 +7,7 @@ struct JournalScreen: View {
     @Environment(AppModel.self) private var app
     @State private var model: JournalModel?
     @State private var selected: JournalModel.Entry?
+    @State private var selectedActivity: ProgressService.ActivityEntry?
 
     var body: some View {
         ScreenScaffold(title: "Diário") {
@@ -24,6 +25,7 @@ struct JournalScreen: View {
             await model.load()
             self.model = model
         }
+        .sheet(item: $selectedActivity) { entry in ActivityDetailSheet(entry: entry) }
         .sheet(item: $selected) { entry in
             if let model {
                 SessionDetailSheet(model: model, entry: entry)
@@ -63,16 +65,26 @@ struct JournalScreen: View {
     @ViewBuilder private func sessions(_ model: JournalModel) -> some View {
         VStack(alignment: .leading, spacing: HTSSpacing.space3) {
             Text("TREINOS").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
-            if model.entries.isEmpty {
+            if model.items.isEmpty {
                 Text("Os treinos concluídos aparecem aqui.").htsTextStyle(.body).foregroundStyle(Color.hts.greyApp)
             }
-            ForEach(model.entries) { entry in
-                Button {
-                    selected = entry
-                } label: {
-                    SessionRow(entry: entry)
+            ForEach(model.items) { item in
+                switch item {
+                case .session(let entry):
+                    Button {
+                        selected = entry
+                    } label: {
+                        SessionRow(entry: entry)
+                    }
+                    .buttonStyle(.plain)
+                case .activity(let entry):
+                    Button {
+                        selectedActivity = entry
+                    } label: {
+                        ActivityRow(entry: entry)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -105,6 +117,32 @@ private struct SessionRow: View {
         return records > 0
             ? "\(entry.progress.completedSets) séries · \(volume) kg · \(minutes) min · \(records) recordes"
             : "\(entry.progress.completedSets) séries · \(volume) kg · \(minutes) min"
+    }
+}
+
+/// An activity imported from Garmin, with its badge (spec 2026-10-31, model 3).
+private struct ActivityRow: View {
+    let entry: ProgressService.ActivityEntry
+
+    var body: some View {
+        NotchCard {
+            VStack(alignment: .leading, spacing: HTSSpacing.space2) {
+                HStack {
+                    Text(verbatim: LocalDate(entry.activity.startedAt, in: .current).short)
+                        .htsTextStyle(.dataSm).foregroundStyle(Color.hts.grey)
+                    Spacer()
+                    Text(verbatim: "+\(entry.xp.xp) XP").htsTextStyle(.dataSm)
+                }
+                HStack {
+                    Text(entry.activity.typeLabel).htsTextStyle(.uiSection)
+                    Spacer()
+                    GarminBadge()
+                }
+                Text(verbatim: entry.activity.summary()).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                if !entry.xp.attributes.isEmpty { AttributeBadges(attributes: entry.xp.attributes) }
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 

@@ -89,3 +89,41 @@ extension BattleResult {
         }
     }
 }
+
+extension ImportedActivity {
+    /// The Garmin type in pt-BR; unknown types read as "Atividade".
+    var typeLabel: LocalizedStringKey {
+        switch activityType {
+        case "RUNNING", "TREADMILL_RUNNING", "TRAIL_RUNNING": "Corrida"
+        case "CYCLING", "INDOOR_CYCLING": "Bike"
+        case "ROWING", "INDOOR_ROWING": "Remo"
+        case "ELLIPTICAL": "Elíptico"
+        case "WALKING": "Caminhada"
+        case "LAP_SWIMMING", "OPEN_WATER_SWIMMING": "Natação"
+        case "HIIT": "HIIT"
+        case "INDOOR_CARDIO": "Cardio"
+        case "YOGA": "Yoga"
+        case "PILATES": "Pilates"
+        case "STRETCHING": "Alongamento"
+        case "STRENGTH_TRAINING": "Musculação"
+        case "BOXING", "MIXED_MARTIAL_ARTS": "Luta"
+        default: "Atividade"
+        }
+    }
+
+    /// "8,2 km · 40 min · 4:53 /km · FC 152": each part only when the activity has it.
+    func summary(locale: Locale = .current) -> String {
+        var parts: [String] = []
+        let km = distanceMeters.map { NSDecimalNumber(decimal: $0).doubleValue / 1000 } ?? 0
+        if km > 0 {
+            parts.append("\(km.formatted(.number.precision(.fractionLength(1)).locale(locale))) km")
+        }
+        parts.append("\(durationSeconds / 60) min")
+        if km > 0 {
+            let pace = Int((Double(durationSeconds) / km).rounded())
+            parts.append(String(format: "%d:%02d /km", pace / 60, pace % 60))
+        }
+        if let averageHeartRate { parts.append("FC \(averageHeartRate)") }
+        return parts.joined(separator: " · ")
+    }
+}
