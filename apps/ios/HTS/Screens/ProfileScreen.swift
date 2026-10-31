@@ -141,6 +141,7 @@ struct ProfileScreen: View {
             row("A Batalha", .battle)
             row("Conquistas", .titles)
             row("Atributos", .attributes)
+            row("Integrações", .integrations)
         }
         .overlay(alignment: .top) { Rectangle().fill(Color.hts.line).frame(height: HTSStroke.hair) }
     }

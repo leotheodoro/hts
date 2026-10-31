@@ -9,6 +9,7 @@ enum Route: Hashable {
     case battle
     case titles
     case attributes
+    case integrations
 }
 
 /// Navigation stack of a tab. The system bar stays hidden like the tab bar (docs/decisions/0022); pages draw their
@@ -31,6 +32,7 @@ struct TabStack<Content: View>: View {
                         case .battle: BattleScreen()
                         case .titles: TitlesScreen()
                         case .attributes: AttributesScreen()
+                        case .integrations: IntegrationsScreen()
                         }
                     }
                     .toolbar(.hidden, for: .navigationBar)
