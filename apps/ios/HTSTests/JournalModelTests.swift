@@ -110,7 +110,7 @@ import Testing
         let model = JournalModel(database: database, athleteId: athleteId)
         await model.load()
         #expect(!model.items.map(\.id).contains(linked))
-        #expect(model.linkedActivities[order[3]]?.id == linked)
+        #expect(model.linkedActivities[order[3]]?.map(\.id) == [linked])
     }
 
     @Test func totalsCountOnlySessions() async throws {
@@ -134,5 +134,18 @@ import Testing
         run.distanceMeters = nil
         run.averageHeartRate = nil
         #expect(run.summary(locale: pt) == "40 min")
+    }
+
+    @Test func everyLinkedActivityShowsInItsWorkout() async throws {
+        let (database, athleteId, order, linked) = try await journalWithActivities()
+        let workoutStart = Date(timeIntervalSince1970: 1_794_142_800)
+        let warmUp = ImportedActivity(
+            id: UUID(), athleteId: athleteId, source: "garmin", externalId: "warm-up", activityType: "RUNNING",
+            startedAt: workoutStart.addingTimeInterval(60), durationSeconds: 480, createdAt: workoutStart)
+        try await database.writer.write { try warmUp.insert($0) }
+        let model = JournalModel(database: database, athleteId: athleteId)
+        await model.load()
+        #expect(Set((model.linkedActivities[order[3]] ?? []).map(\.id)) == [linked, warmUp.id])
+        #expect(!model.items.map(\.id).contains(warmUp.id))
     }
 }

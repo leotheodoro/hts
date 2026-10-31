@@ -39,7 +39,7 @@ final class JournalModel {
     /// Workouts and unlinked activities, newest first.
     private(set) var items: [Item] = []
     /// Activities recorded inside a workout, by the workout's id: they show in its detail, not as items.
-    private(set) var linkedActivities: [UUID: ImportedActivity] = [:]
+    private(set) var linkedActivities: [UUID: [ImportedActivity]] = [:]
     private(set) var records: [ProgressService.Record] = []
     private(set) var totalSets = 0
     private(set) var totalVolume: Decimal = 0
@@ -61,8 +61,8 @@ final class JournalModel {
             .reversed()
         let activities = (try? await ProgressService(database).activities(athleteId: athleteId)) ?? []
         linkedActivities = Dictionary(
-            activities.compactMap { entry in entry.linkedSessionId.map { ($0, entry.activity) } },
-            uniquingKeysWith: { first, _ in first })
+            grouping: activities.filter { $0.linkedSessionId != nil }, by: { $0.linkedSessionId! }
+        ).mapValues { $0.map(\.activity) }
         items = (entries.map(Item.session) + activities.filter { $0.linkedSessionId == nil }.map(Item.activity))
             .sorted { $0.startedAt > $1.startedAt }
         // The totals stay about the HTS workouts.

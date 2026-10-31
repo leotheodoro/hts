@@ -310,7 +310,7 @@ describe("sync", () => {
     expect((await pushChanges(newcomer.token, fresh.changes)).status).toBe(200);
   });
 
-  it("pulls imported activities and refuses them for another athlete", async () => {
+  it("pulls imported activities and ignores them in pushes", async () => {
     const leo = await signedIn();
     const other = await signedIn();
     const id = uuidv7();
@@ -334,7 +334,20 @@ describe("sync", () => {
       duration_seconds: 2400,
       source: "garmin",
     });
-    expect((await pushChanges(other.token, { imported_activity: [row] })).status).toBe(403);
+    // Read-only on the device (docs/decisions/0033): pushed rows are ignored, from anyone.
+    const edited = { ...row, duration_seconds: 9999, updated_at: new Date().toISOString() };
+    const mine = await pushChanges(leo.token, { imported_activity: [edited] });
+    expect(mine.status).toBe(200);
+    expect(await mine.json()).toEqual({ applied: 0 });
+    const theirs = await pushChanges(other.token, { imported_activity: [edited] });
+    expect(await theirs.json()).toEqual({ applied: 0 });
+    const forged = { ...edited, id: uuidv7(), athlete_id: leo.athleteId };
+    expect((await pushChanges(leo.token, { imported_activity: [forged] })).status).toBe(200);
+    const stored = await db
+      .select()
+      .from(importedActivity)
+      .where(eq(importedActivity.athleteId, leo.athleteId));
+    expect(stored.map((r) => r.durationSeconds)).toEqual([2400]);
   });
 
   it("pull only serves the session athlete", async () => {

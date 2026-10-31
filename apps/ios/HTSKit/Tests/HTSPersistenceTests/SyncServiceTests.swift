@@ -214,4 +214,16 @@ actor FakeSyncServer: SyncTransport {
         #expect(activities.first?.durationSeconds == 2400)
         #expect(activities.first?.distanceMeters == Decimal(8200))
     }
+
+    /// Imported activities are born on the server and read-only here (docs/decisions/0033): the push never sends them.
+    @Test func importedActivitiesAreNeverPushed() async throws {
+        let server = FakeSyncServer()
+        let (device, athlete) = try await deviceA()
+        let activity = ImportedActivity(
+            id: UUID(), athleteId: athlete.id, source: "garmin", externalId: "run-1", activityType: "RUNNING",
+            startedAt: .now, durationSeconds: 2400, createdAt: .now)
+        try await device.writer.write { try activity.insert($0) }
+        try await SyncService(device, transport: server).sync(athleteId: athlete.id)
+        #expect(await server.pushed.allSatisfy { $0["imported_activity"] == nil })
+    }
 }

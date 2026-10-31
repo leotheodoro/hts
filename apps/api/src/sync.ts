@@ -38,6 +38,9 @@ const TABLES = [
 
 type SyncTable = (typeof TABLES)[number];
 
+/** Born on the server and read-only on the device (docs/decisions/0033): pulled, never written by a push. */
+const PULL_ONLY = new Set<SyncTable>([importedActivity]);
+
 const tableName = (table: PgTable) => getTableConfig(table).name;
 export const SYNC_TABLE_NAMES = TABLES.map(tableName);
 
@@ -113,6 +116,7 @@ export async function push(db: Db, changes: Changes, athleteId: string): Promise
     if (!SYNC_TABLE_NAMES.includes(name)) throw new UnknownTableError(name);
   }
   for (const table of TABLES) {
+    if (PULL_ONLY.has(table)) continue;
     const owner = table === athlete ? "id" : "athlete_id";
     for (const row of changes[tableName(table)] ?? []) {
       if (row[owner] !== athleteId) throw new ForeignAthleteError(tableName(table));
@@ -122,7 +126,7 @@ export async function push(db: Db, changes: Changes, athleteId: string): Promise
   await db.transaction(async (tx) => {
     await refuseForeignParents(tx, changes, athleteId);
     for (const table of TABLES) {
-      const rows = changes[tableName(table)] ?? [];
+      const rows = PULL_ONLY.has(table) ? [] : (changes[tableName(table)] ?? []);
       if (rows.length === 0) continue;
       const now = sql`date_trunc('milliseconds', now())`;
       const set: Record<string, unknown> = { serverUpdatedAt: now };
