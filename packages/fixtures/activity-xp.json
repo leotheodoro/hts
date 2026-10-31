@@ -1,0 +1,96 @@
+{
+  "function": "activityXp",
+  "cases": [
+    {
+      "name": "a 40 min run feeds conditioning",
+      "input": {
+        "activityType": "RUNNING",
+        "durationSeconds": 2400
+      },
+      "expected": {
+        "minutes": 40,
+        "xp": 200,
+        "attributeXp": 100,
+        "attributes": ["conditioning"]
+      }
+    },
+    {
+      "name": "swimming feeds conditioning and strength",
+      "input": {
+        "activityType": "LAP_SWIMMING",
+        "durationSeconds": 2400
+      },
+      "expected": {
+        "minutes": 40,
+        "xp": 200,
+        "attributeXp": 100,
+        "attributes": ["conditioning", "strength"]
+      }
+    },
+    {
+      "name": "over the cap counts 60 minutes",
+      "input": {
+        "activityType": "RUNNING",
+        "durationSeconds": 5400
+      },
+      "expected": {
+        "minutes": 60,
+        "xp": 300,
+        "attributeXp": 150,
+        "attributes": ["conditioning"]
+      }
+    },
+    {
+      "name": "partial minutes are dropped",
+      "input": {
+        "activityType": "YOGA",
+        "durationSeconds": 659
+      },
+      "expected": {
+        "minutes": 10,
+        "xp": 50,
+        "attributeXp": 25,
+        "attributes": ["mobility"]
+      }
+    },
+    {
+      "name": "one minute rounds 2.5 up",
+      "input": {
+        "activityType": "RUNNING",
+        "durationSeconds": 60
+      },
+      "expected": {
+        "minutes": 1,
+        "xp": 5,
+        "attributeXp": 3,
+        "attributes": ["conditioning"]
+      }
+    },
+    {
+      "name": "unknown type gives XP without attributes",
+      "input": {
+        "activityType": "GOLF",
+        "durationSeconds": 1200
+      },
+      "expected": {
+        "minutes": 20,
+        "xp": 100,
+        "attributeXp": 50,
+        "attributes": []
+      }
+    },
+    {
+      "name": "zero duration gives nothing",
+      "input": {
+        "activityType": "RUNNING",
+        "durationSeconds": 0
+      },
+      "expected": {
+        "minutes": 0,
+        "xp": 0,
+        "attributeXp": 0,
+        "attributes": ["conditioning"]
+      }
+    }
+  ]
+}

@@ -212,6 +212,49 @@
         "level": 2,
         "rank": "E"
       }
+    },
+    {
+      "name": "unlinked activities add XP, linked ones do not",
+      "input": {
+        "sessions": [
+          {
+            "sets": [
+              {
+                "exerciseId": "a",
+                "unit": "reps",
+                "completed": true,
+                "weightKg": "50",
+                "reps": 10
+              }
+            ]
+          }
+        ],
+        "activities": [
+          {
+            "activityType": "RUNNING",
+            "durationSeconds": 2400,
+            "linked": false
+          },
+          {
+            "activityType": "RUNNING",
+            "durationSeconds": 2400,
+            "linked": true
+          }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "completedSets": 1,
+            "volumeKg": "500",
+            "records": [],
+            "xp": 51
+          }
+        ],
+        "totalXp": 251,
+        "level": 2,
+        "rank": "E"
+      }
     }
   ]
 }

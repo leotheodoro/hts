@@ -3,56 +3,187 @@
   "cases": [
     {
       "name": "no sets: every attribute at level 1",
-      "input": { "sets": [] },
+      "input": {
+        "sets": []
+      },
       "expected": {
-        "strength": { "xp": 0, "level": 1 },
-        "power": { "xp": 0, "level": 1 },
-        "conditioning": { "xp": 0, "level": 1 },
-        "core": { "xp": 0, "level": 1 },
-        "mobility": { "xp": 0, "level": 1 }
+        "strength": {
+          "xp": 0,
+          "level": 1
+        },
+        "power": {
+          "xp": 0,
+          "level": 1
+        },
+        "conditioning": {
+          "xp": 0,
+          "level": 1
+        },
+        "core": {
+          "xp": 0,
+          "level": 1
+        },
+        "mobility": {
+          "xp": 0,
+          "level": 1
+        }
       }
     },
     {
       "name": "completed sets feed every attribute of their block; open sets do not",
       "input": {
         "sets": [
-          { "attributes": ["strength"], "completed": true },
-          { "attributes": ["strength"], "completed": true },
-          { "attributes": ["power", "conditioning"], "completed": true },
-          { "attributes": ["core"], "completed": false }
+          {
+            "attributes": ["strength"],
+            "completed": true
+          },
+          {
+            "attributes": ["strength"],
+            "completed": true
+          },
+          {
+            "attributes": ["power", "conditioning"],
+            "completed": true
+          },
+          {
+            "attributes": ["core"],
+            "completed": false
+          }
         ]
       },
       "expected": {
-        "strength": { "xp": 20, "level": 1 },
-        "power": { "xp": 10, "level": 1 },
-        "conditioning": { "xp": 10, "level": 1 },
-        "core": { "xp": 0, "level": 1 },
-        "mobility": { "xp": 0, "level": 1 }
+        "strength": {
+          "xp": 20,
+          "level": 1
+        },
+        "power": {
+          "xp": 10,
+          "level": 1
+        },
+        "conditioning": {
+          "xp": 10,
+          "level": 1
+        },
+        "core": {
+          "xp": 0,
+          "level": 1
+        },
+        "mobility": {
+          "xp": 0,
+          "level": 1
+        }
       }
     },
     {
       "name": "levels use the athlete curve",
       "input": {
         "sets": [
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true },
-          { "attributes": ["mobility"], "completed": true }
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          },
+          {
+            "attributes": ["mobility"],
+            "completed": true
+          }
         ]
       },
       "expected": {
-        "strength": { "xp": 0, "level": 1 },
-        "power": { "xp": 0, "level": 1 },
-        "conditioning": { "xp": 0, "level": 1 },
-        "core": { "xp": 0, "level": 1 },
-        "mobility": { "xp": 110, "level": 2 }
+        "strength": {
+          "xp": 0,
+          "level": 1
+        },
+        "power": {
+          "xp": 0,
+          "level": 1
+        },
+        "conditioning": {
+          "xp": 0,
+          "level": 1
+        },
+        "core": {
+          "xp": 0,
+          "level": 1
+        },
+        "mobility": {
+          "xp": 110,
+          "level": 2
+        }
+      }
+    },
+    {
+      "name": "activities add their attribute XP",
+      "input": {
+        "sets": [
+          {
+            "attributes": ["strength"],
+            "completed": true
+          }
+        ],
+        "activities": [
+          {
+            "attributes": ["conditioning"],
+            "attributeXp": 100
+          }
+        ]
+      },
+      "expected": {
+        "strength": {
+          "xp": 10,
+          "level": 1
+        },
+        "power": {
+          "xp": 0,
+          "level": 1
+        },
+        "conditioning": {
+          "xp": 100,
+          "level": 1
+        },
+        "core": {
+          "xp": 0,
+          "level": 1
+        },
+        "mobility": {
+          "xp": 0,
+          "level": 1
+        }
       }
     }
   ]

@@ -22,10 +22,15 @@ public struct AttributeLevel: Hashable, Sendable, Decodable {
 extension Progression {
     /// Each attribute has its own level on the athlete's curve (docs/decisions/0023). Must match `attributeLevels`
     /// in packages/progression; both run packages/fixtures/attribute-levels.json.
-    public func attributeLevels(_ sets: [AttributeSet]) -> [Attribute: AttributeLevel] {
+    public func attributeLevels(
+        _ sets: [AttributeSet], activities: [ActivityAttributeXP] = []
+    ) -> [Attribute: AttributeLevel] {
         var xp = Dictionary(uniqueKeysWithValues: Attribute.allCases.map { ($0, 0) })
         for set in sets where set.completed {
             for attribute in Set(set.attributes) { xp[attribute, default: 0] += rules.xp.setCompleted }
+        }
+        for activity in activities {
+            for attribute in Set(activity.attributes) { xp[attribute, default: 0] += activity.attributeXP }
         }
         return xp.mapValues { AttributeLevel(xp: $0, level: level(forXP: $0)) }
     }

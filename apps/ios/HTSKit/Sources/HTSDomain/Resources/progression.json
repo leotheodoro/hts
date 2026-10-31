@@ -14,6 +14,34 @@
     "base": 108,
     "exponent": 1.5
   },
+  "activity": {
+    "note": "Atividades importadas (Garmin): extra, como a Manutenção. XP pelo tempo, no máximo 60 min por atividade; atributos ganham 10 XP a cada 4 min (escala de uma série). Tipos em caixa alta, como o Garmin manda; desconhecido dá só XP (decisão do Leo, spec 2026-10-31).",
+    "xpPerMinute": 5,
+    "maxMinutes": 60,
+    "attributeXp": 10,
+    "minutesPerAttributeXp": 4,
+    "attributes": {
+      "RUNNING": ["conditioning"],
+      "TREADMILL_RUNNING": ["conditioning"],
+      "TRAIL_RUNNING": ["conditioning"],
+      "CYCLING": ["conditioning"],
+      "INDOOR_CYCLING": ["conditioning"],
+      "ROWING": ["conditioning"],
+      "INDOOR_ROWING": ["conditioning"],
+      "ELLIPTICAL": ["conditioning"],
+      "WALKING": ["conditioning"],
+      "LAP_SWIMMING": ["conditioning", "strength"],
+      "OPEN_WATER_SWIMMING": ["conditioning", "strength"],
+      "HIIT": ["conditioning", "power"],
+      "INDOOR_CARDIO": ["conditioning", "power"],
+      "YOGA": ["mobility"],
+      "PILATES": ["mobility"],
+      "STRETCHING": ["mobility"],
+      "STRENGTH_TRAINING": ["strength"],
+      "BOXING": ["conditioning", "core"],
+      "MIXED_MARTIAL_ARTS": ["conditioning", "core"]
+    }
+  },
   "ranks": [
     {
       "id": "E",

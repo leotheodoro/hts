@@ -89,7 +89,7 @@ public struct ProgressHistory: Hashable, Sendable {
 extension Progression {
     /// Derived progress of completed sessions in chronological order (docs/decisions/0010, 0019, 0027). Must
     /// match `progressHistory` in packages/progression; both run packages/fixtures/progress-history.json.
-    public func history(_ sessions: [HistorySession]) -> ProgressHistory {
+    public func history(_ sessions: [HistorySession], activities: [HistoryActivity] = []) -> ProgressHistory {
         var best: [String: Decimal] = [:]
         var results: [SessionProgress] = []
         var total = 0
@@ -127,6 +127,9 @@ extension Progression {
             ).total
             total += xp
             results.append(SessionProgress(completedSets: completedSets, volumeKg: volume, records: records, xp: xp))
+        }
+        for activity in activities where !activity.linked {
+            total += activityXP(activityType: activity.activityType, durationSeconds: activity.durationSeconds).xp
         }
         let level = level(forXP: total)
         return ProgressHistory(sessions: results, totalXp: total, level: level, rank: rank(forLevel: level))
