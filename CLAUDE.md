@@ -37,6 +37,7 @@ Código, tabelas e identificadores em inglês. Textos de interface em pt-BR, no 
 
 ```
 apps/api/                 API Hono + Drizzle (Postgres). src/, drizzle/ (migrations), Dockerfile
+apps/web/                 Site público (Astro, estático): landing, privacidade, suporte. Publicado na Vercel
 apps/ios/project.yml      Projeto XcodeGen (o .xcodeproj não é versionado)
 apps/ios/HTS/             Target do app: App, navegação, telas. Fino.
 apps/ios/HTSKit/          Swift Package local
@@ -57,6 +58,7 @@ docs/decisions/           ADRs
 ```
 pnpm install                     dependências TS
 pnpm dev                         API em http://localhost:8787
+pnpm --filter web dev            site em http://localhost:4321
 pnpm test | pnpm lint | pnpm typecheck
 pnpm sync:shared                 gera Tokens.swift e copia progression.json, fixtures e openapi.json
 pnpm --filter api db:generate    nova migration a partir de src/db/schema.ts
