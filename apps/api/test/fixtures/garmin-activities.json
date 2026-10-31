@@ -1,0 +1,17 @@
+{
+  "activities": [
+    {
+      "userId": "GARMIN_USER",
+      "summaryId": "SUMMARY_ID",
+      "activityId": 21001,
+      "activityType": "RUNNING",
+      "activityName": "Corrida",
+      "startTimeInSeconds": 1793602800,
+      "startTimeOffsetInSeconds": -10800,
+      "durationInSeconds": 2400,
+      "distanceInMeters": 8200.4,
+      "averageHeartRateInBeatsPerMinute": 152,
+      "activeKilocalories": 520
+    }
+  ]
+}

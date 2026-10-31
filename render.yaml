@@ -32,3 +32,6 @@ services:
         sync: false
       - key: S3_BUCKET
         sync: false
+      # Secret path segment of the Garmin push URL (#163); set when Garmin approves the access.
+      - key: GARMIN_PUSH_SECRET
+        sync: false

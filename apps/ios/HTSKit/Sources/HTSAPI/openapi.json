@@ -175,6 +175,34 @@
           "cursor",
           "changes"
         ]
+      },
+      "Integration": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "garmin"
+            ]
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "connectedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "provider",
+          "connected",
+          "connectedAt",
+          "lastActivityAt"
+        ]
       }
     },
     "parameters": {}
@@ -756,6 +784,136 @@
           },
           "403": {
             "description": "Rows or athlete of another athlete than the session's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations": {
+      "get": {
+        "operationId": "listIntegrations",
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Which platforms the session's account is connected to",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One entry per platform",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "integrations": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Integration"
+                      }
+                    }
+                  },
+                  "required": [
+                    "integrations"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown or revoked session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/garmin/connect": {
+      "post": {
+        "operationId": "connectGarmin",
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Start the Garmin login; answers the page to open",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Garmin authorization page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown or revoked session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "garmin_unavailable: the Garmin access is not approved yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/integrations/garmin": {
+      "delete": {
+        "operationId": "disconnectGarmin",
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Forget the Garmin connection and its tokens; imported activities stay",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Disconnected"
+          },
+          "401": {
+            "description": "Missing, unknown or revoked session",
             "content": {
               "application/json": {
                 "schema": {
