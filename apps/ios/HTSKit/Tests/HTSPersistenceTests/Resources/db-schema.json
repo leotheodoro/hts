@@ -230,6 +230,67 @@
       ]
     },
     {
+      "name": "imported_activity",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "source",
+          "notNull": true
+        },
+        {
+          "name": "external_id",
+          "notNull": true
+        },
+        {
+          "name": "activity_type",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "notNull": false
+        },
+        {
+          "name": "started_at",
+          "notNull": true
+        },
+        {
+          "name": "duration_seconds",
+          "notNull": true
+        },
+        {
+          "name": "distance_meters",
+          "notNull": false
+        },
+        {
+          "name": "average_heart_rate",
+          "notNull": false
+        },
+        {
+          "name": "calories",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
       "name": "logged_round",
       "columns": [
         {

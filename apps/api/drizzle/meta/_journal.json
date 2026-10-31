@@ -64,6 +64,13 @@
       "when": 1793384429166,
       "tag": "0008_rename_avatar_key",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793483382619,
+      "tag": "0009_add_imported_activity",
+      "breakpoints": true
     }
   ]
 }

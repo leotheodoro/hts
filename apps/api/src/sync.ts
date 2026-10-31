@@ -7,6 +7,7 @@ import {
   battle,
   block,
   exercise,
+  importedActivity,
   loggedRound,
   loggedSet,
   prescribedExercise,
@@ -22,6 +23,7 @@ import {
 /** Parents before children, so foreign keys hold when a push creates both. */
 const TABLES = [
   athlete,
+  importedActivity,
   season,
   arc,
   workoutTemplate,

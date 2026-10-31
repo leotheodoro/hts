@@ -19,10 +19,13 @@ public struct SyncService: Sendable {
 
     /// Parents before children, the same order as the API.
     static let tables = [
-        "athlete", "season", "arc", "workout_template", "block", "exercise", "prescribed_exercise", "session",
+        "athlete", "imported_activity", "season", "arc", "workout_template", "block", "exercise", "prescribed_exercise",
+        "session",
         "logged_set", "logged_round", "battle",
     ]
     /// SQLite stores these as 0/1; the API expects booleans.
+    /// Numeric columns that arrive as decimal strings and are kept as the shortest exact decimal.
+    static let decimalColumns: Set<String> = ["weight_kg", "meters", "distance_meters"]
     static let booleanColumns: Set<String> = ["completed", "per_side", "active"]
     /// SQLite stores these as JSON text; the API expects JSON.
     static let jsonColumns: Set<String> = ["attributes", "targets", "plan_snapshot", "weights"]
@@ -150,7 +153,7 @@ public struct SyncService: Sendable {
             return number.rounded() == number ? Int64(number).databaseValue : number.databaseValue
         case .string(let text):
             // Postgres numeric comes back as "62.50"; keep the shortest exact decimal like the app writes it.
-            if column == "weight_kg" || column == "meters",
+            if decimalColumns.contains(column),
                 let decimal = Decimal(string: text, locale: Locale(identifier: "en_US_POSIX"))
             {
                 return decimal.databaseValue

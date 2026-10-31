@@ -12,3 +12,4 @@ extension Session: HTSRecord { public static let databaseTableName = "session" }
 extension LoggedSet: HTSRecord { public static let databaseTableName = "logged_set" }
 extension LoggedRound: HTSRecord { public static let databaseTableName = "logged_round" }
 extension Battle: HTSRecord { public static let databaseTableName = "battle" }
+extension ImportedActivity: HTSRecord { public static let databaseTableName = "imported_activity" }

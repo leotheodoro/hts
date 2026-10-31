@@ -85,7 +85,7 @@ export const authSession = pgTable("auth_session", {
 });
 
 /** Tables that live only on the server: left out of the SQLite mirror (db-schema.json) and of sync. */
-export const SERVER_ONLY_TABLES = ["account", "auth_session"];
+export const SERVER_ONLY_TABLES = ["account", "auth_session", "integration_connection"];
 
 const owned = () => ({
   id: uuid("id").primaryKey(),
@@ -356,6 +356,58 @@ export const battle = pgTable(
     ...timestamps,
   },
   (t) => [index("battle_athlete_date_idx").on(t.athleteId, t.date)],
+);
+
+/**
+ * An activity recorded on another platform (Garmin) and pushed to the server (docs/decisions/0033). The row is
+ * born on the server, so its id is generated there; the app only reads it. XP, attributes and the link to an HTS
+ * workout are derived, never stored.
+ */
+export const importedActivity = pgTable(
+  "imported_activity",
+  {
+    ...owned(),
+    /** Where it came from: "garmin". */
+    source: text("source").notNull(),
+    /** The platform's id of the activity (Garmin summaryId), unique per source. */
+    externalId: text("external_id").notNull(),
+    /** The platform's type, as sent ("RUNNING"); progression.json maps it to attributes. */
+    activityType: text("activity_type").notNull(),
+    name: text("name"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    durationSeconds: integer("duration_seconds").notNull(),
+    distanceMeters: numeric("distance_meters", { precision: 9, scale: 2 }),
+    averageHeartRate: smallint("average_heart_rate"),
+    calories: integer("calories"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("imported_activity_source_external_id_idx").on(t.source, t.externalId),
+    index("imported_activity_athlete_started_at_idx").on(t.athleteId, t.startedAt),
+  ],
+);
+
+/** An account's link to another platform (Garmin), with its tokens. Server only: tokens never leave it. */
+export const integrationConnection = pgTable(
+  "integration_connection",
+  {
+    id: uuid("id").primaryKey(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => account.id),
+    provider: text("provider").notNull(),
+    /** The platform's id of the user (Garmin userId), which its pushes carry. */
+    externalUserId: text("external_user_id").notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    lastActivityAt: timestamp("last_activity_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("integration_connection_provider_user_idx").on(t.provider, t.externalUserId),
+    uniqueIndex("integration_connection_account_provider_idx").on(t.accountId, t.provider),
+  ],
 );
 
 export type Athlete = typeof athlete.$inferSelect;
