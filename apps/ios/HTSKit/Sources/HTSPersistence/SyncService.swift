@@ -24,6 +24,8 @@ public struct SyncService: Sendable {
         "logged_set", "logged_round", "battle",
     ]
     /// SQLite stores these as 0/1; the API expects booleans.
+    /// Born on the server and read-only here (docs/decisions/0033): pulled, never pushed.
+    static let pullOnlyTables: Set<String> = ["imported_activity"]
     /// Numeric columns that arrive as decimal strings and are kept as the shortest exact decimal.
     static let decimalColumns: Set<String> = ["weight_kg", "meters", "distance_meters"]
     static let booleanColumns: Set<String> = ["completed", "per_side", "active"]
@@ -78,7 +80,7 @@ public struct SyncService: Sendable {
         return try await database.writer.read { db in
             var changes: SyncChanges = [:]
             var newest = since
-            for table in Self.tables {
+            for table in Self.tables where !Self.pullOnlyTables.contains(table) {
                 let owner = table == "athlete" ? "id" : "athlete_id"
                 let rows = try Row.fetchAll(
                     db,

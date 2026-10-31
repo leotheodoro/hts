@@ -11,4 +11,4 @@ Data: 2026-10-31 · Status: aceita (spec `docs/superpowers/specs/2026-10-31-garm
 
 ## Consequências
 - A atividade é um extra, como a Manutenção (0030): dá XP, nível, patente e atributos, e fica fora da meta semanal, da sequência e dos títulos.
-- O push do app reenvia linhas puxadas que mudaram desde o último push. Para `imported_activity`, isso só repete o que o servidor já tem: last write wins com o mesmo `updated_at`.
+- `imported_activity` é só de puxar: o app não a envia no push, e a API ignora linhas dessa tabela num push (#176). Só o import do Garmin escreve nela.

@@ -24,7 +24,7 @@ struct SessionDetailSheet: View {
                         Text(verbatim: "+\(entry.progress.xp) XP · \(LoggedSet.format(entry.progress.volumeKg)) kg")
                             .htsTextStyle(.dataSm).foregroundStyle(Color.hts.greyApp)
                     }
-                    if let garmin = model.linkedActivities[entry.session.id] { linked(garmin) }
+                    ForEach(model.linkedActivities[entry.session.id] ?? []) { linked($0) }
                     ForEach(entry.session.planSnapshot.blocks, id: \.blockId) { block in
                         ForEach(block.exercises, id: \.prescribedExerciseId) { exercise in
                             exerciseSets(exercise)
