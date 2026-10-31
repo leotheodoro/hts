@@ -1,0 +1,80 @@
+---
+import { CONTACT_EMAIL, type Lang, routes } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const mail = `mailto:${CONTACT_EMAIL}`;
+---
+
+{
+  lang === "pt" ? (
+    <article class="wrap doc">
+      <h1>Suporte</h1>
+      <p class="muted updated">
+        Escreva para <a href={mail}>{CONTACT_EMAIL}</a>. Respondemos em até 2 dias úteis.
+      </p>
+
+      <h2>Como crio uma conta?</h2>
+      <p>
+        Ainda não há cadastro aberto: as contas são criadas por convite. Peça a sua pelo e-mail acima.
+      </p>
+
+      <h2>Esqueci a senha</h2>
+      <p>Escreva para o e-mail de suporte a partir do e-mail da sua conta.</p>
+
+      <h2>O app funciona sem internet?</h2>
+      <p>
+        Sim. Tudo é gravado no iPhone e sincroniza quando a conexão volta. Só o login e o envio da foto
+        precisam de internet.
+      </p>
+
+      <h2>Como excluo minha conta e meus dados?</h2>
+      <p>
+        Escreva para <a href={mail}>{CONTACT_EMAIL}</a> a partir do e-mail da conta. Apagamos a conta,
+        os treinos, a foto e as atividades importadas. Detalhes na{" "}
+        <a href={routes.privacy.pt}>política de privacidade</a>.
+      </p>
+
+      <h2>Garmin</h2>
+      <p>
+        A integração está chegando. Quando estiver no app, você conecta e desconecta em Perfil,
+        Integrações.
+      </p>
+    </article>
+  ) : (
+    <article class="wrap doc">
+      <h1>Support</h1>
+      <p class="muted updated">
+        Write to <a href={mail}>{CONTACT_EMAIL}</a>. We answer within 2 business days.
+      </p>
+
+      <h2>How do I create an account?</h2>
+      <p>There is no open sign-up yet: accounts are by invitation. Ask for yours at the email above.</p>
+
+      <h2>I forgot my password</h2>
+      <p>Write to the support email from your account's email address.</p>
+
+      <h2>Does the app work offline?</h2>
+      <p>
+        Yes. Everything is saved on your iPhone and syncs when the connection is back. Only signing in
+        and uploading the photo need the internet.
+      </p>
+
+      <h2>How do I delete my account and data?</h2>
+      <p>
+        Write to <a href={mail}>{CONTACT_EMAIL}</a> from your account's email address. We delete the
+        account, workouts, photo and imported activities. Details in the{" "}
+        <a href={routes.privacy.en}>privacy policy</a>.
+      </p>
+
+      <h2>Garmin</h2>
+      <p>
+        The integration is on its way. Once it is in the app, you connect and disconnect it in Profile,
+        Integrations.
+      </p>
+    </article>
+  )
+}

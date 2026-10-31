@@ -1,0 +1,287 @@
+/* Brand rules (docs/design/design-system.md): black and bone are ~90% of the page, blood only on the
+   SUBMIT of the wordmark; straight corners, the notch is the corner; no shadow, gradient or glow.
+   Values come from tokens.json as custom properties (src/tokens.ts). */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--black);
+  color: var(--bone);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--black);
+}
+
+main {
+  flex: 1;
+}
+
+a {
+  color: inherit;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: var(--stroke-rule) solid var(--focus);
+  outline-offset: var(--stroke-rule);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .wrap {
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
+  }
+}
+
+/* Type */
+
+.label {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+
+.kanji {
+  font-family: var(--font-kanji);
+  font-weight: 900;
+}
+
+.stencil {
+  font-family: var(--font-stencil);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.85;
+  letter-spacing: 0.01em;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.ui-title {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.muted {
+  color: var(--grey);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Notched surfaces: top-left and bottom-right corners cut at 45°. */
+
+.notch {
+  --cut: var(--notch-lg);
+  clip-path: polygon(
+    var(--cut) 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%,
+    0 100%,
+    0 var(--cut)
+  );
+}
+
+/* A notched card with a hairline border: the border is the outer shape, the fill sits inset by it. */
+.card {
+  --cut: var(--notch-lg);
+  position: relative;
+  background: var(--line);
+  padding: var(--stroke-hair);
+}
+
+.card > .card-body {
+  --cut: calc(var(--notch-lg) - 0.4px);
+  background: var(--charcoal);
+  padding: var(--space-6);
+  height: 100%;
+}
+
+.card,
+.card > .card-body {
+  clip-path: polygon(
+    var(--cut) 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%,
+    0 100%,
+    0 var(--cut)
+  );
+}
+
+/* Header and footer */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-5);
+}
+
+.wordmark {
+  font-family: var(--font-stencil);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--bone);
+}
+
+.wordmark .submit {
+  color: var(--blood);
+}
+
+.switch {
+  text-decoration: none;
+  color: var(--grey);
+}
+
+.switch:hover {
+  color: var(--bone);
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
+  border-top: var(--stroke-hair) solid var(--line);
+  margin-top: var(--space-16);
+}
+
+.foot-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.foot-brand .kanji {
+  font-size: 20px;
+  color: var(--tab-idle);
+}
+
+.foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.foot-links a {
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.foot-links a:hover {
+  color: var(--bone);
+}
+
+/* "Coming soon" tag: not an action, so bone on black, never blood. */
+
+.soon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: var(--stroke-hair) solid var(--line-strong);
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+
+.soon img {
+  width: 28px;
+  height: 28px;
+}
+
+/* Long-form pages: privacy and support. */
+
+.doc {
+  max-width: 720px;
+  padding-top: var(--space-8);
+}
+
+.doc h1 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--space-3);
+}
+
+.doc h2 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  margin: var(--space-12) 0 var(--space-3);
+}
+
+.doc p,
+.doc li {
+  color: var(--bone);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.doc ul {
+  padding-left: var(--space-5);
+}
+
+.doc li + li {
+  margin-top: var(--space-2);
+}
+
+.doc a {
+  color: var(--bone);
+  text-underline-offset: 3px;
+}
+
+.doc .updated {
+  margin-bottom: var(--space-8);
+}

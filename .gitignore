@@ -26,3 +26,7 @@ apps/ios/LocalSeed/
 
 # Coach programs for the API seed (see apps/api/seed.example): licensed content, never in the public repo
 apps/api/seed/
+
+# Astro and Vercel (apps/web)
+.astro/
+.vercel/

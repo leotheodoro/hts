@@ -1,0 +1,67 @@
+---
+import "../styles/global.css";
+import { CONTACT_EMAIL, copy, type Lang, type Page, routes } from "../i18n";
+import { tokenCss } from "../tokens";
+
+interface Props {
+  lang: Lang;
+  page: Page;
+  title: string;
+  description?: string;
+}
+
+const { lang, page, title, description } = Astro.props;
+const t = copy[lang];
+const other: Lang = lang === "pt" ? "en" : "pt";
+const canonical = new URL(routes[page][lang], Astro.site);
+---
+
+<!doctype html>
+<html lang={t.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description ?? t.description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="pt-BR" href={new URL(routes[page].pt, Astro.site)} />
+    <link rel="alternate" hreflang="en" href={new URL(routes[page].en, Astro.site)} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description ?? t.description} />
+    <meta property="og:image" content={new URL("/icon.png", Astro.site)} />
+    <meta name="theme-color" content="#0B0B0B" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Big+Shoulders+Stencil+Display:wght@900&family=IBM+Plex+Mono:wght@500;600&family=Inter+Tight:wght@600&family=Inter:wght@400;500&family=Noto+Serif+JP:wght@900&display=swap"
+    />
+    <style is:inline set:html={tokenCss()}></style>
+  </head>
+  <body>
+    <header class="top wrap">
+      <a class="wordmark" href={routes.home[lang]} aria-label="Hard To Submit">
+        <span>HARD TO</span> <span class="submit">SUBMIT</span>
+      </a>
+      <a class="switch label" href={routes[page][other]} hreflang={copy[other].htmlLang}>
+        {t.nav.switchLabel}
+      </a>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="foot wrap">
+      <div class="foot-brand">
+        <span class="kanji" aria-hidden="true">不屈</span>
+        <span class="label">© 2026 {t.footer.rights}</span>
+      </div>
+      <nav class="foot-links label">
+        <a href={routes.privacy[lang]}>{t.nav.privacy}</a>
+        <a href={routes.support[lang]}>{t.nav.support}</a>
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+      </nav>
+    </footer>
+  </body>
+</html>
