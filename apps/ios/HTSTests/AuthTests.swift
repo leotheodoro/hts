@@ -44,6 +44,16 @@ final class FakeRemote: RemoteAPI, @unchecked Sendable {
         return try avatarResult.get()
     }
 
+    var integrationsResult: Result<[IntegrationStatus], any Error> = .success([
+        IntegrationStatus(provider: "garmin", connected: false)
+    ])
+    var connectResult: Result<URL, any Error> = .failure(APIError.garminUnavailable)
+    private(set) var disconnectCalls = 0
+
+    func integrations() async throws -> [IntegrationStatus] { try integrationsResult.get() }
+    func connectGarmin() async throws -> URL { try connectResult.get() }
+    func disconnectGarmin() async throws { disconnectCalls += 1 }
+
     func push(_ changes: SyncChanges) async throws -> Int { 0 }
 
     func pull(athleteId: UUID, since: String?) async throws -> (cursor: String?, changes: SyncChanges) {

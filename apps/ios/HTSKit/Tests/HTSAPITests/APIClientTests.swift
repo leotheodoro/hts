@@ -163,4 +163,23 @@ let configuration = APIConfiguration(baseURL: URL(string: "http://localhost:8787
             transport: StubTransport(status: .contentTooLarge, json: #"{"error":"too_large"}"#))
         await #expect(throws: APIError.photoTooLarge) { try await big.uploadAvatar(jpeg: Data([0xFF])) }
     }
+
+    @Test func readsTheIntegrationsAndReportsGarminUnavailable() async throws {
+        let json = #"""
+            {"integrations":[{"provider":"garmin","connected":true,"connectedAt":"2026-11-01T12:00:00.000Z",
+            "lastActivityAt":"2026-11-02T07:00:00.000Z"}]}
+            """#
+        let ok = APIClient(configuration: configuration, transport: StubTransport(status: .ok, json: json))
+        let status = try await ok.integrations()
+        #expect(status.count == 1)
+        #expect(status.first?.provider == "garmin")
+        #expect(status.first?.connected == true)
+        #expect(status.first?.lastActivityAt == Date(timeIntervalSince1970: 1_793_602_800))
+        let off = APIClient(
+            configuration: configuration,
+            transport: StubTransport(status: .serviceUnavailable, json: #"{"error":"garmin_unavailable"}"#))
+        await #expect(throws: APIError.garminUnavailable) { _ = try await off.connectGarmin() }
+        let gone = APIClient(configuration: configuration, transport: StubTransport(status: .noContent, json: ""))
+        try await gone.disconnectGarmin()
+    }
 }

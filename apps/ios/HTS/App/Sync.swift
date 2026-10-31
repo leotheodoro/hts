@@ -10,6 +10,9 @@ protocol RemoteAPI: SyncTransport {
     func updateAccount(name: String?, username: String?, email: String?) async throws -> Account
     func changePassword(current: String, new: String) async throws
     func uploadAvatar(jpeg: Data) async throws -> Account
+    func integrations() async throws -> [IntegrationStatus]
+    func connectGarmin() async throws -> URL
+    func disconnectGarmin() async throws
 }
 
 // The generated API client is the sync transport. Declared here so HTSAPI and HTSPersistence stay independent.

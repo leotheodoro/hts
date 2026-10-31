@@ -9,6 +9,8 @@ const EnvSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_REGION: z.string().optional(),
   S3_BUCKET: z.string().optional(),
+  /** Secret path segment of the Garmin push URL (#163). Optional: without it, the push route answers 404. */
+  GARMIN_PUSH_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

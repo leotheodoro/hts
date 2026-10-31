@@ -98,6 +98,23 @@ public enum APIError: Error, Sendable, Equatable {
     /// Photo upload: the server has no bucket configured, or the photo is over 2 MB.
     case storageUnavailable
     case photoTooLarge
+    /// Integrations: the Garmin access is not approved yet, so there is no login to open.
+    case garminUnavailable
+}
+
+/// One platform on the Integrations page: whether the account is connected and when the last activity arrived.
+public struct IntegrationStatus: Sendable, Hashable {
+    public var provider: String
+    public var connected: Bool
+    public var connectedAt: Date?
+    public var lastActivityAt: Date?
+
+    public init(provider: String, connected: Bool, connectedAt: Date? = nil, lastActivityAt: Date? = nil) {
+        self.provider = provider
+        self.connected = connected
+        self.connectedAt = connectedAt
+        self.lastActivityAt = lastActivityAt
+    }
 }
 
 /// Short reason for a failed request, for the UI.
@@ -236,6 +253,46 @@ public struct APIClient: Sendable {
         case .contentTooLarge: throw APIError.photoTooLarge
         case .serviceUnavailable: throw APIError.storageUnavailable
         case .badGateway: throw APIError.unexpectedStatus(502)
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    // MARK: Integrations (spec 2026-10-31)
+
+    public func integrations() async throws -> [IntegrationStatus] {
+        switch try await client.listIntegrations() {
+        case .ok(let ok):
+            let date = { (text: String?) in
+                try text.map {
+                    try Date($0, strategy: .iso8601.year().month().day().time(includingFractionalSeconds: true))
+                }
+            }
+            return try ok.body.json.integrations.map {
+                IntegrationStatus(
+                    provider: $0.provider.rawValue, connected: $0.connected, connectedAt: try date($0.connectedAt),
+                    lastActivityAt: try date($0.lastActivityAt))
+            }
+        case .unauthorized: throw APIError.unauthorized
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    /// The Garmin login page to open. Until the access is approved, the API answers `garminUnavailable`.
+    public func connectGarmin() async throws -> URL {
+        switch try await client.connectGarmin() {
+        case .ok(let ok):
+            guard let url = URL(string: try ok.body.json.url) else { throw APIError.invalidResponse }
+            return url
+        case .unauthorized: throw APIError.unauthorized
+        case .serviceUnavailable: throw APIError.garminUnavailable
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
+    public func disconnectGarmin() async throws {
+        switch try await client.disconnectGarmin() {
+        case .noContent: return
+        case .unauthorized: throw APIError.unauthorized
         case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
         }
     }
