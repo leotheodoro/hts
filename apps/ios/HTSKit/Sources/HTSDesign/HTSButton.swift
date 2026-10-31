@@ -5,6 +5,8 @@ public enum HTSButtonKind: Sendable {
     case primary
     /// Secondary action: `line-strong` border, `bone` label.
     case ghost
+    /// "Conectar Garmin" only: Garmin's blue, the one exception to the brand colors (spec 2026-10-31).
+    case garmin
 }
 
 public struct HTSButtonStyle: ButtonStyle {
@@ -18,17 +20,29 @@ public struct HTSButtonStyle: ButtonStyle {
         let shape = NotchShape(cut: HTSNotch.sm)
         configuration.label
             .htsTextStyle(.bodyStrong)
-            .foregroundStyle(kind == .primary ? Color.hts.onBlood : Color.hts.bone)
+            .foregroundStyle(label)
             .frame(maxWidth: .infinity, minHeight: 52)
             .padding(.horizontal, HTSSpacing.space5)
             .background {
-                if kind == .primary { shape.fill(Color.hts.blood) }
+                switch kind {
+                case .primary: shape.fill(Color.hts.blood)
+                case .garmin: shape.fill(Color.hts.garmin)
+                case .ghost: EmptyView()
+                }
             }
             .overlay {
                 if kind == .ghost { shape.strokeBorder(Color.hts.lineStrong, lineWidth: HTSStroke.hair) }
             }
             .contentShape(shape)
             .opacity(configuration.isPressed ? 0.8 : 1)
+    }
+
+    private var label: Color {
+        switch kind {
+        case .primary: Color.hts.onBlood
+        case .ghost: Color.hts.bone
+        case .garmin: Color.hts.onGarmin
+        }
     }
 }
 

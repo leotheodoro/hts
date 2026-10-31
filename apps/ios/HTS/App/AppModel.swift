@@ -36,7 +36,16 @@ final class AppModel {
         case other(String)
     }
 
+    enum IntegrationError: Equatable {
+        /// The Garmin access is not approved yet (#168).
+        case unavailable
+        case offline
+        case other(String)
+    }
+
     private(set) var authState: AuthState = .checking
+    /// Garmin on Perfil > Integrações; nil until loaded.
+    private(set) var garminStatus: IntegrationStatus?
 
     var session: AuthSession? {
         if case .signedIn(let session) = authState { session } else { nil }
@@ -202,6 +211,47 @@ final class AppModel {
             return nil
         } catch {
             return Self.accountError(error)
+        }
+    }
+
+    /// Whether the account is connected to Garmin and when the last activity arrived (spec 2026-10-31).
+    func loadIntegrations() async {
+        guard let session, let client = remote(session.token) else { return }
+        if let garmin = try? await client.integrations().first(where: { $0.provider == "garmin" }) {
+            garminStatus = garmin
+        }
+    }
+
+    /// Starts the Garmin login. Until the access is approved the API answers that it is unavailable; the login page
+    /// itself arrives with #168.
+    func connectGarmin() async -> IntegrationError? {
+        guard let session, let client = remote(session.token) else { return .offline }
+        do {
+            _ = try await client.connectGarmin()
+            await loadIntegrations()
+            return nil
+        } catch {
+            return Self.integrationError(error)
+        }
+    }
+
+    /// Forgets the connection and its tokens on the server; imported activities stay.
+    func disconnectGarmin() async -> IntegrationError? {
+        guard let session, let client = remote(session.token) else { return .offline }
+        do {
+            try await client.disconnectGarmin()
+            garminStatus = IntegrationStatus(provider: "garmin", connected: false)
+            return nil
+        } catch {
+            return Self.integrationError(error)
+        }
+    }
+
+    private static func integrationError(_ error: any Error) -> IntegrationError {
+        if case APIError.garminUnavailable = error { return .unavailable }
+        switch APIFailure(error) {
+        case .timedOut, .unreachable: return .offline
+        case .other(let detail): return .other(detail)
         }
     }
 
