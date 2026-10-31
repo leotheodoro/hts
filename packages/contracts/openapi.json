@@ -158,7 +158,7 @@
             }
           }
         },
-        "description": "Rows by table (athlete, season, arc, workout_template, block, exercise, prescribed_exercise, session, logged_set, logged_round, battle), keyed by column name."
+        "description": "Rows by table (athlete, imported_activity, season, arc, workout_template, block, exercise, prescribed_exercise, session, logged_set, logged_round, battle), keyed by column name."
       },
       "SyncPull": {
         "type": "object",

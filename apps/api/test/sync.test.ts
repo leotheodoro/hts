@@ -7,6 +7,7 @@ import {
   athlete,
   block,
   exercise,
+  importedActivity,
   loggedSet,
   prescribedExercise,
   season,
@@ -35,6 +36,7 @@ afterAll(async () => {
   await removeAccounts(db, athletes);
   if (athletes.length > 0) {
     for (const table of [
+      importedActivity,
       loggedSet,
       session,
       prescribedExercise,
@@ -306,6 +308,33 @@ describe("sync", () => {
     const newcomer = await signedIn();
     const fresh = deviceRows(newcomer.athleteId);
     expect((await pushChanges(newcomer.token, fresh.changes)).status).toBe(200);
+  });
+
+  it("pulls imported activities and refuses them for another athlete", async () => {
+    const leo = await signedIn();
+    const other = await signedIn();
+    const id = uuidv7();
+    await db.insert(importedActivity).values({
+      id,
+      athleteId: leo.athleteId,
+      source: "garmin",
+      externalId: `run-${id}`,
+      activityType: "RUNNING",
+      name: "Corrida",
+      startedAt: new Date(Date.UTC(2026, 10, 3, 7)),
+      durationSeconds: 2400,
+      distanceMeters: "8200",
+      averageHeartRate: 152,
+      calories: 520,
+    });
+    const pulled = await pullSince(leo.token, leo.athleteId);
+    const row = pulled.changes.imported_activity?.find((r) => r.id === id);
+    expect(row).toMatchObject({
+      distance_meters: "8200.00",
+      duration_seconds: 2400,
+      source: "garmin",
+    });
+    expect((await pushChanges(other.token, { imported_activity: [row] })).status).toBe(403);
   });
 
   it("pull only serves the session athlete", async () => {

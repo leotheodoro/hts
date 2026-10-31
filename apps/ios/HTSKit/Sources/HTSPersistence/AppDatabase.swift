@@ -118,6 +118,27 @@ public final class AppDatabase: Sendable {
                 try db.execute(sql: "DELETE FROM \(table)")
             }
         }
+        // Mirrors apps/api/drizzle/0009: activities pushed by Garmin, read-only here (docs/decisions/0033).
+        migrator.registerMigration("v11_imported_activity") { db in
+            try db.create(table: "imported_activity") { t in
+                owned(t)
+                t.column("source", .text).notNull()
+                t.column("external_id", .text).notNull()
+                t.column("activity_type", .text).notNull()
+                t.column("name", .text)
+                t.column("started_at", .text).notNull()
+                t.column("duration_seconds", .integer).notNull()
+                t.column("distance_meters", .text)
+                t.column("average_heart_rate", .integer)
+                t.column("calories", .integer)
+                timestamps(t)
+            }
+            try db.execute(
+                sql: """
+                    CREATE UNIQUE INDEX imported_activity_source_external_id_idx ON imported_activity(source, external_id);
+                    CREATE INDEX imported_activity_athlete_started_at_idx ON imported_activity(athlete_id, started_at);
+                    """)
+        }
         return migrator
     }
 

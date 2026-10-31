@@ -34,6 +34,13 @@ actor FakeSyncServer: SyncTransport {
         return applied
     }
 
+    /// A row written on the server only, as the Garmin import does.
+    func insert(_ table: String, _ row: [String: JSONValue]) {
+        guard case .string(let id)? = row["id"] else { return }
+        clock += 1
+        rows[table, default: [:]][id] = (row, clock)
+    }
+
     func displayName(of athleteId: UUID) -> JSONValue? {
         rows["athlete"]?[athleteId.uuidString.lowercased()]?.row["display_name"]
     }
@@ -183,5 +190,28 @@ actor FakeSyncServer: SyncTransport {
         #expect(asA.pushed >= 1)
         #expect(await server.displayName(of: athleteA.id) == .string("Leo offline"))
         #expect(try await SyncService.lastSyncAt(device, athleteId: athleteA.id) != nil)
+    }
+
+    @Test func importedActivitiesArriveByPull() async throws {
+        let server = FakeSyncServer()
+        let (device, athlete) = try await deviceA()
+        try await SyncService(device, transport: server).sync(athleteId: athlete.id)
+        let stamp = JSONValue.string("2026-11-03T08:00:00.000Z")
+        await server.insert(
+            "imported_activity",
+            [
+                "id": .string(UUID().uuidString.lowercased()),
+                "athlete_id": .string(athlete.id.uuidString.lowercased()),
+                "source": .string("garmin"), "external_id": .string("run-1"), "activity_type": .string("RUNNING"),
+                "name": .string("Corrida"), "started_at": .string("2026-11-03T07:00:00.000Z"),
+                "duration_seconds": .number(2400), "distance_meters": .string("8200.00"),
+                "average_heart_rate": .number(152), "calories": .number(520), "created_at": stamp, "updated_at": stamp,
+                "deleted_at": .null,
+            ])
+        try await SyncService(device, transport: server).sync(athleteId: athlete.id)
+        let activities = try await device.writer.read { try ImportedActivity.fetchAll($0) }
+        #expect(activities.count == 1)
+        #expect(activities.first?.durationSeconds == 2400)
+        #expect(activities.first?.distanceMeters == Decimal(8200))
     }
 }
