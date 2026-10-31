@@ -5,6 +5,12 @@ import HTSPersistence
 import PhotosUI
 import SwiftUI
 
+/// A photo on its way to the crop screen.
+private struct PhotoToCrop: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
 /// Avatar, name, @username · patente · nível, then the list of pages and, last, Sair (#143).
 struct ProfileScreen: View {
     @Environment(AppModel.self) private var app
@@ -13,6 +19,10 @@ struct ProfileScreen: View {
     @State private var showsLibrary = false
     @State private var showsCamera = false
     @State private var libraryItem: PhotosPickerItem?
+    /// The photo taken or chosen, waiting for its crop (#157).
+    @State private var cropping: PhotoToCrop?
+    /// The camera's photo, shown for cropping once the camera has gone.
+    @State private var taken: UIImage?
     @State private var uploading = false
     @State private var photoError: LocalizedStringKey?
 
@@ -54,15 +64,33 @@ struct ProfileScreen: View {
                 libraryItem = nil
                 Task {
                     let data = try? await item.loadTransferable(type: Data.self)
-                    await upload(data.flatMap(UIImage.init(data:)))
+                    if let image = data.flatMap(UIImage.init(data:)) {
+                        cropping = PhotoToCrop(image: image)
+                    } else {
+                        photoError = "Não foi possível ler a foto."
+                    }
                 }
             }
-            .fullScreenCover(isPresented: $showsCamera) {
+            .fullScreenCover(
+                isPresented: $showsCamera,
+                onDismiss: {
+                    if let taken { cropping = PhotoToCrop(image: taken) }
+                    taken = nil
+                }
+            ) {
                 CameraPicker { image in
+                    taken = image
                     showsCamera = false
-                    Task { await upload(image) }
                 }
                 .ignoresSafeArea()
+            }
+            .fullScreenCover(item: $cropping) { photo in
+                AvatarCropScreen(image: photo.image) {
+                    cropping = nil
+                } onUse: { rect in
+                    cropping = nil
+                    Task { await upload(photo.image, crop: rect) }
+                }
             }
             if let photoError {
                 Text(photoError).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
@@ -75,10 +103,9 @@ struct ProfileScreen: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Reduces the photo (512 px JPEG) and sends it; the avatar shows the new link when it comes back.
-    private func upload(_ image: UIImage?) async {
-        guard let image else { return }
-        guard let jpeg = AvatarImage.jpeg(from: image) else {
+    /// Reduces the cropped photo (512 px JPEG) and sends it; the avatar shows the new link when it comes back.
+    private func upload(_ image: UIImage, crop: CGRect) async {
+        guard let jpeg = AvatarImage.jpeg(from: image, crop: crop) else {
             photoError = "Não foi possível ler a foto."
             return
         }
