@@ -29,6 +29,15 @@ public struct ProgressService: Sendable {
         public var rankedUp: Bool { after.rank.id != before.rank.id }
     }
 
+    /// An imported activity with what it gives and the HTS workout it falls inside, if any (spec 2026-10-31).
+    public struct ActivityEntry: Hashable, Sendable, Identifiable {
+        public let activity: ImportedActivity
+        public let xp: ActivityXP
+        /// The completed workout it overlaps for more than half of its duration; then it gives no XP of its own.
+        public let linkedSessionId: UUID?
+        public var id: UUID { activity.id }
+    }
+
     private let database: AppDatabase
     private let progression: Progression
 
@@ -37,12 +46,62 @@ public struct ProgressService: Sendable {
         self.progression = progression
     }
 
-    /// Completed live sessions in chronological order, with their sets as progress sees them.
+    /// Completed live sessions in chronological order, with their sets as progress sees them. The total also counts
+    /// the imported activities that are not linked to a workout.
     public func history(athleteId: UUID) async throws -> (sessions: [Session], history: ProgressHistory) {
         try await database.writer.read { db in
             let sessions = try Self.completedSessions(athleteId: athleteId, db)
-            return (sessions, progression.history(try sessions.map { try Self.historySession($0, db) }))
+            let activities = try entries(athleteId: athleteId, sessions: sessions, db)
+            return (
+                sessions,
+                progression.history(
+                    try sessions.map { try Self.historySession($0, db) },
+                    activities: activities.map(Self.historyActivity))
+            )
         }
+    }
+
+    /// Imported activities, oldest first, with their XP and link.
+    public func activities(athleteId: UUID) async throws -> [ActivityEntry] {
+        try await database.writer.read { db in
+            try entries(athleteId: athleteId, sessions: Self.completedSessions(athleteId: athleteId, db), db)
+        }
+    }
+
+    private func entries(athleteId: UUID, sessions: [Session], _ db: Database) throws -> [ActivityEntry] {
+        let windows = sessions.compactMap { session in
+            session.finishedAt.map { (id: session.id, startedAt: session.startedAt, finishedAt: $0) }
+        }
+        return try ActivityRepository.activities(athleteId: athleteId, db).map { activity in
+            let linked = progression.isActivityLinked(
+                startedAt: activity.startedAt, durationSeconds: activity.durationSeconds,
+                sessions: windows.map { (startedAt: $0.startedAt, finishedAt: $0.finishedAt) })
+            // Shown inside the workout it overlaps the most.
+            let session = windows.max {
+                Self.overlap(activity, $0.startedAt, $0.finishedAt)
+                    < Self.overlap(activity, $1.startedAt, $1.finishedAt)
+            }
+            return ActivityEntry(
+                activity: activity,
+                xp: progression.activityXP(
+                    activityType: activity.activityType, durationSeconds: activity.durationSeconds),
+                linkedSessionId: linked ? session?.id : nil)
+        }
+    }
+
+    private static func overlap(_ activity: ImportedActivity, _ start: Date, _ end: Date) -> TimeInterval {
+        max(0, min(activity.finishedAt, end).timeIntervalSince(max(activity.startedAt, start)))
+    }
+
+    private static func historyActivity(_ entry: ActivityEntry) -> HistoryActivity {
+        HistoryActivity(
+            activityType: entry.activity.activityType, durationSeconds: entry.activity.durationSeconds,
+            linked: entry.linkedSessionId != nil)
+    }
+
+    private static func attributeXP(_ entries: [ActivityEntry]) -> [ActivityAttributeXP] {
+        entries.filter { $0.linkedSessionId == nil }
+            .map { ActivityAttributeXP(attributes: $0.xp.attributes, attributeXP: $0.xp.attributeXP) }
     }
 
     public func completion(sessionId: UUID) async throws -> Completion? {
@@ -51,8 +110,11 @@ public struct ProgressService: Sendable {
             let sessions = try Self.completedSessions(athleteId: session.athleteId, db)
             guard let index = sessions.firstIndex(where: { $0.id == sessionId }) else { return nil }
             let sets = try sessions.map { try Self.historySession($0, db) }
-            let after = progression.history(Array(sets[...index]))
-            let before = progression.history(Array(sets[..<index]))
+            // Activities that started before this workout count in both pictures.
+            let earlier = try entries(athleteId: session.athleteId, sessions: sessions, db)
+                .filter { $0.activity.startedAt < session.startedAt }
+            let after = progression.history(Array(sets[...index]), activities: earlier.map(Self.historyActivity))
+            let before = progression.history(Array(sets[..<index]), activities: earlier.map(Self.historyActivity))
             let progress = after.sessions[index]
             let names = Dictionary(
                 session.planSnapshot.blocks.flatMap(\.exercises).map { ($0.exerciseId.sql, $0.name) },
@@ -64,16 +126,20 @@ public struct ProgressService: Sendable {
             return Completion(
                 session: session, progress: progress, before: before, after: after,
                 recordNames: progress.records.compactMap { names[$0] }, newTitles: newTitles,
-                attributesBefore: progression.attributeLevels(attributeSets.dropLast().flatMap { $0 }),
-                attributesAfter: progression.attributeLevels(attributeSets.flatMap { $0 }))
+                attributesBefore: progression.attributeLevels(
+                    attributeSets.dropLast().flatMap { $0 }, activities: Self.attributeXP(earlier)),
+                attributesAfter: progression.attributeLevels(
+                    attributeSets.flatMap { $0 }, activities: Self.attributeXP(earlier)))
         }
     }
 
     /// Level of each attribute from the sets of completed sessions; attributes come from the session snapshot.
     public func attributeLevels(athleteId: UUID) async throws -> [Attribute: AttributeLevel] {
         try await database.writer.read { db in
-            let sets = try Self.completedSessions(athleteId: athleteId, db).flatMap { try Self.attributeSets($0, db) }
-            return progression.attributeLevels(sets)
+            let sessions = try Self.completedSessions(athleteId: athleteId, db)
+            let sets = try sessions.flatMap { try Self.attributeSets($0, db) }
+            let activities = try entries(athleteId: athleteId, sessions: sessions, db)
+            return progression.attributeLevels(sets, activities: Self.attributeXP(activities))
         }
     }
 
