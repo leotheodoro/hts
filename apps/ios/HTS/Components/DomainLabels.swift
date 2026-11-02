@@ -93,20 +93,30 @@ extension BattleResult {
 extension ImportedActivity {
     /// The Garmin type in pt-BR; unknown types read as "Atividade".
     var typeLabel: LocalizedStringKey {
+        // Activity API 2.1, Appendix A.
         switch activityType {
-        case "RUNNING", "TREADMILL_RUNNING", "TRAIL_RUNNING": "Corrida"
-        case "CYCLING", "INDOOR_CYCLING": "Bike"
-        case "ROWING", "INDOOR_ROWING": "Remo"
+        case "RUNNING", "INDOOR_RUNNING", "OBSTACLE_RUN", "STREET_RUNNING", "TRACK_RUNNING", "TRAIL_RUNNING",
+            "TREADMILL_RUNNING", "ULTRA_RUN", "VIRTUAL_RUN":
+            "Corrida"
+        case "CYCLING", "CYCLOCROSS", "DOWNHILL_BIKING", "E_BIKE_FITNESS", "E_BIKE_MOUNTAIN", "E_ENDURO_MTB",
+            "ENDURO_MTB", "GRAVEL_CYCLING", "INDOOR_CYCLING", "MOUNTAIN_BIKING", "RECUMBENT_CYCLING", "ROAD_BIKING",
+            "TRACK_CYCLING", "VIRTUAL_RIDE", "HANDCYCLING", "INDOOR_HANDCYCLING":
+            "Bike"
+        case "ROWING", "ROWING_V2", "INDOOR_ROWING": "Remo"
         case "ELLIPTICAL": "Elíptico"
-        case "WALKING": "Caminhada"
-        case "LAP_SWIMMING", "OPEN_WATER_SWIMMING": "Natação"
+        case "STAIR_CLIMBING": "Escada"
+        case "WALKING", "CASUAL_WALKING", "SPEED_WALKING": "Caminhada"
+        case "HIKING", "RUCKING": "Trilha"
+        case "SWIMMING", "LAP_SWIMMING", "OPEN_WATER_SWIMMING": "Natação"
         case "HIIT": "HIIT"
         case "INDOOR_CARDIO": "Cardio"
+        case "JUMP_ROPE": "Corda"
         case "YOGA": "Yoga"
         case "PILATES": "Pilates"
-        case "STRETCHING": "Alongamento"
+        case "MOBILITY": "Mobilidade"
         case "STRENGTH_TRAINING": "Musculação"
-        case "BOXING", "MIXED_MARTIAL_ARTS": "Luta"
+        case "BOXING": "Boxe"
+        case "MIXED_MARTIAL_ARTS": "Luta"
         default: "Atividade"
         }
     }

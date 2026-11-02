@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-// The Garmin push of activity summaries, as documented publicly for the Health/Activity API. Provisional
-// until Garmin approves the access and the official documentation confirms the names (#168): every field
-// the import needs is read here and nowhere else.
+// The Garmin push of activity summaries (Activity API 2.1, sections 4 and 6.1-6.2): every field the import
+// needs is read here and nowhere else. The push carries no deletions: an activity deleted at Garmin stays.
 
 const ActivitySchema = z.object({
   userId: z.string(),
@@ -14,8 +13,8 @@ const ActivitySchema = z.object({
   distanceInMeters: z.number().nonnegative().optional(),
   averageHeartRateInBeatsPerMinute: z.number().int().positive().optional(),
   activeKilocalories: z.number().int().nonnegative().optional(),
-  /** Assumed deletion marker; the real one comes from the official documentation (#168). */
-  deleted: z.boolean().optional(),
+  /** A multisport activity: its parts arrive as their own summaries, so it does not count itself. */
+  isParent: z.boolean().optional(),
 });
 
 const PushSchema = z.object({
@@ -33,7 +32,7 @@ export interface GarminActivity {
   distanceMeters: number | null;
   averageHeartRate: number | null;
   calories: number | null;
-  deleted: boolean;
+  isParent: boolean;
 }
 
 /** The activities of one push. Items that do not parse are skipped, so one bad item never drops the rest. */
@@ -56,7 +55,7 @@ export function parseGarminActivities(body: unknown): GarminActivity[] {
         distanceMeters: a.distanceInMeters ?? null,
         averageHeartRate: a.averageHeartRateInBeatsPerMinute ?? null,
         calories: a.activeKilocalories ?? null,
-        deleted: a.deleted ?? false,
+        isParent: a.isParent ?? false,
       },
     ];
   });

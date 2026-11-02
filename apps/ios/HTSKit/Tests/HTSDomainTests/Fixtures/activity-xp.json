@@ -91,6 +91,45 @@
         "attributeXp": 0,
         "attributes": ["conditioning"]
       }
+    },
+    {
+      "name": "official running variants feed conditioning",
+      "input": {
+        "activityType": "STREET_RUNNING",
+        "durationSeconds": 1800
+      },
+      "expected": {
+        "minutes": 30,
+        "xp": 150,
+        "attributeXp": 75,
+        "attributes": ["conditioning"]
+      }
+    },
+    {
+      "name": "hiking counts as walking",
+      "input": {
+        "activityType": "HIKING",
+        "durationSeconds": 3600
+      },
+      "expected": {
+        "minutes": 60,
+        "xp": 300,
+        "attributeXp": 150,
+        "attributes": ["conditioning"]
+      }
+    },
+    {
+      "name": "a mobility session feeds mobility",
+      "input": {
+        "activityType": "MOBILITY",
+        "durationSeconds": 1200
+      },
+      "expected": {
+        "minutes": 20,
+        "xp": 100,
+        "attributeXp": 50,
+        "attributes": ["mobility"]
+      }
     }
   ]
 }
