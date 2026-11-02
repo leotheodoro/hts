@@ -1,3 +1,4 @@
+import AuthenticationServices
 import HTSAPI
 import HTSDesign
 import HTSDomain
@@ -7,6 +8,7 @@ import SwiftUI
 /// Perfil > Integrações (spec 2026-10-31, models 1 and 2): the Garmin card, disconnected or connected with its status.
 struct IntegrationsScreen: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @State private var lastActivity: ImportedActivity?
     @State private var importedCount = 0
     @State private var working = false
@@ -47,11 +49,7 @@ struct IntegrationsScreen: View {
             Text("Corridas e outros treinos do relógio entram no Diário e dão XP. Não contam para a meta da semana.")
                 .htsTextStyle(.body).foregroundStyle(Color.hts.greyApp)
             HTSButton("Conectar Garmin", kind: .garmin) {
-                Task {
-                    working = true
-                    message = Self.message(await app.connectGarmin())
-                    working = false
-                }
+                Task { await connect() }
             }
             .disabled(working)
         }
@@ -96,6 +94,31 @@ struct IntegrationsScreen: View {
         }
     }
 
+    /// The Garmin page in a web authentication session; the API's callback brings the outcome back.
+    private func connect() async {
+        working = true
+        defer { working = false }
+        message = nil
+        switch await app.garminLoginPage() {
+        case .failure(let error):
+            message = Self.message(error)
+        case .success(let page):
+            do {
+                let back = try await webAuthenticationSession.authenticate(
+                    using: page, callbackURLScheme: GarminLogin.callbackScheme)
+                switch GarminLogin.status(from: back) {
+                case .connected: await app.loadIntegrations()
+                case .denied: message = "Conexão cancelada no Garmin."
+                case .failed: message = "Não foi possível conectar ao Garmin. Tente de novo."
+                }
+            } catch ASWebAuthenticationSessionError.canceledLogin {
+                // Closed by the athlete: nothing to say.
+            } catch {
+                message = "Não foi possível abrir o login do Garmin."
+            }
+        }
+    }
+
     private func field(_ label: LocalizedStringKey, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: HTSSpacing.space1) {
             Text(label).htsTextStyle(.label).foregroundStyle(Color.hts.grey)
@@ -106,7 +129,7 @@ struct IntegrationsScreen: View {
     private static func message(_ error: AppModel.IntegrationError?) -> LocalizedStringKey? {
         switch error {
         case nil: nil
-        case .unavailable: "A conexão com o Garmin ainda não foi liberada."
+        case .unavailable: "A conexão com o Garmin ainda não está configurada no servidor."
         case .offline: "Sem conexão. Tente de novo com internet."
         case .other: "Não foi possível falar com o servidor. Tente de novo."
         }
