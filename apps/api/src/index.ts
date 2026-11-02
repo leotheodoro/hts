@@ -9,7 +9,12 @@ const { db } = createDb(env.DATABASE_URL);
 const app = createApp({
   db,
   storage: s3Storage(env),
-  garmin: { pushSecret: env.GARMIN_PUSH_SECRET },
+  garmin: {
+    pushSecret: env.GARMIN_PUSH_SECRET,
+    clientId: env.GARMIN_CLIENT_ID,
+    clientSecret: env.GARMIN_CLIENT_SECRET,
+    redirectUri: env.GARMIN_REDIRECT_URI,
+  },
 });
 
 serve({ fetch: app.fetch, port: env.PORT, hostname: "0.0.0.0" }, (info) => {

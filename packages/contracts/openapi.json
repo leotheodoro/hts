@@ -884,7 +884,7 @@
             }
           },
           "503": {
-            "description": "garmin_unavailable: the Garmin access is not approved yet",
+            "description": "garmin_unavailable: the Garmin client is not configured on the server",
             "content": {
               "application/json": {
                 "schema": {

@@ -11,6 +11,11 @@ const EnvSchema = z.object({
   S3_BUCKET: z.string().optional(),
   /** Secret path segment of the Garmin push URL (#163). Optional: without it, the push route answers 404. */
   GARMIN_PUSH_SECRET: z.string().optional(),
+  /** Garmin app credentials (#168). Without them, "Conectar Garmin" answers 503. */
+  GARMIN_CLIENT_ID: z.string().optional(),
+  GARMIN_CLIENT_SECRET: z.string().optional(),
+  /** Must match the OAuth redirect URL registered on the Garmin app exactly. */
+  GARMIN_REDIRECT_URI: z.url().default("https://api.hardtosubmit.com/integrations/garmin/callback"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

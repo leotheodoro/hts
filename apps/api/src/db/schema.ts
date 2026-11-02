@@ -85,7 +85,12 @@ export const authSession = pgTable("auth_session", {
 });
 
 /** Tables that live only on the server: left out of the SQLite mirror (db-schema.json) and of sync. */
-export const SERVER_ONLY_TABLES = ["account", "auth_session", "integration_connection"];
+export const SERVER_ONLY_TABLES = [
+  "account",
+  "auth_session",
+  "integration_connection",
+  "oauth_state",
+];
 
 const owned = () => ({
   id: uuid("id").primaryKey(),
@@ -409,6 +414,20 @@ export const integrationConnection = pgTable(
     uniqueIndex("integration_connection_account_provider_idx").on(t.accountId, t.provider),
   ],
 );
+
+/**
+ * A login with another platform in progress (OAuth2 PKCE, #168): the `state` sent to the platform and the code
+ * verifier, kept on the server between "Conectar" and the callback. Server only; valid for 10 minutes.
+ */
+export const oauthState = pgTable("oauth_state", {
+  state: text("state").primaryKey(),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => account.id),
+  provider: text("provider").notNull(),
+  codeVerifier: text("code_verifier").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export type Athlete = typeof athlete.$inferSelect;
 export type NewAthlete = typeof athlete.$inferInsert;

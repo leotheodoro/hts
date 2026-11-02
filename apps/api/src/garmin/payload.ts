@@ -61,3 +61,13 @@ export function parseGarminActivities(body: unknown): GarminActivity[] {
     ];
   });
 }
+
+const DeregistrationsSchema = z.object({
+  deregistrations: z.array(z.object({ userId: z.string() }).passthrough()),
+});
+
+/** Garmin users who removed their consent in Garmin Connect (the Deregistrations endpoint). */
+export function parseGarminDeregistrations(body: unknown): string[] {
+  const parsed = DeregistrationsSchema.safeParse(body);
+  return parsed.success ? parsed.data.deregistrations.map((d) => d.userId) : [];
+}

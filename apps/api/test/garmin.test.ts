@@ -112,6 +112,21 @@ describe("Garmin push", () => {
     expect(row?.deletedAt).not.toBeNull();
   });
 
+  it("a deregistration removes the connection", async () => {
+    const leo = await connected();
+    const res = await send({ deregistrations: [{ userId: leo.garminUser }] });
+    expect(res.status).toBe(200);
+    const rows = await db
+      .select()
+      .from(integrationConnection)
+      .where(eq(integrationConnection.externalUserId, leo.garminUser));
+    expect(rows).toEqual([]);
+    expect(await (await send(push(leo.garminUser, `s-${uuidv7()}`))).json()).toEqual({
+      imported: 0,
+      ignored: 1,
+    });
+  });
+
   it("wrong secret answers 404", async () => {
     expect((await send(push("x", "y"), "wrong")).status).toBe(404);
     const unconfigured = createApp({ db });
