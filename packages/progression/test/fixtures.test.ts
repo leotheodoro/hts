@@ -61,7 +61,7 @@ describe("progressHistory", () => {
     ProgressHistory
   >("progress-history.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
-    expect(progressHistory(input.sessions, undefined, input.activities)).toEqual(expected);
+    expect(progressHistory(input.sessions, input.activities)).toEqual(expected);
   });
 });
 
@@ -85,7 +85,7 @@ describe("attributeLevels", () => {
     Record<Attribute, { xp: number; level: number }>
   >("attribute-levels.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
-    expect(attributeLevels(input.sets, undefined, input.activities)).toEqual(expected);
+    expect(attributeLevels(input.sets, input.activities)).toEqual(expected);
   });
 });
 

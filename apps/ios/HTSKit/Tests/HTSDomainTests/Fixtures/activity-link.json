@@ -103,6 +103,28 @@
       "expected": {
         "linked": false
       }
+    },
+    {
+      "name": "spanning two workouts counts both overlaps",
+      "input": {
+        "activity": {
+          "startedAt": "2026-11-02T10:10:00.000Z",
+          "durationSeconds": 3600
+        },
+        "sessions": [
+          {
+            "startedAt": "2026-11-02T10:00:00.000Z",
+            "finishedAt": "2026-11-02T10:30:00.000Z"
+          },
+          {
+            "startedAt": "2026-11-02T10:40:00.000Z",
+            "finishedAt": "2026-11-02T11:10:00.000Z"
+          }
+        ]
+      },
+      "expected": {
+        "linked": true
+      }
     }
   ]
 }

@@ -137,8 +137,8 @@ export interface HistoryActivity {
  */
 export function progressHistory(
   sessions: HistorySession[],
-  r: ProgressionRules = rules,
   activities: HistoryActivity[] = [],
+  r: ProgressionRules = rules,
 ): ProgressHistory {
   const best = new Map<string, bigint>();
   const result: SessionProgress[] = [];
@@ -335,8 +335,8 @@ export interface AttributeSet {
  */
 export function attributeLevels(
   sets: AttributeSet[],
-  r: ProgressionRules = rules,
   activities: { attributes: Attribute[]; attributeXp: number }[] = [],
+  r: ProgressionRules = rules,
 ): Record<Attribute, { xp: number; level: number }> {
   const xp = Object.fromEntries(ATTRIBUTES.map((a) => [a, 0])) as Record<Attribute, number>;
   for (const set of sets) {

@@ -1,6 +1,7 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { and, eq, or } from "drizzle-orm";
+import { bodyLimit } from "hono/body-limit";
 import { v7 as uuidv7 } from "uuid";
 import type { AppEnv } from "../auth/middleware.js";
 import type { Db } from "../db/client.js";
@@ -33,6 +34,15 @@ export interface GarminConfig {
 /** Where the callback sends the app back (ASWebAuthenticationSession listens for this scheme). */
 const APP_CALLBACK = "hardtosubmit://integrations/garmin";
 const STATE_TTL_MS = 10 * 60_000;
+/** Far above a real push (a few summaries of a few hundred bytes each). */
+const PUSH_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Compares the push secret in constant time, so its length and prefix do not leak through timing. */
+function sameSecret(given: string, expected: string): boolean {
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 const oauthConfig = (garmin: GarminConfig): GarminOAuthConfig | null =>
   garmin.clientId && garmin.clientSecret && garmin.redirectUri
@@ -213,11 +223,16 @@ export function integrationRoutes(db: Db, garmin: GarminConfig = {}) {
   });
   // Outside /v1: Garmin calls it without a session, so the secret path segment is what lets it in. Not in
   // the OpenAPI document, since the app never calls it.
-  routes.post("/integrations/garmin/push/:secret", async (c) => {
-    if (!garmin.pushSecret || c.req.param("secret") !== garmin.pushSecret) return c.notFound();
-    const body = await c.req.json().catch(() => null);
-    await removeGarminUsers(db, parseGarminDeregistrations(body));
-    return c.json(await importGarminActivities(db, parseGarminActivities(body)), 200);
-  });
+  routes.post(
+    "/integrations/garmin/push/:secret",
+    bodyLimit({ maxSize: PUSH_MAX_BYTES, onError: (c) => c.json({ error: "too_large" }, 413) }),
+    async (c) => {
+      if (!garmin.pushSecret || !sameSecret(c.req.param("secret"), garmin.pushSecret))
+        return c.notFound();
+      const body = await c.req.json().catch(() => null);
+      await removeGarminUsers(db, parseGarminDeregistrations(body));
+      return c.json(await importGarminActivities(db, parseGarminActivities(body)), 200);
+    },
+  );
   return routes;
 }

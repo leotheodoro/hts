@@ -11,7 +11,7 @@ const ActivitySchema = z.object({
   startTimeInSeconds: z.number().int(),
   durationInSeconds: z.number().int().nonnegative(),
   distanceInMeters: z.number().nonnegative().optional(),
-  averageHeartRateInBeatsPerMinute: z.number().int().positive().optional(),
+  averageHeartRateInBeatsPerMinute: z.number().optional(),
   activeKilocalories: z.number().int().nonnegative().optional(),
   /** A multisport activity: its parts arrive as their own summaries, so it does not count itself. */
   isParent: z.boolean().optional(),
@@ -35,6 +35,10 @@ export interface GarminActivity {
   isParent: boolean;
 }
 
+/** A sensor glitch must not drop the activity: an impossible average heart rate is left out. */
+const heartRate = (value: number | undefined) =>
+  value !== undefined && Number.isInteger(value) && value > 0 && value <= 250 ? value : null;
+
 /** The activities of one push. Items that do not parse are skipped, so one bad item never drops the rest. */
 export function parseGarminActivities(body: unknown): GarminActivity[] {
   const push = PushSchema.safeParse(body);
@@ -53,7 +57,7 @@ export function parseGarminActivities(body: unknown): GarminActivity[] {
         startedAt: new Date(a.startTimeInSeconds * 1000),
         durationSeconds: a.durationInSeconds,
         distanceMeters: a.distanceInMeters ?? null,
-        averageHeartRate: a.averageHeartRateInBeatsPerMinute ?? null,
+        averageHeartRate: heartRate(a.averageHeartRateInBeatsPerMinute),
         calories: a.activeKilocalories ?? null,
         isParent: a.isParent ?? false,
       },

@@ -130,6 +130,35 @@ describe("Garmin push", () => {
     expect(rows.map((r) => r.activityType)).toEqual(["CYCLING"]);
   });
 
+  it("a summary owned by another athlete is not counted", async () => {
+    const owner = await connected();
+    const other = await connected();
+    const summary = `s-${uuidv7()}`;
+    await send(push(owner.garminUser, summary));
+    const res = await send(push(other.garminUser, summary, { durationInSeconds: 60 }));
+    expect(await res.json()).toEqual({ imported: 0, ignored: 1 });
+    expect((await activitiesOf(owner.athleteId))[0]?.durationSeconds).toBe(2400);
+    const [connection] = await db
+      .select()
+      .from(integrationConnection)
+      .where(eq(integrationConnection.externalUserId, other.garminUser));
+    expect(connection?.lastActivityAt).toBeNull();
+  });
+
+  it("an impossible heart rate is dropped and the activity kept", async () => {
+    const leo = await connected();
+    const res = await send(
+      push(leo.garminUser, `s-${uuidv7()}`, { averageHeartRateInBeatsPerMinute: 40_000 }),
+    );
+    expect(await res.json()).toEqual({ imported: 1, ignored: 0 });
+    expect((await activitiesOf(leo.athleteId))[0]?.averageHeartRate).toBeNull();
+  });
+
+  it("a push over the size limit is refused", async () => {
+    const res = await send({ activities: [], padding: "x".repeat(6 * 1024 * 1024) });
+    expect(res.status).toBe(413);
+  });
+
   it("a deregistration removes the connection", async () => {
     const leo = await connected();
     const res = await send({ deregistrations: [{ userId: leo.garminUser }] });
