@@ -57,7 +57,9 @@ const iso = (ms: number) => new Date(ms).toISOString();
 
 /** A device-side snapshot: one athlete, plan and session, as the app sends it. */
 function deviceRows(athleteId: string) {
-  const t = Date.UTC(2026, 10, 2, 12);
+  // Ahead of the server's clock, as a device edit made after the account was created: a fixed date passed on
+  // 2026-11-02 and made the server's rows newer, so last write wins rejected the device's.
+  const t = Math.floor(Date.now() / 1000) * 1000 + 86_400_000;
   const base = { athlete_id: athleteId, created_at: iso(t), updated_at: iso(t), deleted_at: null };
   const ids = {
     season: uuidv7(),
