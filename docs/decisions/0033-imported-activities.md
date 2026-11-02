@@ -12,3 +12,5 @@ Data: 2026-10-31 · Status: aceita (spec `docs/superpowers/specs/2026-10-31-garm
 ## Consequências
 - A atividade é um extra, como a Manutenção (0030): dá XP, nível, patente e atributos, e fica fora da meta semanal, da sequência e dos títulos.
 - `imported_activity` é só de puxar: o app não a envia no push, e a API ignora linhas dessa tabela num push (#176). Só o import do Garmin escreve nela.
+- O vínculo usa só treinos **concluídos**. Uma atividade gravada durante um treino ainda em andamento aparece como card próprio, com XP, até o treino ser concluído; aí ela passa para dentro dele e deixa de contar sozinha. Como o relógio costuma sincronizar depois do treino, o caso é raro e se corrige sozinho (#178).
+- Uma atividade que cruza dois treinos seguidos é vinculada pela soma das sobreposições e aparece no treino que ela mais cruza.

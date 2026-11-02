@@ -131,14 +131,15 @@ private struct ActivityRow: View {
                     Text(verbatim: LocalDate(entry.activity.startedAt, in: .current).short)
                         .htsTextStyle(.dataSm).foregroundStyle(Color.hts.grey)
                     Spacer()
-                    Text(verbatim: "+\(entry.xp.xp) XP").htsTextStyle(.dataSm)
+                    Text(verbatim: "+\(entry.xp.xp) XP").htsTextStyle(.dataSm).monospacedDigit()
                 }
                 HStack {
                     Text(entry.activity.typeLabel).htsTextStyle(.uiSection)
                     Spacer()
                     GarminBadge()
                 }
-                Text(verbatim: entry.activity.summary()).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                Text(verbatim: entry.activity.summary()).htsTextStyle(.caption).monospacedDigit()
+                    .foregroundStyle(Color.hts.greyApp)
                 if !entry.xp.attributes.isEmpty { AttributeBadges(attributes: entry.xp.attributes) }
             }
         }
