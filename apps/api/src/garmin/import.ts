@@ -7,7 +7,7 @@ import type { GarminActivity } from "./payload.js";
 /**
  * Writes pushed activities into the athlete of the connected account (docs/decisions/0033). A repeated
  * summary updates its row (unique source + external id); an unknown Garmin user is ignored, so Garmin does
- * not keep retrying. Each write stamps `server_updated_at`, which the app's next pull picks up.
+ * not keep retrying. A multisport parent is ignored: its parts arrive as their own summaries. Each write stamps `server_updated_at`, which the app's next pull picks up.
  */
 export async function importGarminActivities(
   db: Db,
@@ -16,6 +16,11 @@ export async function importGarminActivities(
   let imported = 0;
   let ignored = 0;
   for (const activity of activities) {
+    // Its parts (swim, bike, run) arrive too; counting the whole would count the time twice.
+    if (activity.isParent) {
+      ignored += 1;
+      continue;
+    }
     const [owner] = await db
       .select({ connectionId: integrationConnection.id, athleteId: account.athleteId })
       .from(integrationConnection)
@@ -39,7 +44,6 @@ export async function importGarminActivities(
       distanceMeters: activity.distanceMeters === null ? null : activity.distanceMeters.toFixed(2),
       averageHeartRate: activity.averageHeartRate,
       calories: activity.calories,
-      deletedAt: activity.deleted ? now : null,
       updatedAt: now,
       serverUpdatedAt: now,
     };
@@ -58,14 +62,12 @@ export async function importGarminActivities(
         // A summary id never moves to another athlete.
         setWhere: eq(importedActivity.athleteId, owner.athleteId),
       });
-    if (!activity.deleted) {
-      await db
-        .update(integrationConnection)
-        .set({
-          lastActivityAt: sql`greatest(${integrationConnection.lastActivityAt}, ${activity.startedAt.toISOString()}::timestamptz)`,
-        })
-        .where(eq(integrationConnection.id, owner.connectionId));
-    }
+    await db
+      .update(integrationConnection)
+      .set({
+        lastActivityAt: sql`greatest(${integrationConnection.lastActivityAt}, ${activity.startedAt.toISOString()}::timestamptz)`,
+      })
+      .where(eq(integrationConnection.id, owner.connectionId));
     imported += 1;
   }
   return { imported, ignored };

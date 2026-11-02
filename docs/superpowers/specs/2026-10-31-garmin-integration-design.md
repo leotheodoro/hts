@@ -69,7 +69,7 @@ O login precisa de internet. Sem conexão, o botão mostra a mensagem de erro de
 - O Garmin chama nosso endpoint de push a cada atividade nova. A API confere de que conta Garmin ela é, acha o atleta e grava a atividade.
 - A atividade chega ao aparelho pela sync normal (pull), como qualquer outra linha do atleta.
 - Atividade repetida (o mesmo id do Garmin) atualiza a existente; nunca cria outra.
-- Atividade apagada no Garmin, se o push avisar a exclusão, recebe exclusão lógica no HTS.
+- O push do Garmin não avisa exclusões (Activity API 2.1): uma atividade apagada no Garmin continua no HTS. Uma atividade multiesporte chega como "pai" e partes; o pai não conta (#183).
 
 ### Desconectar
 
@@ -127,7 +127,7 @@ O login precisa de internet. Sem conexão, o botão mostra a mensagem de erro de
 ## Escolhas do Claude (para o Leo conferir)
 
 - Atividade anterior à conexão não entra (limite do Starter).
-- Atividade apagada no Garmin recebe exclusão lógica no HTS.
+- Atividade apagada no Garmin continua no HTS: o push não avisa exclusões (especificação oficial, #183).
 - Vínculo quando o cruzamento de horário passa da metade da duração da atividade.
 - Desconectar mantém as atividades já importadas.
 - Os totais do topo do Diário continuam contando só os treinos do HTS.

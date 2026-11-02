@@ -103,13 +103,31 @@ describe("Garmin push", () => {
     expect(await res.json()).toEqual({ imported: 0, ignored: 1 });
   });
 
-  it("a deletion soft-deletes", async () => {
+  it("a multisport parent does not count, its parts do", async () => {
     const leo = await connected();
-    const summary = `s-${uuidv7()}`;
-    await send(push(leo.garminUser, summary));
-    await send(push(leo.garminUser, summary, { deleted: true }));
-    const [row] = await activitiesOf(leo.athleteId);
-    expect(row?.deletedAt).not.toBeNull();
+    const parent = `p-${uuidv7()}`;
+    const [base] = payload.activities;
+    const res = await send({
+      activities: [
+        {
+          ...base,
+          userId: leo.garminUser,
+          summaryId: parent,
+          activityType: "MULTI_SPORT",
+          isParent: true,
+        },
+        {
+          ...base,
+          userId: leo.garminUser,
+          summaryId: `c-${uuidv7()}`,
+          activityType: "CYCLING",
+          parentSummaryId: parent,
+        },
+      ],
+    });
+    expect(await res.json()).toEqual({ imported: 1, ignored: 1 });
+    const rows = await activitiesOf(leo.athleteId);
+    expect(rows.map((r) => r.activityType)).toEqual(["CYCLING"]);
   });
 
   it("a deregistration removes the connection", async () => {
