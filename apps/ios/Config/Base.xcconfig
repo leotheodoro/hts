@@ -5,7 +5,7 @@ HTS_BUNDLE_ID = com.hardtosubmit.app
 HTS_DEVELOPMENT_TEAM =
 
 // Production API on Render, with the Neon database (#20).
-HTS_PRODUCTION_API_BASE_URL = https:/$()/hts-api-nrrk.onrender.com
+HTS_PRODUCTION_API_BASE_URL = https:/$()/api.hardtosubmit.com
 
 // The simulator shares the Mac's network, so localhost reaches `pnpm dev`. A physical iPhone uses production;
 // to test it against `pnpm dev`, set HTS_DEVICE_API_BASE_URL to the Mac's address in Local.xcconfig.

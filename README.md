@@ -62,7 +62,7 @@ Funciona com um Apple ID gratuito (Personal Team). Nesse caso o app expira em 7 
    make ios-device                          # ou DEVICE="Nome do iPhone" make ios-device
    ```
    Ou rode pelo Xcode escolhendo o iPhone como destino. Na primeira abertura, o iOS pede para confiar no desenvolvedor em Ajustes > Geral > VPN e Gerenciamento de Dispositivo.
-5. O iPhone sincroniza com a API de produção (Render + Neon, `https://hts-api-nrrk.onrender.com`). `HTS_API_TOKEN` no `Local.xcconfig` precisa ser o mesmo `API_TOKEN` do serviço no Render. Para testar contra o `pnpm dev`, defina `HTS_DEVICE_API_BASE_URL` com o endereço do Mac, deixe o iPhone na mesma Wi-Fi e aceite o pedido de acesso à rede local.
+5. O iPhone sincroniza com a API de produção (Render + Neon, `https://api.hardtosubmit.com`, um CNAME para `hts-api-nrrk.onrender.com`). O acesso é pelo login da conta (docs/decisions/0031). Para testar contra o `pnpm dev`, defina `HTS_DEVICE_API_BASE_URL` com o endereço do Mac, deixe o iPhone na mesma Wi-Fi e aceite o pedido de acesso à rede local.
 
 O simulador usa `localhost`; builds para o aparelho usam `HTS_DEVICE_API_BASE_URL` (por padrão, produção) e o Release usa sempre produção. Configurações de build ficam em `apps/ios/Config/*.xcconfig`.
 
