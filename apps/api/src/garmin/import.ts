@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Db } from "../db/client.js";
 import { account, importedActivity, integrationConnection } from "../db/schema.js";
@@ -69,4 +69,17 @@ export async function importGarminActivities(
     imported += 1;
   }
   return { imported, ignored };
+}
+
+/** Forgets the connections of Garmin users who removed their consent; their imported activities stay. */
+export async function removeGarminUsers(db: Db, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+  await db
+    .delete(integrationConnection)
+    .where(
+      and(
+        eq(integrationConnection.provider, "garmin"),
+        inArray(integrationConnection.externalUserId, userIds),
+      ),
+    );
 }

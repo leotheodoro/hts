@@ -29,12 +29,30 @@ import Testing
         #expect(app.garminStatus?.lastActivityAt == last)
     }
 
-    @Test func connectReportsUnavailableBeforeApproval() async throws {
+    @Test func connectReportsUnavailableWithoutTheClient() async throws {
         let remote = FakeRemote(login: .success(AuthTests.session))
         let app = try await signedIn(remote)
-        #expect(await app.connectGarmin() == .unavailable)
+        #expect(await app.garminLoginPage() == .failure(.unavailable))
         remote.connectResult = .failure(URLError(.notConnectedToInternet))
-        #expect(await app.connectGarmin() == .offline)
+        #expect(await app.garminLoginPage() == .failure(.offline))
+    }
+
+    @Test func connectAnswersTheGarminLoginPage() async throws {
+        let remote = FakeRemote(login: .success(AuthTests.session))
+        let page = URL(string: "https://connect.garmin.com/oauth2Confirm?state=s")!
+        remote.connectResult = .success(page)
+        let app = try await signedIn(remote)
+        #expect(await app.garminLoginPage() == .success(page))
+    }
+
+    @Test func readsTheStatusTheLoginSendsBack() {
+        let back = { (status: String) in
+            GarminLogin.status(from: URL(string: "hardtosubmit://integrations/garmin?status=\(status)")!)
+        }
+        #expect(back("connected") == .connected)
+        #expect(back("denied") == .denied)
+        #expect(back("error") == .failed)
+        #expect(GarminLogin.status(from: URL(string: "hardtosubmit://integrations/garmin")!) == .failed)
     }
 
     @Test func disconnectClearsTheStatus() async throws {

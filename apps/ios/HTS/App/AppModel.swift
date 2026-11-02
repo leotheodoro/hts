@@ -36,8 +36,8 @@ final class AppModel {
         case other(String)
     }
 
-    enum IntegrationError: Equatable {
-        /// The Garmin access is not approved yet (#168).
+    enum IntegrationError: Error, Equatable {
+        /// The server has no Garmin client configured.
         case unavailable
         case offline
         case other(String)
@@ -222,16 +222,14 @@ final class AppModel {
         }
     }
 
-    /// Starts the Garmin login. Until the access is approved the API answers that it is unavailable; the login page
-    /// itself arrives with #168.
-    func connectGarmin() async -> IntegrationError? {
-        guard let session, let client = remote(session.token) else { return .offline }
+    /// The Garmin login page for this account (OAuth2 PKCE, #168). The screen opens it in a web authentication
+    /// session; the API keeps the tokens and sends the app back with the outcome (`GarminLogin`).
+    func garminLoginPage() async -> Result<URL, IntegrationError> {
+        guard let session, let client = remote(session.token) else { return .failure(.offline) }
         do {
-            _ = try await client.connectGarmin()
-            await loadIntegrations()
-            return nil
+            return .success(try await client.connectGarmin())
         } catch {
-            return Self.integrationError(error)
+            return .failure(Self.integrationError(error))
         }
     }
 
