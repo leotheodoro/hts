@@ -73,3 +73,21 @@ extension ProgressServiceTests {
         #expect(completion.attributesAfter[.conditioning]?.xp == 100)
     }
 }
+
+extension ProgressServiceTests {
+    /// The progress page compares the attributes now with 30 days ago (#195): only what started before the date.
+    @Test func attributeLevelsAsOfADateCountOnlyEarlierRecords() async throws {
+        let (database, athlete, _, plans) = try await setUp()
+        try await workout(database, plans[0], kg: 60, day: 0)
+        try await workout(database, plans[0], kg: 60, day: 40)
+        try await activity(database, athlete, at: t0.addingTimeInterval(86_400), seconds: 2400)
+        try await activity(database, athlete, at: t0.addingTimeInterval(38 * 86_400), seconds: 2400)
+        let service = ProgressService(database)
+        let then = try await service.attributeLevels(athleteId: athlete.id, asOf: t0.addingTimeInterval(35 * 86_400))
+        #expect(then[.strength]?.xp == 30)
+        #expect(then[.conditioning]?.xp == 100)
+        let now = try await service.attributeLevels(athleteId: athlete.id)
+        #expect(now[.strength]?.xp == 60)
+        #expect(now[.conditioning]?.xp == 200)
+    }
+}
