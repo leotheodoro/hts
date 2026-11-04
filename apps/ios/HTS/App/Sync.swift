@@ -7,6 +7,7 @@ import HTSPersistence
 protocol RemoteAPI: SyncTransport {
     func login(identifier: String, password: String) async throws -> AuthSession
     func logout() async throws
+    func me() async throws -> Account
     func updateAccount(name: String?, username: String?, email: String?) async throws -> Account
     func changePassword(current: String, new: String) async throws
     func uploadAvatar(jpeg: Data) async throws -> Account

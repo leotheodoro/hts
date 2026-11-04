@@ -389,6 +389,7 @@ final class AppModel {
             if let id = athlete?.id, let refreshed = try await AthleteRepository(database).athlete(id: id) {
                 athlete = refreshed
             }
+            await refreshAccount(session, client: client)
         } catch APIError.unauthorized {
             // Only the session that made the request: a late answer must not sign out a newer login.
             if self.session?.token == session.token { signOutLocally() }
@@ -403,6 +404,18 @@ final class AppModel {
                 }
             syncState = .failed(message)
         }
+    }
+
+    /// The account from the API: the photo link is signed for a few hours, so each sync brings a fresh one (#187).
+    /// A failure keeps the saved account.
+    private func refreshAccount(_ session: AuthSession, client: any RemoteAPI) async {
+        guard let account = try? await client.me(), self.session?.token == session.token,
+            let current = self.session, account != current.account
+        else { return }
+        var updated = current
+        updated.account = account
+        try? sessionStore.save(updated)
+        authState = .signedIn(updated)
     }
 
     func updateAthlete(_ athlete: Athlete) async {

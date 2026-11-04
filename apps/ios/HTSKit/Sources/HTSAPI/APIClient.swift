@@ -257,6 +257,15 @@ public struct APIClient: Sendable {
         }
     }
 
+    /// The session's account, with a freshly signed photo link (it expires after a few hours, #187).
+    public func me() async throws -> Account {
+        switch try await client.me() {
+        case .ok(let ok): return try Self.account(try ok.body.json.account)
+        case .unauthorized: throw APIError.unauthorized
+        case .undocumented(let status, _): throw APIError.unexpectedStatus(status)
+        }
+    }
+
     // MARK: Integrations (spec 2026-10-31)
 
     public func integrations() async throws -> [IntegrationStatus] {

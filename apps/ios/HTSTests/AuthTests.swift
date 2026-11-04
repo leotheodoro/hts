@@ -36,6 +36,13 @@ final class FakeRemote: RemoteAPI, @unchecked Sendable {
 
     func changePassword(current: String, new: String) async throws { try passwordResult.get() }
 
+    var meResult: Result<Account, any Error>?
+
+    func me() async throws -> Account {
+        guard let meResult else { throw APIError.invalidResponse }
+        return try meResult.get()
+    }
+
     var avatarResult: Result<Account, any Error> = .failure(APIError.storageUnavailable)
     private(set) var uploaded: Data?
 
@@ -283,5 +290,20 @@ final class Box<Value>: @unchecked Sendable {
         #expect(store.load()?.account.avatarUrl == "https://b.test/a.jpg")
         remote.avatarResult = .failure(APIError.storageUnavailable)
         #expect(await app.uploadAvatar(jpeg: Data([0xFF])) == .photoUnavailable)
+    }
+
+    /// The photo link is signed for a few hours (#187): every sync brings a fresh one into the session.
+    @Test func aSyncRenewsThePhotoLink() async throws {
+        let remote = FakeRemote(login: .success(Self.session), pull: .success(Self.pulledAthlete))
+        let store = InMemorySessionStore(Self.session)
+        let app = try model(remote, store: store)
+        await app.start()
+        var fresh = Self.session.account
+        fresh.avatarUrl = "https://b.test/a.jpg?signature=new"
+        remote.meResult = .success(fresh)
+        await app.sync()
+        #expect(app.session?.account.avatarUrl == "https://b.test/a.jpg?signature=new")
+        #expect(store.load()?.account.avatarUrl == "https://b.test/a.jpg?signature=new")
+        #expect(store.load()?.token == Self.session.token)
     }
 }
