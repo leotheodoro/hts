@@ -7,7 +7,7 @@ services:
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: .
     # free: $0, sleeps after 15 min idle (first request ~1 min). starter: $7/month, always on.
-    plan: free
+    plan: starter
     region: virginia
     branch: main
     autoDeploy: true

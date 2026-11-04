@@ -10,6 +10,8 @@ A API roda no Render como serviço web Docker (`render.yaml`, Blueprint) a parti
 ## Custo
 - Render `free`: $0, o serviço dorme após 15 min sem uso e a primeira chamada leva cerca de 1 min. Serve enquanto só o Diagnóstico e a sync usam a API.
 - Render `starter`: $7/mês, sempre ligado. Trocar em `plan:` no `render.yaml`.
+
+Em 2026-11-04 a API passou para o `starter` (#191). No `free`, a primeira chamada depois do sono levava 33 s, mais que os 30 s que o Garmin espera por um push e mais que os 10 s do app (#188).
 - Neon free: 0,5 GB, com restauração point-in-time de 24 h.
 
 ## Consequências
