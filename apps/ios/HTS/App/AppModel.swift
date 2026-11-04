@@ -44,8 +44,11 @@ final class AppModel {
     }
 
     private(set) var authState: AuthState = .checking
-    /// Garmin on Perfil > Integrações; nil until loaded.
+    /// Garmin on Perfil > Integrações; nil until the API answered once. A failed check keeps the last answer.
     private(set) var garminStatus: IntegrationStatus?
+    /// Why the last check of the integrations failed; nil when it worked. Unknown is not "disconnected" (#188).
+    private(set) var integrationsError: IntegrationError?
+    private(set) var checkingIntegrations = false
 
     var session: AuthSession? {
         if case .signedIn(let session) = authState { session } else { nil }
@@ -214,11 +217,24 @@ final class AppModel {
         }
     }
 
-    /// Whether the account is connected to Garmin and when the last activity arrived (spec 2026-10-31).
+    /// Whether the account is connected to Garmin and when the last activity arrived (spec 2026-10-31). The API sleeps
+    /// when idle and takes ~30 s to answer the first call, longer than one request waits: a few attempts cover it.
     func loadIntegrations() async {
         guard let session, let client = remote(session.token) else { return }
-        if let garmin = try? await client.integrations().first(where: { $0.provider == "garmin" }) {
-            garminStatus = garmin
+        checkingIntegrations = true
+        defer { checkingIntegrations = false }
+        for attempt in 1...4 {
+            do {
+                if let garmin = try await client.integrations().first(where: { $0.provider == "garmin" }) {
+                    garminStatus = garmin
+                }
+                integrationsError = nil
+                return
+            } catch {
+                let failure = Self.integrationError(error)
+                integrationsError = failure
+                guard failure == .offline, attempt < 4 else { return }
+            }
         }
     }
 

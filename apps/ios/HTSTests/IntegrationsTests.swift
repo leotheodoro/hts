@@ -64,4 +64,35 @@ import Testing
         #expect(remote.disconnectCalls == 1)
         #expect(app.garminStatus?.connected == false)
     }
+
+    /// A sleeping API answers after ~30 s (#188): a failed check is unknown, never "disconnected".
+    @Test func aFailedCheckIsNotDisconnected() async throws {
+        let remote = FakeRemote(login: .success(AuthTests.session))
+        remote.integrationsTimeouts = 10
+        let app = try await signedIn(remote)
+        await app.loadIntegrations()
+        #expect(app.garminStatus == nil)
+        #expect(app.integrationsError == .offline)
+    }
+
+    @Test func theCheckRetriesWhileTheAPIWakesUp() async throws {
+        let remote = FakeRemote(login: .success(AuthTests.session))
+        remote.integrationsTimeouts = 2
+        remote.integrationsResult = .success([IntegrationStatus(provider: "garmin", connected: true)])
+        let app = try await signedIn(remote)
+        await app.loadIntegrations()
+        #expect(app.garminStatus?.connected == true)
+        #expect(app.integrationsError == nil)
+        #expect(remote.integrationsCalls == 3)
+    }
+
+    @Test func aFailureKeepsTheLastKnownStatus() async throws {
+        let remote = FakeRemote(login: .success(AuthTests.session))
+        remote.integrationsResult = .success([IntegrationStatus(provider: "garmin", connected: true)])
+        let app = try await signedIn(remote)
+        await app.loadIntegrations()
+        remote.integrationsTimeouts = 10
+        await app.loadIntegrations()
+        #expect(app.garminStatus?.connected == true)
+    }
 }

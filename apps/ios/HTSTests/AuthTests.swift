@@ -57,7 +57,18 @@ final class FakeRemote: RemoteAPI, @unchecked Sendable {
     var connectResult: Result<URL, any Error> = .failure(APIError.garminUnavailable)
     private(set) var disconnectCalls = 0
 
-    func integrations() async throws -> [IntegrationStatus] { try integrationsResult.get() }
+    /// Calls that time out before `integrationsResult` answers, like a sleeping API waking up.
+    var integrationsTimeouts = 0
+    private(set) var integrationsCalls = 0
+
+    func integrations() async throws -> [IntegrationStatus] {
+        integrationsCalls += 1
+        if integrationsTimeouts > 0 {
+            integrationsTimeouts -= 1
+            throw URLError(.timedOut)
+        }
+        return try integrationsResult.get()
+    }
     func connectGarmin() async throws -> URL { try connectResult.get() }
     func disconnectGarmin() async throws { disconnectCalls += 1 }
 

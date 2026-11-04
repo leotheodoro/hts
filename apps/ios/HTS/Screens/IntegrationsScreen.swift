@@ -27,7 +27,11 @@ struct IntegrationsScreen: View {
                             Text("Conectado").htsTextStyle(.label).foregroundStyle(Color.hts.bone)
                         }
                     }
-                    if app.garminStatus?.connected == true { connected } else { disconnected }
+                    if let status = app.garminStatus {
+                        if status.connected { connected } else { disconnected }
+                    } else {
+                        unknown
+                    }
                     if let message {
                         Text(message).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
                     }
@@ -41,6 +45,24 @@ struct IntegrationsScreen: View {
             let activities = (try? await ActivityRepository(database).activities(athleteId: athlete.id)) ?? []
             importedCount = activities.count
             lastActivity = activities.last
+        }
+    }
+
+    /// Not answered yet: never shown as "disconnected", which would invite connecting again (#188).
+    @ViewBuilder private var unknown: some View {
+        if app.integrationsError == nil || app.checkingIntegrations {
+            HStack(spacing: HTSSpacing.space2) {
+                ProgressView().tint(Color.hts.grey)
+                Text("Verificando a conexão…").htsTextStyle(.body).foregroundStyle(Color.hts.greyApp)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                Text("Não foi possível verificar a conexão agora.")
+                    .htsTextStyle(.body).foregroundStyle(Color.hts.greyApp)
+                HTSButton("Tentar de novo", kind: .ghost) {
+                    Task { await app.loadIntegrations() }
+                }
+            }
         }
     }
 
