@@ -31,7 +31,8 @@ struct RootView: View {
     @State private var selection =
         UserDefaults.standard.string(forKey: "HTSInitialTab").flatMap(AppTab.init(rawValue:)) ?? .home
 
-    @State private var homePath: [Route] = []
+    /// `-HTSOpenProgress YES` opens Progresso over the Home (screenshots).
+    @State private var homePath: [Route] = UserDefaults.standard.bool(forKey: "HTSOpenProgress") ? [.progress] : []
     @State private var arcsPath: [Route] = []
     @State private var profilePath: [Route] = []
     /// Bumped when the selected tab is tapped on its first page: that page scrolls to the top (#106).
