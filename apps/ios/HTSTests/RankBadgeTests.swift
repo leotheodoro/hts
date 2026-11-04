@@ -8,14 +8,14 @@ import Testing
 @MainActor
 @Suite struct RankBadgeTests {
     /// The letter's ink, measured on the rendered badge, sits in the middle of it (#193).
-    @Test(arguments: ProgressionRules.bundled.ranks)
-    func theLetterIsCentered(rank: Rank) throws {
+    @Test(arguments: ProgressionRules.bundled.ranks, [false, true])
+    func theLetterIsCentered(rank: Rank, compact: Bool) throws {
         HTSFonts.register()
         let scale: CGFloat = 3
-        let renderer = ImageRenderer(content: RankBadge(rank: rank))
+        let renderer = ImageRenderer(content: RankBadge(rank: rank, compact: compact))
         renderer.scale = scale
         let image = try #require(renderer.cgImage)
-        let ink = try #require(Self.inkBounds(image, margin: Int(6 * scale)))
+        let ink = try #require(Self.inkBounds(image, margin: Int((compact ? 3 : 6) * scale)))
         let dx = (ink.midX - CGFloat(image.width) / 2) / scale
         let dy = (ink.midY - CGFloat(image.height) / 2) / scale
         #expect(abs(dx) <= 1, "letter \(rank.id.rawValue) is \(dx) pt off horizontally")

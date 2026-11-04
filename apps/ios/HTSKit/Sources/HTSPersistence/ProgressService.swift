@@ -134,11 +134,14 @@ public struct ProgressService: Sendable {
     }
 
     /// Level of each attribute from the sets of completed sessions; attributes come from the session snapshot.
-    public func attributeLevels(athleteId: UUID) async throws -> [Attribute: AttributeLevel] {
+    /// With `asOf`, only the sessions and activities that started before it count (the progress page, #195).
+    public func attributeLevels(athleteId: UUID, asOf: Date? = nil) async throws -> [Attribute: AttributeLevel] {
         try await database.writer.read { db in
             let sessions = try Self.completedSessions(athleteId: athleteId, db)
+                .filter { session in asOf.map { session.startedAt < $0 } ?? true }
             let sets = try sessions.flatMap { try Self.attributeSets($0, db) }
             let activities = try entries(athleteId: athleteId, sessions: sessions, db)
+                .filter { entry in asOf.map { entry.activity.startedAt < $0 } ?? true }
             return progression.attributeLevels(sets, activities: Self.attributeXP(activities))
         }
     }

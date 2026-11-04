@@ -115,6 +115,10 @@ public enum HTSOpacity {
     public static let next: CGFloat = 0.55
     /// `black` sobre a foto fora da moldura, no recorte da foto de perfil.
     public static let scrim: CGFloat = 0.7
+    /// Patente ainda não alcançada, depois da próxima, na página Progresso.
+    public static let locked: CGFloat = 0.4
+    /// Área de `khaki` do radar de atributos, na página Progresso.
+    public static let radar: CGFloat = 0.25
 }
 
 /// Família tipográfica, pela chave de tokens.json.

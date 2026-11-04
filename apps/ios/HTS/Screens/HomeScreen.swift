@@ -26,7 +26,16 @@ struct HomeScreen: View {
         }
     }
 
+    /// The whole card opens Progresso (#195).
     private func athleteCard(_ athlete: Athlete, _ model: HomeModel) -> some View {
+        NavigationLink(value: Route.progress) {
+            athleteCardBody(athlete, model)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Abre o progresso")
+    }
+
+    private func athleteCardBody(_ athlete: Athlete, _ model: HomeModel) -> some View {
         NotchCard {
             VStack(alignment: .leading, spacing: HTSSpacing.space4) {
                 HStack(spacing: HTSSpacing.space4) {
@@ -38,6 +47,9 @@ struct HomeScreen: View {
                                 .htsTextStyle(.label).foregroundStyle(Color.hts.grey)
                         }
                     }
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(Color.hts.greyApp)
+                        .accessibilityHidden(true)
                 }
                 if let level = model.levelProgress, let history = model.history {
                     VStack(alignment: .leading, spacing: HTSSpacing.space2) {
