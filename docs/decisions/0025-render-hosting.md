@@ -12,5 +12,7 @@ A API roda no Render como serviço web Docker (`render.yaml`, Blueprint) a parti
 - Render `starter`: $7/mês, sempre ligado. Trocar em `plan:` no `render.yaml`.
 - Neon free: 0,5 GB, com restauração point-in-time de 24 h.
 
+Em 2026-11-04 a API passou para o `starter` (#191). No `free`, a primeira chamada depois do sono levava 33 s, mais que os 30 s que o Garmin espera por um push e mais que os 10 s do app (#188).
+
 ## Consequências
 O CI constrói a imagem Docker em todo PR, para o deploy não quebrar em silêncio.
