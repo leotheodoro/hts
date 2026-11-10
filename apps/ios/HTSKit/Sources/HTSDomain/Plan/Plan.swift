@@ -49,6 +49,8 @@ public struct Arc: Identifiable, Hashable, Sendable, Codable {
     public var position: Int
     /// "Recomeçar contagem": sessions before this instant do not count for the arc.
     public var countResetAt: Date?
+    /// Calendar months (1 to 12) of a monthly arc (#210); nil for every other arc. See `MonthlyArcs`.
+    public var months: [Int]?
     public var createdAt: Date
     public var updatedAt: Date
     public var deletedAt: Date?
@@ -56,7 +58,8 @@ public struct Arc: Identifiable, Hashable, Sendable, Codable {
     public init(
         id: UUID, athleteId: UUID, seasonId: UUID?, name: String, kanji: String? = nil, program: String? = nil,
         kind: ArcKind = .normal, weeks: Int?, startDate: LocalDate?, status: ArcStatus = .queued, position: Int,
-        countResetAt: Date? = nil, createdAt: Date, updatedAt: Date? = nil, deletedAt: Date? = nil
+        countResetAt: Date? = nil, months: [Int]? = nil, createdAt: Date, updatedAt: Date? = nil,
+        deletedAt: Date? = nil
     ) {
         self.id = id
         self.athleteId = athleteId
@@ -70,6 +73,7 @@ public struct Arc: Identifiable, Hashable, Sendable, Codable {
         self.status = status
         self.position = position
         self.countResetAt = countResetAt
+        self.months = months
         self.createdAt = createdAt.roundedToMilliseconds
         self.updatedAt = (updatedAt ?? createdAt).roundedToMilliseconds
         self.deletedAt = deletedAt?.roundedToMilliseconds

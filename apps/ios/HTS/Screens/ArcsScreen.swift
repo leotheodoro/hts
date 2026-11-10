@@ -121,7 +121,9 @@ struct ArcRow: View {
 
     /// The current arc stands out in `blood`; locked arcs are dimmed (#90).
     private var isCurrent: Bool { summary.arc.status == .current && summary.arc.kind != .filler }
-    private var isLocked: Bool { summary.arc.status == .queued && summary.arc.kind != .filler && !upNext }
+    private var isLocked: Bool {
+        summary.arc.status == .queued && summary.arc.kind != .filler && !upNext && !summary.isOpen
+    }
     private var nameColor: Color { isLocked ? Color.hts.bone.opacity(HTSOpacity.next) : Color.hts.bone }
 
     var body: some View {
@@ -155,6 +157,7 @@ struct ArcRow: View {
         if eve { return "A VÉSPERA · SEMANA DA BATALHA" }
         if overdue { return "ATRASADO" }
         if upNext { return "PRÓXIMO" }
+        if summary.isOpen { return "DISPONÍVEL" }
         switch summary.arc.status {
         case .current: return "ATUAL"
         case .queued: return "BLOQUEADO"

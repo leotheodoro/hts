@@ -40,4 +40,34 @@ import Testing
         await model.load()
         #expect(model.start(hasActiveSession: true) == .busy)
     }
+
+    /// An open monthly arc (#210) can start though it is not the current one.
+    @Test func anOpenMonthCanStart() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let season = try await SeasonService(database).season(named: "Base Performance", athleteId: athlete.id)
+        let service = ArcService(database)
+        var plans: [TemplatePlan] = []
+        for name in ["Adaptação", "Janeiro", "Fevereiro"] {
+            let arc = try await service.save(
+                ArcDraft(
+                    name: name, kanji: "試", weeks: 2, startDate: .today, templates: [.init(origin: .new, name: "A")]),
+                athleteId: athlete.id, seasonId: season.id)
+            let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id)?.templates.first)
+            var draft = try #require(try await TemplateService(database).draft(templateId: plan.template.id))
+            draft.blocks = [
+                TemplateDraft.BlockDraft(exercises: [.init(name: "Supino", setsText: "3", targetText: "8")])
+            ]
+            try await TemplateService(database).save(draft)
+            plans.append(plan)
+        }
+        try await database.writer.write { db in
+            try db.execute(sql: "UPDATE arc SET status = 'completed' WHERE name = 'Adaptação'")
+            try db.execute(sql: "UPDATE arc SET months = '[1]', status = 'current' WHERE name = 'Janeiro'")
+            try db.execute(sql: "UPDATE arc SET months = '[2]' WHERE name = 'Fevereiro'")
+        }
+        let model = WorkoutModel(database: database, templateId: plans[2].template.id)
+        await model.load()
+        #expect(model.start(hasActiveSession: false) == .available)
+    }
 }

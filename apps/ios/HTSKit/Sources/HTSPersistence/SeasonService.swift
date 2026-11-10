@@ -65,18 +65,60 @@ public struct SeasonService: Sendable {
                     stamp, stamp, athleteId.sql, seasonId.sql, stamp, athleteId.sql, stamp, athleteId.sql, seasonId.sql,
                     stamp, seasonId.sql,
                 ])
-            try Self.promoteFirstOpenArc(seasonId: seasonId, stamp: stamp, db)
+            try Self.promoteNextArc(seasonId: seasonId, now: now, db)
         }
     }
 
-    /// The first arc of the season that is not completed (and not Manutenção) becomes current.
-    static func promoteFirstOpenArc(seasonId: UUID, stamp: String, _ db: Database) throws {
-        try db.execute(
-            sql: """
-                UPDATE arc SET status = 'current', updated_at = ?
-                WHERE id = (
-                    SELECT id FROM arc WHERE season_id = ? AND status = 'queued' AND kind != 'filler'
-                    AND deleted_at IS NULL ORDER BY position LIMIT 1)
-                """, arguments: [stamp, seasonId.sql])
+    /// In a season past its initial arcs, the current arc follows the calendar month (#210). Run when the app
+    /// shows the plan; nothing changes outside the monthly phase or when the right arc is already current.
+    public func alignMonthlyArc(athleteId: UUID, now: Date = .now) async throws {
+        try await database.writer.write { db in
+            guard
+                let seasonId = try String.fetchOne(
+                    db, sql: "SELECT id FROM season WHERE athlete_id = ? AND active AND deleted_at IS NULL",
+                    arguments: [athleteId.sql]
+                ).flatMap(UUID.init(uuidString:))
+            else { return }
+            let arcs = try Self.liveArcs(seasonId: seasonId, db)
+            guard let target = MonthlyArcs.current(in: arcs, month: Self.month(of: now)), target.status != .current
+            else { return }
+            try Self.makeCurrent(target, among: arcs, now: now, db)
+        }
     }
+
+    /// The arc that comes next in the season, made current: the first open initial arc in order, or in the
+    /// monthly phase the month of the calendar (#210). Returns it, or nil when the season has nothing left.
+    @discardableResult
+    static func promoteNextArc(seasonId: UUID, now: Date, _ db: Database) throws -> Arc? {
+        let arcs = try liveArcs(seasonId: seasonId, db)
+        let next =
+            MonthlyArcs.inMonthlyPhase(arcs)
+            ? MonthlyArcs.current(in: arcs, month: month(of: now))
+            : arcs.first { $0.status == .queued && $0.kind != .filler && !$0.isMonthly }
+        guard let next, next.status != .current else { return nil }
+        return try makeCurrent(next, among: arcs, now: now, db)
+    }
+
+    @discardableResult
+    private static func makeCurrent(_ arc: Arc, among arcs: [Arc], now: Date, _ db: Database) throws -> Arc {
+        let stamp = now.roundedToMilliseconds
+        // One current arc per athlete: the one it replaces goes back to waiting first.
+        for var other in arcs where other.status == .current && other.id != arc.id {
+            other.status = .queued
+            other.updatedAt = stamp
+            try other.update(db)
+        }
+        var arc = arc
+        arc.status = .current
+        arc.updatedAt = stamp
+        try arc.update(db)
+        return arc
+    }
+
+    private static func liveArcs(seasonId: UUID, _ db: Database) throws -> [Arc] {
+        try Arc.filter(Column("season_id") == seasonId.sql).filter(Columns.deletedAt == nil)
+            .order(Columns.position).fetchAll(db)
+    }
+
+    static func month(of date: Date) -> Int { Calendar.current.component(.month, from: date) }
 }

@@ -52,6 +52,10 @@
           "notNull": false
         },
         {
+          "name": "months",
+          "notNull": false
+        },
+        {
           "name": "created_at",
           "notNull": true
         },

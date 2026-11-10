@@ -4,7 +4,7 @@
 
 - App iOS nativo para registrar treinos de preparação física para jiu-jitsu, série por série, com timer de descanso.
 - Camada de progressão: cada série concluída vira XP, nível, patente (E a S) e atributos (FOR, EXP, GÁS, COR, MOB).
-- O atleta organiza os arcos em temporadas (uma ativa por vez, arcos liberados em ordem); a Manutenção fica fora delas, sempre disponível. Cada arco tem treinos-modelo e uma duração em semanas.
+- O atleta organiza os arcos em temporadas (uma ativa por vez, arcos liberados em ordem; arcos mensais abrem juntos depois dos iniciais, ADR 0035); a Manutenção fica fora delas, sempre disponível. Cada arco tem treinos-modelo e uma duração em semanas.
 - Offline-first: o app grava no SQLite local e sincroniza com a API (Postgres) depois.
 - Só entra quem tem conta (login por username ou e-mail; contas criadas pelo seed, sem cadastro no app). Hoje é uma conta só, mas todo dado já é multiusuário (`athlete_id`) e a API só serve o atleta da sessão (ADR 0031).
 

@@ -53,6 +53,8 @@ const ArcSeed = z.object({
   kanji: z.string().trim().min(1),
   kind: z.enum(arcKind.enumValues).optional(),
   weeks: z.number().int().positive().optional(),
+  /** Calendar months of a monthly arc (#210, docs/decisions/0035): [11, 12] for "Novembro e Dezembro". */
+  months: z.array(z.number().int().min(1).max(12)).min(1).optional(),
   templates: z.array(TemplateSeed),
 });
 
@@ -139,10 +141,23 @@ async function addArc(
   const sameSeason = seasonId ? eq(arc.seasonId, seasonId) : isNull(arc.seasonId);
   const live = and(eq(arc.athleteId, athleteId), isNull(arc.deletedAt));
   const [existing] = await tx
-    .select({ id: arc.id })
+    .select({ id: arc.id, months: arc.months })
     .from(arc)
     .where(and(live, sameSeason, eq(arc.name, seed.name.trim())));
-  if (existing) return false;
+  if (existing) {
+    // Months can arrive after the arc (Jiu-Jitsu's Novembro e Dezembro): set them, and reach the devices.
+    if (seed.months && JSON.stringify(seed.months) !== JSON.stringify(existing.months)) {
+      await tx
+        .update(arc)
+        .set({
+          months: seed.months,
+          updatedAt: now,
+          serverUpdatedAt: sql`date_trunc('milliseconds', now())`,
+        })
+        .where(eq(arc.id, existing.id));
+    }
+    return false;
+  }
 
   const kind = seed.kind ?? "normal";
   const [current] = await tx
@@ -159,8 +174,9 @@ async function addArc(
     .select({ last: max(arc.position) })
     .from(arc)
     .where(and(live, sameSeason));
-  // Filler arcs are always available and never take the current slot (docs/decisions/0028).
-  const becomesCurrent = !current && kind !== "filler" && Boolean(inActiveSeason);
+  // Filler arcs are always available and never take the current slot (docs/decisions/0028). Months wait
+  // for the initial arcs; the app makes the month of the calendar current (#210).
+  const becomesCurrent = !current && kind !== "filler" && !seed.months && Boolean(inActiveSeason);
   const hasDuration = kind !== "filler";
   const arcId = uuidv7();
   await tx.insert(arc).values({
@@ -174,6 +190,7 @@ async function addArc(
     startDate: hasDuration ? today : null,
     status: becomesCurrent ? "current" : "queued",
     position: (last ?? -1) + 1,
+    months: seed.months ?? null,
     createdAt: now,
     updatedAt: now,
   });
