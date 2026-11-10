@@ -72,6 +72,12 @@ final class JournalModel {
     }
 
     /// Soft delete; XP, records, streak and numbering recompute from what is left.
+    /// Fixes kg and reps of a set of a finished workout (#197); records, XP and totals follow on reload.
+    func correct(_ set: LoggedSet, weightKg: Decimal?, reps: Int?) async {
+        try? await SessionRepository(database).correct(setId: set.id, weightKg: weightKg, reps: reps)
+        await load()
+    }
+
     func delete(_ session: Session) async {
         try? await SessionRepository(database).delete(sessionId: session.id)
         await load()

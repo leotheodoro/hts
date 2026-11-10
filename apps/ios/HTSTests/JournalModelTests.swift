@@ -52,6 +52,22 @@ import Testing
         #expect(LoggedSet.plate(kg: Decimal(string: "62.5")!, reps: 6) == "062.5 KG × 06")
     }
 
+    /// 70 kg was a typo for 7 (#197): after the correction the record and the volume follow the new value.
+    @Test func correctingASetRecomputesRecordsAndVolume() async throws {
+        let (database, athleteId, order, _) = try await journalWithActivities()
+        let model = JournalModel(database: database, athleteId: athleteId)
+        await model.load()
+        let second = try #require(model.entries.first { $0.session.id == order[1] })
+        let typo = try #require(try await SessionRepository(database).sets(sessionId: second.session.id).first)
+        await model.correct(typo, weightKg: 70, reps: 8)
+        #expect(model.records.first?.weightKg == 70)
+        #expect(model.totalVolume == Decimal(string: "1040"))  // 60 × 8 + 70 × 8
+
+        await model.correct(typo, weightKg: 7, reps: 10)
+        #expect(model.records.first?.weightKg == 60)
+        #expect(model.totalVolume == Decimal(string: "550"))  // 60 × 8 + 7 × 10
+    }
+
     /// Two finished workouts (days 0 and 1, an hour each) and three Garmin activities: a strength session recorded
     /// inside the first workout, a run on day 0 at noon and a run on day 2.
     func journalWithActivities() async throws -> (AppDatabase, UUID, [UUID], linked: UUID) {
