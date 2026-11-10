@@ -26,6 +26,8 @@ export const PlanSnapshotSchema = z.object({
           setsMax: z.number().int(),
           targets: z.array(SetTargetSchema),
           restSeconds: z.number().int().nullable(),
+          /** Observações (#212); absent in snapshots from before them. */
+          notes: z.string().nullable().optional(),
         }),
       ),
     }),

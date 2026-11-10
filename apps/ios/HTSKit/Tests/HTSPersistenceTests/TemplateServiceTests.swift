@@ -89,6 +89,32 @@ import Testing
         #expect(found.map(\.name) == ["Supino"])
     }
 
+    /// Observações (#212) travel through the editor; blank ones are not kept.
+    @Test func notesAreSavedAndBlankNotesAreDropped() async throws {
+        let (database, _, templateId) = try await setUp()
+        let service = TemplateService(database)
+        var draft = try #require(try await service.draft(templateId: templateId))
+        draft.blocks = [
+            .init(
+                kind: .strength, attributes: [.strength],
+                exercises: [
+                    .init(
+                        name: "Back Squat", setsText: "1", targetText: "20",
+                        notes: "  Widow Maker: comece com 50% e suba 5 kg por sessão.  "),
+                    .init(name: "Glute Bridge", setsText: "4", targetText: "8", notes: "   "),
+                ])
+        ]
+        try await service.save(draft)
+        let saved = try #require(try await service.draft(templateId: templateId))
+        #expect(
+            saved.blocks[0].exercises.map(\.notes) == ["Widow Maker: comece com 50% e suba 5 kg por sessão.", ""])
+        let plan = try #require(try await PlanRepository(database).template(id: templateId)?.plan)
+        #expect(
+            plan.blocks[0].exercises.map(\.prescription.notes) == [
+                "Widow Maker: comece com 50% e suba 5 kg por sessão.", nil,
+            ])
+    }
+
     @Test func invalidTargetsMakeTheDraftInvalid() {
         var exercise = TemplateDraft.ExerciseDraft(name: "Supino", setsText: "4", targetText: "6-6-3")
         #expect(!exercise.isValid)

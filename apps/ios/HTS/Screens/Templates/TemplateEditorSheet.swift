@@ -202,6 +202,21 @@ private struct ExerciseEditor: View {
                 )
                 .frame(width: 64)
             }
+            VStack(alignment: .leading, spacing: HTSSpacing.space1) {
+                FieldLabel(text: "OBSERVAÇÕES")
+                TextField(
+                    text: $exercise.notes,
+                    prompt: Text("Progressão de carga semanal").foregroundStyle(Color.hts.tabIdle),
+                    axis: .vertical
+                ) { Text("Observações") }
+                .lineLimit(1...4)
+                .htsTextStyle(.caption)
+                .foregroundStyle(Color.hts.bone)
+                .padding(HTSSpacing.space2)
+                .frame(minHeight: 44)
+                .background(Color.hts.black)
+                .overlay(Rectangle().strokeBorder(Color.hts.line, lineWidth: HTSStroke.hair))
+            }
             Group {
                 if !exercise.targetText.isEmpty && exercise.parsed == nil {
                     Text("Alvo inválido. Use 8, 6-6-3-3, 12/12, 10-20 ou máx.").foregroundStyle(Color.hts.redText)

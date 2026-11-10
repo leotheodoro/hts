@@ -355,6 +355,7 @@ private struct ExerciseTable: View {
                 }
             }
             Text(verbatim: prescription).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+            if let notes = exercise.notes { ExerciseNotes(text: notes) }
             HStack(spacing: HTSSpacing.space2) {
                 Text("SÉRIE").lineLimit(1).fixedSize().frame(width: 52, alignment: .leading)
                 Text("ANTERIOR").frame(maxWidth: .infinity, alignment: .leading)

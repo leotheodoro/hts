@@ -192,6 +192,8 @@ public struct PrescribedExercise: Identifiable, Hashable, Sendable, Codable {
     public var setsMax: Int
     public var targets: [SetTarget]
     public var restSeconds: Int?
+    /// Observações: the coach's notes for this exercise (#212).
+    public var notes: String?
     public var position: Int
     public var createdAt: Date
     public var updatedAt: Date
@@ -199,8 +201,8 @@ public struct PrescribedExercise: Identifiable, Hashable, Sendable, Codable {
 
     public init(
         id: UUID, athleteId: UUID, blockId: UUID, exerciseId: UUID, setsMin: Int, setsMax: Int? = nil,
-        targets: [SetTarget], restSeconds: Int? = nil, position: Int, createdAt: Date, updatedAt: Date? = nil,
-        deletedAt: Date? = nil
+        targets: [SetTarget], restSeconds: Int? = nil, notes: String? = nil, position: Int, createdAt: Date,
+        updatedAt: Date? = nil, deletedAt: Date? = nil
     ) {
         self.id = id
         self.athleteId = athleteId
@@ -210,6 +212,7 @@ public struct PrescribedExercise: Identifiable, Hashable, Sendable, Codable {
         self.setsMax = setsMax ?? setsMin
         self.targets = targets
         self.restSeconds = restSeconds
+        self.notes = notes
         self.position = position
         self.createdAt = createdAt.roundedToMilliseconds
         self.updatedAt = (updatedAt ?? createdAt).roundedToMilliseconds
