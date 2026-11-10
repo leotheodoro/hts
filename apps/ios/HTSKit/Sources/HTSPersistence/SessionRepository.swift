@@ -199,9 +199,23 @@ public struct SessionRepository: Sendable {
     }
 
     /// Removes a set added by mistake during the session (soft delete).
+    /// Removes a set; the later sets of the same exercise in that workout move down by one, so the numbers stay
+    /// 01, 02, 03 without gaps (#200).
     public func deleteSet(id: UUID, now: Date = .now) async throws {
         try await database.writer.write { db in
+            guard let removed = try LoggedSet.filter(Columns.id == id.sql && Columns.deletedAt == nil).fetchOne(db)
+            else { return }
             try Self.softDelete(LoggedSet.self, filter: Columns.id == id.sql, now: now, db)
+            let later = try LoggedSet.filter(Column("session_id") == removed.sessionId.sql)
+                .filter(Column("prescribed_exercise_id") == removed.prescribedExerciseId.sql)
+                .filter(Columns.deletedAt == nil)
+                .filter(Column("set_number") > removed.setNumber)
+                .fetchAll(db)
+            for var set in later {
+                set.setNumber -= 1
+                set.updatedAt = now.roundedToMilliseconds
+                try set.update(db)
+            }
         }
     }
 

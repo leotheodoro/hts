@@ -116,6 +116,24 @@ import Testing
         #expect(weight == "207")
     }
 
+    /// Removing set 02 of 04 leaves 01, 02, 03 (#200): the later sets move down and get a new updated_at.
+    @Test func deletingASetRenumbersTheLaterOnes() async throws {
+        let (fixture, plan) = try await seeded()
+        let repository = SessionRepository(fixture.database)
+        let session = try await repository.start(plan, now: fixture.now, timeZone: utc)
+        let exerciseId = plan.blocks[0].exercises[0].prescription.id
+        let before = try await repository.sets(sessionId: session.id).filter { $0.prescribedExerciseId == exerciseId }
+        #expect(before.map(\.setNumber) == [1, 2, 3, 4])
+
+        let later = fixture.now.addingTimeInterval(120)
+        try await repository.deleteSet(id: before[1].id, now: later)
+
+        let after = try await repository.sets(sessionId: session.id).filter { $0.prescribedExerciseId == exerciseId }
+        #expect(after.map(\.id) == [before[0].id, before[2].id, before[3].id])
+        #expect(after.map(\.setNumber) == [1, 2, 3])
+        #expect(after.map(\.updatedAt) == [before[0].updatedAt, later, later])
+    }
+
     @Test func storesFightRoundsWithDecimalStringWeights() async throws {
         let (fixture, plan) = try await seeded()
         let repository = SessionRepository(fixture.database)

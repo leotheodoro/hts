@@ -62,6 +62,25 @@ import Testing
         #expect(try await SessionRepository(database).inProgress(athleteId: athlete.id) == nil)
     }
 
+    /// Long press > Remover série on set 02 of 03: the screen shows 01, 02 right away (#200).
+    @Test func removingASetRenumbersTheRows() async throws {
+        let (database, app) = try await setUp()
+        let athlete = try #require(app.athlete)
+        let arc = try #require(try await PlanRepository(database).currentArc(athleteId: athlete.id))
+        let plan = try #require(try await PlanRepository(database).plan(arcId: arc.id)?.templates.first)
+        await app.startWorkout(plan)
+        let model = ActiveSessionModel(
+            database: database, session: try #require(app.activeSession), alerts: FakeRestAlerts())
+        await model.load()
+        let exercise = model.snapshot.blocks[0].exercises[0]
+        let rows = model.rows(for: exercise)
+
+        await model.remove(rows[1])
+
+        #expect(model.rows(for: exercise).map(\.id) == [rows[0].id, rows[2].id])
+        #expect(model.rows(for: exercise).map(\.setNumber) == [1, 2])
+    }
+
     @Test func aBlockIsDoneWhenEverySetIsCheckedAndThePagerOpensOnTheFirstPending() async throws {
         let (database, app) = try await setUp()
         let athlete = try #require(app.athlete)
