@@ -13,7 +13,6 @@ struct JournalScreen: View {
         ScreenScaffold(title: "Diário") {
             if let model {
                 totals(model)
-                if !model.records.isEmpty { records(model) }
                 sessions(model)
             }
         }
@@ -47,19 +46,6 @@ struct JournalScreen: View {
             Text(verbatim: value).htsTextStyle(.data).lineLimit(1).minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func records(_ model: JournalModel) -> some View {
-        VStack(alignment: .leading, spacing: HTSSpacing.space3) {
-            Text("RECORDES").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
-            ForEach(model.records) { record in
-                DogTag(lines: [
-                    record.exerciseName.uppercased(),
-                    LoggedSet.plate(kg: record.weightKg, reps: record.reps),
-                    record.date.short,
-                ])
-            }
-        }
     }
 
     @ViewBuilder private func sessions(_ model: JournalModel) -> some View {
