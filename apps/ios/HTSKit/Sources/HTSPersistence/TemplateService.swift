@@ -88,6 +88,7 @@ public struct TemplateService: Sendable {
                     prescription.setsMax = sets.max
                     prescription.targets = parsed.targets
                     prescription.restSeconds = entry.restSeconds
+                    prescription.notes = entry.storedNotes
                     prescription.position = exerciseIndex
                     prescription.updatedAt = stamp
                     try prescription.save(db)

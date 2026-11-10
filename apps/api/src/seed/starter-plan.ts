@@ -1,4 +1,4 @@
-import { and, eq, isNull, max, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, max, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 import type { Db } from "../db/client.js";
@@ -13,6 +13,7 @@ import {
   exerciseUnit,
   prescribedExercise,
   season,
+  session,
   workoutTemplate,
 } from "../db/schema.js";
 import { parseSets, parseTarget } from "./notation.js";
@@ -32,6 +33,8 @@ const ExerciseSeed = z.object({
   restSeconds: z.number().int().positive().optional(),
   /** The coach's YouTube link. */
   video: z.string().optional(),
+  /** Observações (#212): what the other fields cannot say ("Progressão de carga semanal."). */
+  notes: z.string().trim().min(1).optional(),
 });
 
 const BlockSeed = z.object({
@@ -77,28 +80,34 @@ function letter(index: number): string {
 
 /**
  * Adds every season and arc of the plan that the athlete does not have yet (arcs by name inside
- * their season, or among free arcs), then fills the catalog videos that are still empty. Existing
- * arcs are left untouched. All or nothing: a template the notation cannot read aborts the import.
+ * their season, or among free arcs), then fills the catalog videos that are still empty. An arc
+ * already there and never trained is refreshed when its templates in the plan changed (#212); an
+ * arc with sessions is left untouched. All or nothing: a template the notation cannot read aborts
+ * the import.
  */
 export async function importStarterPlan(
   db: Db,
   athleteId: string,
   plan: StarterPlanFile,
   today: string,
-): Promise<{ arcsAdded: number; videosFilled: number }> {
+): Promise<{ arcsAdded: number; arcsRefreshed: number; videosFilled: number }> {
   return db.transaction(async (tx) => {
     const now = new Date();
-    let arcsAdded = 0;
+    const counts = { added: 0, refreshed: 0, unchanged: 0 };
     for (const seasonSeed of plan.seasons) {
       const seasonId = await findOrCreateSeason(tx, athleteId, seasonSeed.name, now);
       for (const seed of seasonSeed.arcs) {
-        if (await addArc(tx, athleteId, seed, seasonId, today, now)) arcsAdded++;
+        counts[await addArc(tx, athleteId, seed, seasonId, today, now)]++;
       }
     }
     for (const seed of plan.arcs) {
-      if (await addArc(tx, athleteId, { ...seed, kind: "filler" }, null, today, now)) arcsAdded++;
+      counts[await addArc(tx, athleteId, { ...seed, kind: "filler" }, null, today, now)]++;
     }
-    return { arcsAdded, videosFilled: await fillVideos(tx, athleteId, plan, now) };
+    return {
+      arcsAdded: counts.added,
+      arcsRefreshed: counts.refreshed,
+      videosFilled: await fillVideos(tx, athleteId, plan, now),
+    };
   });
 }
 
@@ -137,7 +146,7 @@ async function addArc(
   seasonId: string | null,
   today: string,
   now: Date,
-): Promise<boolean> {
+): Promise<"added" | "refreshed" | "unchanged"> {
   const sameSeason = seasonId ? eq(arc.seasonId, seasonId) : isNull(arc.seasonId);
   const live = and(eq(arc.athleteId, athleteId), isNull(arc.deletedAt));
   const [existing] = await tx
@@ -156,7 +165,9 @@ async function addArc(
         })
         .where(eq(arc.id, existing.id));
     }
-    return false;
+    return (await refreshArc(tx, athleteId, existing.id, seed.templates, now))
+      ? "refreshed"
+      : "unchanged";
   }
 
   const kind = seed.kind ?? "normal";
@@ -195,7 +206,20 @@ async function addArc(
     updatedAt: now,
   });
 
-  for (const [templateIndex, templateSeed] of seed.templates.entries()) {
+  await insertTemplates(tx, athleteId, arcId, seed.templates, now);
+  return "added";
+}
+
+type TemplateSeedT = z.infer<typeof TemplateSeed>;
+
+async function insertTemplates(
+  tx: Tx,
+  athleteId: string,
+  arcId: string,
+  templates: TemplateSeedT[],
+  now: Date,
+): Promise<void> {
+  for (const [templateIndex, templateSeed] of templates.entries()) {
     const templateId = uuidv7();
     const focus = templateSeed.focus?.trim();
     await tx.insert(workoutTemplate).values({
@@ -248,6 +272,7 @@ async function addArc(
           setsMax: sets.max,
           targets: parsed.targets,
           restSeconds: exerciseSeed.restSeconds ?? null,
+          notes: exerciseSeed.notes ?? null,
           position: exerciseIndex,
           createdAt: now,
           updatedAt: now,
@@ -255,7 +280,154 @@ async function addArc(
       }
     }
   }
+}
+
+/**
+ * Rebuilds the templates of an arc never trained when the plan says something else (#212): the old
+ * templates, blocks and exercises are soft-deleted and the plan's are inserted, all stamped so the
+ * devices pull the change. Returns whether it did.
+ */
+async function refreshArc(
+  tx: Tx,
+  athleteId: string,
+  arcId: string,
+  templates: TemplateSeedT[],
+  now: Date,
+): Promise<boolean> {
+  const [trained] = await tx
+    .select({ id: session.id })
+    .from(session)
+    .where(eq(session.arcId, arcId));
+  if (trained) return false;
+  const stored = await storedContent(tx, arcId);
+  if (canonical(stored.content) === canonical(planContent(templates))) return false;
+
+  const gone = {
+    deletedAt: now,
+    updatedAt: now,
+    serverUpdatedAt: sql`date_trunc('milliseconds', now())`,
+  };
+  if (stored.prescribedIds.length > 0) {
+    await tx
+      .update(prescribedExercise)
+      .set(gone)
+      .where(inArray(prescribedExercise.id, stored.prescribedIds));
+  }
+  if (stored.blockIds.length > 0) {
+    await tx.update(block).set(gone).where(inArray(block.id, stored.blockIds));
+  }
+  if (stored.templateIds.length > 0) {
+    await tx
+      .update(workoutTemplate)
+      .set(gone)
+      .where(inArray(workoutTemplate.id, stored.templateIds));
+  }
+  await insertTemplates(tx, athleteId, arcId, templates, now);
   return true;
+}
+
+/** JSON with object keys sorted: jsonb does not keep the order they were written in. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
+}
+
+/** What a template says, in a shape both the plan file and the database can produce. */
+type Content = {
+  name: string;
+  focus: string | null;
+  blocks: {
+    kind: string;
+    attributes: string[];
+    durationMinutes: number | null;
+    exercises: {
+      name: string;
+      setsMin: number;
+      setsMax: number;
+      targets: unknown;
+      restSeconds: number | null;
+      notes: string | null;
+    }[];
+  }[];
+}[];
+
+function planContent(templates: TemplateSeedT[]): Content {
+  return templates.map((t) => ({
+    name: t.name.trim(),
+    focus: t.focus?.trim() || null,
+    blocks: t.blocks.map((b) => ({
+      kind: b.kind,
+      attributes: b.attributes,
+      durationMinutes: b.kind === "fight_round" ? (b.durationMinutes ?? 8) : null,
+      exercises: b.exercises.map((e) => {
+        const sets = parseSets(e.sets);
+        const parsed = sets ? parseTarget(e.target, sets.max) : null;
+        return {
+          name: normalizeExerciseName(e.name),
+          setsMin: sets?.min ?? 0,
+          setsMax: sets?.max ?? 0,
+          targets: parsed?.targets ?? null,
+          restSeconds: e.restSeconds ?? null,
+          notes: e.notes ?? null,
+        };
+      }),
+    })),
+  }));
+}
+
+async function storedContent(
+  tx: Tx,
+  arcId: string,
+): Promise<{
+  content: Content;
+  templateIds: string[];
+  blockIds: string[];
+  prescribedIds: string[];
+}> {
+  const templates = await tx
+    .select()
+    .from(workoutTemplate)
+    .where(and(eq(workoutTemplate.arcId, arcId), isNull(workoutTemplate.deletedAt)))
+    .orderBy(workoutTemplate.position);
+  const blockIds: string[] = [];
+  const prescribedIds: string[] = [];
+  const content: Content = [];
+  for (const t of templates) {
+    const blocks = await tx
+      .select()
+      .from(block)
+      .where(and(eq(block.workoutTemplateId, t.id), isNull(block.deletedAt)))
+      .orderBy(block.position);
+    const contentBlocks: Content[number]["blocks"] = [];
+    for (const b of blocks) {
+      blockIds.push(b.id);
+      const rows = await tx
+        .select({ prescribed: prescribedExercise, normalizedName: exercise.normalizedName })
+        .from(prescribedExercise)
+        .innerJoin(exercise, eq(exercise.id, prescribedExercise.exerciseId))
+        .where(and(eq(prescribedExercise.blockId, b.id), isNull(prescribedExercise.deletedAt)))
+        .orderBy(prescribedExercise.position);
+      prescribedIds.push(...rows.map((r) => r.prescribed.id));
+      contentBlocks.push({
+        kind: b.kind,
+        attributes: b.attributes,
+        durationMinutes: b.durationMinutes,
+        exercises: rows.map(({ prescribed, normalizedName }) => ({
+          name: normalizedName,
+          setsMin: prescribed.setsMin,
+          setsMax: prescribed.setsMax,
+          targets: prescribed.targets,
+          restSeconds: prescribed.restSeconds,
+          notes: prescribed.notes,
+        })),
+      });
+    }
+    content.push({ name: t.name, focus: t.focus, blocks: contentBlocks });
+  }
+  return { content, templateIds: templates.map((t) => t.id), blockIds, prescribedIds };
 }
 
 /** Catalog exercise by normalized name (docs/decisions/0016); unit and per side follow the plan. */

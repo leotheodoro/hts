@@ -143,6 +143,10 @@ public final class AppDatabase: Sendable {
         migrator.registerMigration("v12_arc_months") { db in
             try db.alter(table: "arc") { t in t.add(column: "months", .jsonText) }
         }
+        // Mirrors apps/api/drizzle/0012: observações on prescribed exercises (#212).
+        migrator.registerMigration("v13_prescribed_exercise_notes") { db in
+            try db.alter(table: "prescribed_exercise") { t in t.add(column: "notes", .text) }
+        }
         return migrator
     }
 

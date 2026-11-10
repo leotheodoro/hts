@@ -85,6 +85,13 @@
       "when": 1794331223603,
       "tag": "0011_add_arc_months",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794334191449,
+      "tag": "0012_add_prescribed_exercise_notes",
+      "breakpoints": true
     }
   ]
 }

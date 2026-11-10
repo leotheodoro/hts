@@ -252,6 +252,8 @@ export const prescribedExercise = pgTable(
     /** One target for every set, or one per set up to sets_max (docs/decisions/0014). */
     targets: jsonb("targets").$type<SetTarget[]>().notNull(),
     restSeconds: integer("rest_seconds"),
+    /** Observações: the coach's notes for this exercise ("Progressão de carga semanal.", #212). */
+    notes: text("notes"),
     position: integer("position").notNull(),
     ...timestamps,
   },

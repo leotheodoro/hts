@@ -21,6 +21,8 @@ public struct PlanSnapshot: Hashable, Sendable, Codable {
         public var setsMax: Int
         public var targets: [SetTarget]
         public var restSeconds: Int?
+        /// Observações (#212); nil in snapshots from before them.
+        public var notes: String?
     }
 
     public var workoutTemplateId: UUID
@@ -43,7 +45,8 @@ public struct PlanSnapshot: Hashable, Sendable, Codable {
                         prescribedExerciseId: planned.prescription.id, exerciseId: planned.exercise.id,
                         name: planned.exercise.name, unit: planned.exercise.unit, perSide: planned.exercise.perSide,
                         setsMin: planned.prescription.setsMin, setsMax: planned.prescription.setsMax,
-                        targets: planned.prescription.targets, restSeconds: planned.prescription.restSeconds)
+                        targets: planned.prescription.targets, restSeconds: planned.prescription.restSeconds,
+                        notes: planned.prescription.notes)
                 })
         }
     }
@@ -79,7 +82,7 @@ extension PlanSnapshot.Block {
 
 extension PlanSnapshot.Exercise {
     private enum CodingKeys: String, CodingKey {
-        case prescribedExerciseId, exerciseId, name, unit, perSide, setsMin, setsMax, targets, restSeconds
+        case prescribedExerciseId, exerciseId, name, unit, perSide, setsMin, setsMax, targets, restSeconds, notes
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -93,5 +96,6 @@ extension PlanSnapshot.Exercise {
         try c.encode(setsMax, forKey: .setsMax)
         try c.encode(targets, forKey: .targets)
         try c.encode(restSeconds, forKey: .restSeconds)
+        try c.encode(notes, forKey: .notes)
     }
 }

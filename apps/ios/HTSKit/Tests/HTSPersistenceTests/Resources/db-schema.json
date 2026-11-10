@@ -436,6 +436,10 @@
           "notNull": false
         },
         {
+          "name": "notes",
+          "notNull": false
+        },
+        {
           "name": "position",
           "notNull": true
         },

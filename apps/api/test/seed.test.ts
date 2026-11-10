@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
@@ -10,6 +10,7 @@ import {
   exercise,
   prescribedExercise,
   season,
+  session,
   workoutTemplate,
 } from "../src/db/schema.js";
 import { seedAccount } from "../src/seed/account.js";
@@ -23,7 +24,15 @@ const athletes: string[] = [];
 afterAll(async () => {
   await removeAccounts(db, athletes);
   if (athletes.length > 0) {
-    for (const table of [prescribedExercise, exercise, block, workoutTemplate, arc, season]) {
+    for (const table of [
+      session,
+      prescribedExercise,
+      exercise,
+      block,
+      workoutTemplate,
+      arc,
+      season,
+    ]) {
       await db.delete(table).where(inArray(table.athleteId, athletes));
     }
     await db.delete(athlete).where(inArray(athlete.id, athletes));
@@ -149,7 +158,7 @@ describe("importStarterPlan", () => {
   it("imports seasons, arcs and templates like the app did", async () => {
     const leo = await seeded();
     const result = await importStarterPlan(db, leo.athleteId, plan, "2026-11-02");
-    expect(result).toEqual({ arcsAdded: 3, videosFilled: 1 });
+    expect(result).toEqual({ arcsAdded: 3, arcsRefreshed: 0, videosFilled: 1 });
 
     const [jiuJitsu] = await db.select().from(season).where(eq(season.athleteId, leo.athleteId));
     expect(jiuJitsu).toMatchObject({ name: "Jiu-Jitsu", active: true, position: 0 });
@@ -224,6 +233,7 @@ describe("importStarterPlan", () => {
     await importStarterPlan(db, leo.athleteId, plan, "2026-11-02");
     expect(await importStarterPlan(db, leo.athleteId, plan, "2026-11-09")).toEqual({
       arcsAdded: 0,
+      arcsRefreshed: 0,
       videosFilled: 0,
     });
   });
@@ -286,6 +296,7 @@ describe("importStarterPlan", () => {
       const again = withMonths([month("Novembro e Dezembro", [11, 12])]);
       expect(await importStarterPlan(db, leo.athleteId, again, "2026-11-09")).toEqual({
         arcsAdded: 0,
+        arcsRefreshed: 0,
         videosFilled: 0,
       });
       const [after] = await db
@@ -300,6 +311,112 @@ describe("importStarterPlan", () => {
 
     it("refuses a month outside 1 to 12", () => {
       expect(() => withMonths([month("Treze", [13])])).toThrow();
+    });
+  });
+
+  describe("notes and refresh (#212)", () => {
+    const arcWith = (exercises: { name: string; sets: string; target: string; notes?: string }[]) =>
+      StarterPlanFileSchema.parse({
+        seasons: [
+          {
+            name: "Base Performance",
+            arcs: [
+              {
+                name: "Pós-Adaptação",
+                kanji: "進",
+                weeks: 2,
+                templates: [
+                  { name: "Potência", blocks: [{ kind: "core", attributes: ["core"], exercises }] },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    const v1 = arcWith([{ name: "Core Bruto 3.0", sets: "1", target: "1" }]);
+    const v2 = arcWith([
+      { name: "Passagem de Kettlebell", sets: "3", target: "20", notes: "Pesado." },
+      { name: "Superman", sets: "3", target: "8" },
+      // A range target: jsonb stores its keys in another order (#212).
+      { name: "Paralelas", sets: "4", target: "6 a 12" },
+    ]);
+
+    const liveExercises = (athleteId: string) =>
+      db
+        .select({ name: exercise.name, notes: prescribedExercise.notes })
+        .from(prescribedExercise)
+        .innerJoin(exercise, eq(exercise.id, prescribedExercise.exerciseId))
+        .where(
+          and(eq(prescribedExercise.athleteId, athleteId), isNull(prescribedExercise.deletedAt)),
+        )
+        .orderBy(prescribedExercise.position);
+
+    it("imports the notes", async () => {
+      const leo = await seeded();
+      await importStarterPlan(db, leo.athleteId, v2, "2026-11-10");
+      expect(await liveExercises(leo.athleteId)).toEqual([
+        { name: "Passagem de Kettlebell", notes: "Pesado." },
+        { name: "Superman", notes: null },
+        { name: "Paralelas", notes: null },
+      ]);
+    });
+
+    it("refreshes an arc never trained when the plan changed", async () => {
+      const leo = await seeded();
+      await importStarterPlan(db, leo.athleteId, v1, "2026-11-10");
+      expect(await importStarterPlan(db, leo.athleteId, v2, "2026-11-10")).toEqual({
+        arcsAdded: 0,
+        arcsRefreshed: 1,
+        videosFilled: 0,
+      });
+      expect((await liveExercises(leo.athleteId)).map((e) => e.name)).toEqual([
+        "Passagem de Kettlebell",
+        "Superman",
+        "Paralelas",
+      ]);
+      const templates = await db
+        .select({ deletedAt: workoutTemplate.deletedAt })
+        .from(workoutTemplate)
+        .where(eq(workoutTemplate.athleteId, leo.athleteId));
+      expect(templates.filter((t) => t.deletedAt === null)).toHaveLength(1);
+      expect(templates).toHaveLength(2);
+      // Same plan again: nothing to do.
+      expect(await importStarterPlan(db, leo.athleteId, v2, "2026-11-10")).toEqual({
+        arcsAdded: 0,
+        arcsRefreshed: 0,
+        videosFilled: 0,
+      });
+    });
+
+    it("leaves an arc with sessions alone", async () => {
+      const leo = await seeded();
+      await importStarterPlan(db, leo.athleteId, v1, "2026-11-10");
+      const [template] = await db
+        .select({ id: workoutTemplate.id, arcId: workoutTemplate.arcId })
+        .from(workoutTemplate)
+        .where(eq(workoutTemplate.athleteId, leo.athleteId));
+      await db.insert(session).values({
+        id: uuidv7(),
+        athleteId: leo.athleteId,
+        arcId: template?.arcId as string,
+        workoutTemplateId: template?.id as string,
+        status: "completed",
+        startedAt: new Date(),
+        localDate: "2026-11-10",
+        planSnapshot: {
+          workoutTemplateId: template?.id as string,
+          letter: "A",
+          name: "Potência",
+          focus: null,
+          blocks: [],
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      expect(await importStarterPlan(db, leo.athleteId, v2, "2026-11-10")).toMatchObject({
+        arcsRefreshed: 0,
+      });
+      expect((await liveExercises(leo.athleteId)).map((e) => e.name)).toEqual(["Core Bruto 3.0"]);
     });
   });
 
@@ -379,6 +496,7 @@ describe("importStarterPlan", () => {
     await seedAccount(db, { ...leo, name: "Leo Novo" });
     expect(await importStarterPlan(db, leo.athleteId, plan, "2026-11-09")).toEqual({
       arcsAdded: 0,
+      arcsRefreshed: 0,
       videosFilled: 1,
     });
     const after = await pull(cursor ?? undefined);

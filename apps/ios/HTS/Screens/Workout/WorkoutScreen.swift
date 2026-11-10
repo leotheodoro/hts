@@ -78,6 +78,7 @@ struct WorkoutScreen: View {
                                 Text(verbatim: planned.exercise.name).htsTextStyle(.bodyStrong)
                                 Text(verbatim: prescription(planned)).htsTextStyle(.dataSm)
                                     .foregroundStyle(Color.hts.greyApp).monospacedDigit()
+                                if let notes = planned.prescription.notes { ExerciseNotes(text: notes) }
                             }
                             Spacer(minLength: 0)
                             if let video = planned.exercise.video {

@@ -31,7 +31,9 @@ try {
   if (existsSync(planFile)) {
     const plan = StarterPlanFileSchema.parse(JSON.parse(readFileSync(planFile, "utf8")));
     const result = await importStarterPlan(db, athleteId, plan, today);
-    console.log(`Plan: ${result.arcsAdded} arcs added, ${result.videosFilled} videos filled.`);
+    console.log(
+      `Plan: ${result.arcsAdded} arcs added, ${result.arcsRefreshed} refreshed, ${result.videosFilled} videos filled.`,
+    );
   } else {
     console.log("No seed/starter-plan.json: account only.");
   }

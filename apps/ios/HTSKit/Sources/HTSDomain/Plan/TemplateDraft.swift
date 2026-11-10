@@ -40,10 +40,12 @@ public struct TemplateDraft: Hashable, Sendable {
         /// "8", "6-6-3-3", "12/12", "10-20 s", "máx".
         public var targetText: String
         public var restSeconds: Int?
+        /// Observações (#212); blank means none.
+        public var notes: String
 
         public init(
             id: UUID = UUID(), existingId: UUID? = nil, name: String = "", unit: ExerciseUnit = .reps,
-            setsText: String = "3", targetText: String = "", restSeconds: Int? = nil
+            setsText: String = "3", targetText: String = "", restSeconds: Int? = nil, notes: String = ""
         ) {
             self.id = id
             self.existingId = existingId
@@ -52,6 +54,13 @@ public struct TemplateDraft: Hashable, Sendable {
             self.setsText = setsText
             self.targetText = targetText
             self.restSeconds = restSeconds
+            self.notes = notes
+        }
+
+        /// The notes to store: trimmed, nil when blank.
+        public var storedNotes: String? {
+            let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
         }
 
         public var sets: TargetNotation.Sets? { TargetNotation.parseSets(setsText) }
@@ -93,7 +102,7 @@ public struct TemplateDraft: Hashable, Sendable {
                         targetText: TargetNotation.format(
                             planned.prescription.targets, unit: planned.exercise.unit,
                             perSide: planned.exercise.perSide),
-                        restSeconds: planned.prescription.restSeconds)
+                        restSeconds: planned.prescription.restSeconds, notes: planned.prescription.notes ?? "")
                 })
         }
     }
