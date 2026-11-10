@@ -11,6 +11,8 @@ enum Route: Hashable {
     case attributes
     case integrations
     case progress
+    case evolution
+    case exerciseEvolution(UUID)
 }
 
 /// Navigation stack of a tab. The system bar stays hidden like the tab bar (docs/decisions/0022); pages draw their
@@ -35,6 +37,8 @@ struct TabStack<Content: View>: View {
                         case .attributes: AttributesScreen()
                         case .integrations: IntegrationsScreen()
                         case .progress: ProgressScreen()
+                        case .evolution: EvolutionScreen()
+                        case .exerciseEvolution(let id): ExerciseEvolutionScreen(exerciseId: id)
                         }
                     }
                     .toolbar(.hidden, for: .navigationBar)
