@@ -3,12 +3,20 @@ import SwiftUI
 
 /// Common screen frame: the HARD TO SUBMIT wordmark with the 不屈 seal on top (the only stencil in the app), the
 /// screen title, then content.
-struct ScreenScaffold<Content: View>: View {
+struct ScreenScaffold<Content: View, Trailing: View>: View {
     let title: LocalizedStringKey
-    @ViewBuilder let content: Content
+    /// Shown on the right of the title, as "Temporadas disponíveis" on Arcos (#204).
+    let trailing: Trailing
+    let content: Content
     @Environment(\.scrollToTopSignal) private var scrollToTopSignal
     @Environment(AppModel.self) private var app
     @Namespace private var top
+
+    init(title: LocalizedStringKey, @ViewBuilder trailing: () -> Trailing, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.trailing = trailing()
+        self.content = content()
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -40,10 +48,14 @@ struct ScreenScaffold<Content: View>: View {
                     }
                 }
                 .id(top)
-                Text(title)
-                    .htsTextStyle(.uiTitle)
-                    .foregroundStyle(Color.hts.bone)
-                    .accessibilityAddTraits(.isHeader)
+                HStack(alignment: .center, spacing: HTSSpacing.space3) {
+                    Text(title)
+                        .htsTextStyle(.uiTitle)
+                        .foregroundStyle(Color.hts.bone)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 0)
+                    trailing
+                }
                 content
             }
             .padding(.horizontal, HTSSpacing.space5)
@@ -54,6 +66,12 @@ struct ScreenScaffold<Content: View>: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { ActiveSessionBar() }
         .background(Color.hts.black)
         .foregroundStyle(Color.hts.bone)
+    }
+}
+
+extension ScreenScaffold where Trailing == EmptyView {
+    init(title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
+        self.init(title: title, trailing: { EmptyView() }, content: content)
     }
 }
 

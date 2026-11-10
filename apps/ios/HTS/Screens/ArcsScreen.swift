@@ -22,6 +22,18 @@ struct ArcsScreen: View {
 
     var body: some View {
         ScreenScaffold(title: "Arcos") {
+            NavigationLink(value: Route.seasons) {
+                HStack(spacing: HTSSpacing.space1) {
+                    Text("Temporadas disponíveis").htsTextStyle(.label)
+                    Image(systemName: "chevron.right").font(.caption2).accessibilityHidden(true)
+                }
+                .foregroundStyle(Color.hts.bone)
+                .padding(.horizontal, HTSSpacing.space3)
+                .frame(minHeight: 44)
+                .overlay(Rectangle().strokeBorder(Color.hts.lineStrong, lineWidth: HTSStroke.hair).frame(height: 32))
+            }
+            .buttonStyle(.plain)
+        } content: {
             if let model {
                 content(model)
             }
@@ -38,7 +50,8 @@ struct ArcsScreen: View {
         if model.seasons.isEmpty && model.freeArcs.isEmpty {
             PlaceholderCard(label: "TEMPORADAS", text: "Nenhum arco ainda.")
         }
-        ForEach(model.seasons) { entry in
+        // The other seasons live in Temporadas disponíveis (#204).
+        ForEach(model.seasons.filter(\.season.active)) { entry in
             VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                 HStack(spacing: HTSSpacing.space2) {
                     Text(verbatim: "TEMPORADA · \(entry.season.name.uppercased())").htsTextStyle(.label)
@@ -57,9 +70,6 @@ struct ArcsScreen: View {
                             eve: summary.arc.kind == .special && (model.battle?.isEve(.today) ?? false))
                     }
                     .buttonStyle(.plain)
-                }
-                if !entry.season.active {
-                    HTSButton("Ativar temporada", kind: .ghost) { Task { await model.activate(entry.season) } }
                 }
             }
         }
@@ -82,6 +92,8 @@ struct ArcRow: View {
     let summary: ArcService.Summary
     /// The special arc in the week of A Batalha.
     var eve = false
+    /// The first open arc of an inactive season (#204): PRÓXIMO, not dimmed.
+    var upNext = false
 
     private var overdue: Bool {
         summary.arc.status == .current
@@ -90,7 +102,7 @@ struct ArcRow: View {
 
     /// The current arc stands out in `blood`; locked arcs are dimmed (#90).
     private var isCurrent: Bool { summary.arc.status == .current && summary.arc.kind != .filler }
-    private var isLocked: Bool { summary.arc.status == .queued && summary.arc.kind != .filler }
+    private var isLocked: Bool { summary.arc.status == .queued && summary.arc.kind != .filler && !upNext }
     private var nameColor: Color { isLocked ? Color.hts.bone.opacity(HTSOpacity.next) : Color.hts.bone }
 
     var body: some View {
@@ -123,6 +135,7 @@ struct ArcRow: View {
         if summary.arc.kind == .filler { return "SEMPRE DISPONÍVEL" }
         if eve { return "A VÉSPERA · SEMANA DA BATALHA" }
         if overdue { return "ATRASADO" }
+        if upNext { return "PRÓXIMO" }
         switch summary.arc.status {
         case .current: return "ATUAL"
         case .queued: return "BLOQUEADO"
