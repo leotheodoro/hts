@@ -6,6 +6,8 @@ import SwiftUI
 struct ArcsScreen: View {
     @Environment(AppModel.self) private var app
     @State private var model: ArcsModel?
+    /// SEMPRE DISPONÍVEL is an accordion, closed by default (#206).
+    @State private var showsFreeArcs = UserDefaults.standard.bool(forKey: "HTSOpenFreeArcs")
 
     /// Target of `ArcFormSheet`. The form is kept for later but hidden: arcs are loaded from the starter plan for
     /// now, and the app only shows them (#64).
@@ -75,10 +77,27 @@ struct ArcsScreen: View {
         }
         if !model.freeArcs.isEmpty {
             VStack(alignment: .leading, spacing: HTSSpacing.space3) {
-                Text("SEMPRE DISPONÍVEL").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
-                ForEach(model.freeArcs) { summary in
-                    NavigationLink(value: Route.arc(summary.arc.id)) { ArcRow(summary: summary) }
-                        .buttonStyle(.plain)
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showsFreeArcs.toggle() }
+                } label: {
+                    HStack {
+                        Text("SEMPRE DISPONÍVEL").htsTextStyle(.label)
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .rotationEffect(.degrees(showsFreeArcs ? 180 : 0))
+                            .accessibilityHidden(true)
+                    }
+                    .foregroundStyle(Color.hts.grey)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(Text(showsFreeArcs ? "Aberto" : "Fechado"))
+                if showsFreeArcs {
+                    ForEach(model.freeArcs) { summary in
+                        NavigationLink(value: Route.arc(summary.arc.id)) { ArcRow(summary: summary) }
+                            .buttonStyle(.plain)
+                    }
                 }
             }
         }
