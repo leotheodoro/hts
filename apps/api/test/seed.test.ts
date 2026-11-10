@@ -337,6 +337,8 @@ describe("importStarterPlan", () => {
     const v2 = arcWith([
       { name: "Passagem de Kettlebell", sets: "3", target: "20", notes: "Pesado." },
       { name: "Superman", sets: "3", target: "8" },
+      // A range target: jsonb stores its keys in another order (#212).
+      { name: "Paralelas", sets: "4", target: "6 a 12" },
     ]);
 
     const liveExercises = (athleteId: string) =>
@@ -355,6 +357,7 @@ describe("importStarterPlan", () => {
       expect(await liveExercises(leo.athleteId)).toEqual([
         { name: "Passagem de Kettlebell", notes: "Pesado." },
         { name: "Superman", notes: null },
+        { name: "Paralelas", notes: null },
       ]);
     });
 
@@ -369,6 +372,7 @@ describe("importStarterPlan", () => {
       expect((await liveExercises(leo.athleteId)).map((e) => e.name)).toEqual([
         "Passagem de Kettlebell",
         "Superman",
+        "Paralelas",
       ]);
       const templates = await db
         .select({ deletedAt: workoutTemplate.deletedAt })

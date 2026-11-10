@@ -300,7 +300,7 @@ async function refreshArc(
     .where(eq(session.arcId, arcId));
   if (trained) return false;
   const stored = await storedContent(tx, arcId);
-  if (JSON.stringify(stored.content) === JSON.stringify(planContent(templates))) return false;
+  if (canonical(stored.content) === canonical(planContent(templates))) return false;
 
   const gone = {
     deletedAt: now,
@@ -324,6 +324,15 @@ async function refreshArc(
   }
   await insertTemplates(tx, athleteId, arcId, templates, now);
   return true;
+}
+
+/** JSON with object keys sorted: jsonb does not keep the order they were written in. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
 }
 
 /** What a template says, in a shape both the plan file and the database can produce. */
