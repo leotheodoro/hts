@@ -66,4 +66,41 @@ import Testing
         #expect(model.seasons.first?.summaries.first?.arc.status == .current)
         #expect(model.seasons.last?.summaries.first?.arc.status == .queued)
     }
+
+    /// Temporadas disponíveis (#204): an inactive season shows its first open arc as next; the confirmation names
+    /// the arc whose count restarts.
+    @Test func anInactiveSeasonShowsItsNextArcAndTheConfirmationNamesTheRestart() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let seasons = SeasonService(database)
+        let jiuJitsu = try await seasons.season(named: "Jiu-Jitsu", athleteId: athlete.id)
+        let performance = try await seasons.season(named: "Performance", athleteId: athlete.id)
+        let service = ArcService(database)
+        for (name, season) in [("Força Máxima", jiuJitsu), ("Arranque", performance), ("Velocidade", performance)] {
+            try await service.save(
+                ArcDraft(
+                    name: name, kanji: "試", weeks: 2, startDate: .today, templates: [.init(origin: .new, name: "A")]),
+                athleteId: athlete.id, seasonId: season.id)
+        }
+        let model = ArcsModel(database: database, athleteId: athlete.id)
+        await model.load()
+        #expect(
+            model.activationNote(for: performance)
+                == "A temporada Jiu-Jitsu fica inativa. XP, nível, treinos feitos e arcos já liberados continuam.")
+
+        let current = try #require(try await PlanRepository(database).currentArc(athleteId: athlete.id))
+        let plan = try #require(try await PlanRepository(database).plan(arcId: current.id))
+        let session = try await SessionRepository(database).start(plan.templates[0])
+        _ = try await SessionRepository(database).finish(sessionId: session.id)
+        await model.load()
+        let other = try #require(model.seasons.first { $0.season.id == performance.id })
+        #expect(model.upNextArcId(in: other) == other.summaries.first?.arc.id)
+        let active = try #require(model.seasons.first { $0.season.id == jiuJitsu.id })
+        #expect(model.upNextArcId(in: active) == nil)
+
+        #expect(
+            model.activationNote(for: performance)
+                == "A temporada Jiu-Jitsu fica inativa e a contagem do arco Força Máxima (1 de 2) volta a zero. XP, nível, treinos feitos e arcos já liberados continuam."
+        )
+    }
 }

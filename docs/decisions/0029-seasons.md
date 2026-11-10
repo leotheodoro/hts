@@ -1,6 +1,6 @@
 # 0029 · Temporadas substituem a Saga
 
-Data: 2026-10-29 · Status: aceita (decisão do Leo, #72). Substitui a Saga anual do modelo inicial.
+Data: 2026-10-29 · Status: aceita (decisão do Leo, #72), substituída em parte pela 0034 (a troca de temporada recomeça o arco pausado; a aba Arcos mostra só a temporada ativa). Substitui a Saga anual do modelo inicial.
 
 ## Contexto
 A Saga era "o ano" e agrupava todos os arcos. Na prática o Leo segue mais de um programa em paralelo (Jiu-Jitsu, Performance), cada um com arcos em sequência, e arcos novos são adicionados no fim conforme o tempo passa.
