@@ -207,7 +207,10 @@ final class ActiveSessionModel {
     func remove(_ set: LoggedSet) async {
         do {
             try await repository.deleteSet(id: set.id)
-            sets[set.prescribedExerciseId]?.removeAll { $0.id == set.id }
+            // The later sets were renumbered in the database (#200); show them as stored.
+            sets[set.prescribedExerciseId] = try await repository.sets(sessionId: session.id)
+                .filter { $0.prescribedExerciseId == set.prescribedExerciseId }
+                .sorted { $0.setNumber < $1.setNumber }
         } catch {
             self.error = String(describing: error)
         }
