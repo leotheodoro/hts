@@ -50,7 +50,31 @@ final class ArcsModel {
         }
     }
 
-    /// Makes `season` the active one; the previous season pauses on its current arc.
+    /// The first open arc of an inactive season, shown as PRÓXIMO in Temporadas disponíveis (#204).
+    func upNextArcId(in entry: SeasonArcs) -> UUID? {
+        guard !entry.season.active else { return nil }
+        return entry.summaries.first { $0.arc.status == .queued && $0.arc.kind != .filler }?.arc.id
+    }
+
+    /// What activating `season` changes, for the confirmation (#204).
+    func activationNote(for season: Season) -> String {
+        let keeps = String(localized: "XP, nível, treinos feitos e arcos já liberados continuam.")
+        guard let active = seasons.first(where: { $0.season.active }), active.season.id != season.id else {
+            return keeps
+        }
+        if let current = active.summaries.first(where: { $0.arc.status == .current && $0.arc.kind != .filler }),
+            current.completedSessions > 0
+        {
+            let total = current.schedule.totalSessions.map { " de \($0)" } ?? ""
+            return String(
+                localized:
+                    "A temporada \(active.season.name) fica inativa e a contagem do arco \(current.arc.name) (\(current.completedSessions)\(total)) volta a zero. \(keeps)"
+            )
+        }
+        return String(localized: "A temporada \(active.season.name) fica inativa. \(keeps)")
+    }
+
+    /// Makes `season` the active one; the previous season pauses and its current arc restarts (#204).
     func activate(_ season: Season) async {
         do {
             try await SeasonService(database).activate(seasonId: season.id, athleteId: athleteId)
