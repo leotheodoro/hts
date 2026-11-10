@@ -44,20 +44,27 @@ public struct SeasonService: Sendable {
         }
     }
 
-    /// Makes `seasonId` the active season. The previous one pauses on its current arc (it becomes current again
-    /// when that season is reactivated); the new one continues from its first arc not completed.
+    /// Makes `seasonId` the active season. The previous one pauses on its current arc, whose count restarts
+    /// (#204, docs/decisions/0034): it becomes current again from zero when that season is reactivated. The new
+    /// season continues from its first arc not completed.
     public func activate(seasonId: UUID, athleteId: UUID, now: Date = .now) async throws {
         try await database.writer.write { db in
             let stamp = ISO8601Millis.format(now)
             try db.execute(
                 sql: """
+                    UPDATE arc SET count_reset_at = ?, updated_at = ?
+                    WHERE athlete_id = ? AND status = 'current' AND kind != 'filler' AND deleted_at IS NULL
+                    AND season_id IS NOT NULL AND season_id != ?;
                     UPDATE arc SET status = 'queued', updated_at = ?
                     WHERE athlete_id = ? AND status = 'current' AND deleted_at IS NULL;
                     UPDATE season SET active = 0, updated_at = ?
                     WHERE athlete_id = ? AND active AND id != ? AND deleted_at IS NULL;
                     UPDATE season SET active = 1, updated_at = ? WHERE id = ? AND NOT active;
                     """,
-                arguments: [stamp, athleteId.sql, stamp, athleteId.sql, seasonId.sql, stamp, seasonId.sql])
+                arguments: [
+                    stamp, stamp, athleteId.sql, seasonId.sql, stamp, athleteId.sql, stamp, athleteId.sql, seasonId.sql,
+                    stamp, seasonId.sql,
+                ])
             try Self.promoteFirstOpenArc(seasonId: seasonId, stamp: stamp, db)
         }
     }
