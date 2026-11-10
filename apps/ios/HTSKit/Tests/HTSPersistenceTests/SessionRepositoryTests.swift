@@ -82,6 +82,40 @@ import Testing
         #expect(try await !repository.sets(sessionId: session.id).contains(logged))
     }
 
+    /// A finished workout logged 207 kg for 20 (#197): the correction writes kg and reps and nothing else.
+    @Test func correctingASetChangesOnlyKgAndReps() async throws {
+        let (fixture, plan) = try await seeded()
+        let repository = SessionRepository(fixture.database)
+        let session = try await repository.start(plan, now: fixture.now, timeZone: utc)
+        let logged = set(session, plan, number: 1, kg: 207, at: fixture.now)
+        try await repository.save(logged)
+        _ = try await repository.finish(sessionId: session.id, now: fixture.now.addingTimeInterval(3600))
+
+        let later = fixture.now.addingTimeInterval(86_400 * 7)
+        try await repository.correct(setId: logged.id, weightKg: 20, reps: 8, now: later)
+
+        let stored = try #require(try await repository.sets(sessionId: session.id).first { $0.id == logged.id })
+        var expected = logged
+        expected.weightKg = 20
+        expected.reps = 8
+        expected.updatedAt = later
+        #expect(stored == expected)
+    }
+
+    @Test func correctingADeletedSetChangesNothing() async throws {
+        let (fixture, plan) = try await seeded()
+        let repository = SessionRepository(fixture.database)
+        let session = try await repository.start(plan, now: fixture.now, timeZone: utc)
+        let logged = set(session, plan, number: 1, kg: 207, at: fixture.now)
+        try await repository.save(logged)
+        try await repository.deleteSet(id: logged.id, now: fixture.now)
+        try await repository.correct(setId: logged.id, weightKg: 20, reps: 8, now: fixture.now.addingTimeInterval(60))
+        let weight = try await fixture.database.writer.read { db in
+            try String.fetchOne(db, sql: "SELECT weight_kg FROM logged_set WHERE id = ?", arguments: [logged.id.sql])
+        }
+        #expect(weight == "207")
+    }
+
     @Test func storesFightRoundsWithDecimalStringWeights() async throws {
         let (fixture, plan) = try await seeded()
         let repository = SessionRepository(fixture.database)
