@@ -279,6 +279,42 @@ public struct ProgressService: Sendable {
         }
     }
 
+    /// Evolução (#202): every catalog exercise counted in reps with its finished workouts, each from the checked sets
+    /// that have kg and reps. Sorted by name.
+    public func evolution(athleteId: UUID) async throws -> [ExerciseEvolution] {
+        try await database.writer.read { db in
+            let started = Dictionary(
+                uniqueKeysWithValues: try Self.completedSessions(athleteId: athleteId, db).map { ($0.id, $0.startedAt) }
+            )
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT s.exercise_id, e.name, s.session_id, s.weight_kg, s.reps
+                    FROM logged_set s
+                    JOIN exercise e ON e.id = s.exercise_id
+                    WHERE s.athlete_id = ? AND s.completed = 1 AND s.deleted_at IS NULL
+                    AND s.weight_kg IS NOT NULL AND s.reps IS NOT NULL AND s.reps > 0 AND e.unit = 'reps'
+                    """, arguments: [athleteId.sql])
+            var names: [UUID: String] = [:]
+            var lifts: [UUID: [UUID: [ExerciseEvolution.Lift]]] = [:]
+            for row in rows {
+                guard let exerciseId = UUID(uuidString: row[0]), let sessionId = UUID(uuidString: row[2]),
+                    started[sessionId] != nil, let weight = Decimal.fromDatabaseValue(row[3]), weight > 0
+                else { continue }
+                names[exerciseId] = row[1]
+                lifts[exerciseId, default: [:]][sessionId, default: []].append(.init(weightKg: weight, reps: row[4]))
+            }
+            return lifts.compactMap { exerciseId, sessions -> ExerciseEvolution? in
+                guard let name = names[exerciseId] else { return nil }
+                let workouts = sessions.compactMap { sessionId, sets in
+                    started[sessionId].flatMap { ExerciseEvolution.Workout(date: $0, sets: sets) }
+                }
+                return ExerciseEvolution(exerciseId: exerciseId, name: name, workouts: workouts)
+            }
+            .sorted { $0.name < $1.name }
+        }
+    }
+
     private static func completedSessions(athleteId: UUID, _ db: Database) throws -> [Session] {
         try Session.filter(Columns.athleteId == athleteId.sql)
             .filter(Column("status") == SessionStatus.completed.rawValue)
