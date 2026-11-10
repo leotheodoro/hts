@@ -188,3 +188,37 @@ import Testing
         #expect(levels[.conditioning]?.xp == 40)
     }
 }
+
+extension ProgressServiceTests {
+    /// Evolução (#202): one entry per catalog exercise, across templates, with each finished workout's sets.
+    @Test func evolutionGroupsTheSameExerciseAcrossTemplates() async throws {
+        let (database, athlete, _, plans) = try await setUp()
+        try await workout(database, plans[0], kg: 60, day: 0)
+        try await workout(database, plans[1], kg: 70, day: 1)
+        let deleted = try await workout(database, plans[0], kg: 200, day: 2)
+        try await SessionRepository(database).delete(sessionId: deleted.id)
+
+        let evolution = try await ProgressService(database).evolution(athleteId: athlete.id)
+        #expect(evolution.map(\.name) == ["Supino"])
+        let supino = try #require(evolution.first)
+        #expect(supino.workouts.map(\.best) == [.init(weightKg: 60, reps: 8), .init(weightKg: 70, reps: 8)])
+        #expect(supino.workouts.map(\.date) == [t0, t0.addingTimeInterval(86_400)])
+    }
+
+    /// Unchecked sets and sets without kg or reps say nothing about strength.
+    @Test func evolutionSkipsUncheckedAndEmptySets() async throws {
+        let (database, athlete, _, plans) = try await setUp()
+        let repository = SessionRepository(database)
+        let session = try await repository.start(plans[0], now: t0, timeZone: utc)
+        let sets = try await repository.sets(sessionId: session.id)
+        for (index, var set) in sets.enumerated() {
+            set.weightKg = index == 0 ? 100 : (index == 1 ? 50 : nil)
+            set.reps = 5
+            set.completed = index != 0
+            try await repository.save(set)
+        }
+        _ = try await repository.finish(sessionId: session.id, now: t0.addingTimeInterval(3600))
+        let evolution = try await ProgressService(database).evolution(athleteId: athlete.id)
+        #expect(evolution.first?.workouts.map(\.best) == [.init(weightKg: 50, reps: 5)])
+    }
+}
