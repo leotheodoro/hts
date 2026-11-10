@@ -16,14 +16,18 @@ import Testing
     }
 
     @Test func monthlyArcsStayLockedWhileAnInitialArcIsOpen() {
-        let arcs = [arc(0, .completed), arc(1, .current), arc(2, .queued, months: [1, 2]), arc(3, .queued, months: [3])]
+        let arcs = [
+            arc(0, .completed), arc(1, .current), arc(2, .queued, months: [1, 2]), arc(3, .queued, months: [3]),
+        ]
         #expect(!MonthlyArcs.inMonthlyPhase(arcs))
         #expect(arcs.allSatisfy { !MonthlyArcs.isOpen($0, in: arcs, seasonActive: true) })
         #expect(MonthlyArcs.current(in: arcs, month: 1) == nil)
     }
 
     @Test func everyMonthOpensOnceTheInitialArcsAreDone() {
-        let arcs = [arc(0, .completed), arc(1, .completed), arc(2, .queued, months: [1, 2]), arc(3, .queued, months: [3])]
+        let arcs = [
+            arc(0, .completed), arc(1, .completed), arc(2, .queued, months: [1, 2]), arc(3, .queued, months: [3]),
+        ]
         #expect(MonthlyArcs.inMonthlyPhase(arcs))
         #expect(MonthlyArcs.isOpen(arcs[2], in: arcs, seasonActive: true))
         #expect(MonthlyArcs.isOpen(arcs[3], in: arcs, seasonActive: true))

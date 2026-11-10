@@ -228,6 +228,81 @@ describe("importStarterPlan", () => {
     });
   });
 
+  describe("monthly arcs (#210)", () => {
+    const month = (name: string, months?: number[]) => ({
+      name,
+      kanji: "月",
+      weeks: 4,
+      ...(months ? { months } : {}),
+      templates: [
+        {
+          name: "A",
+          blocks: [
+            {
+              kind: "strength",
+              attributes: ["strength"],
+              exercises: [{ name: "Supino", sets: "3", target: "8" }],
+            },
+          ],
+        },
+      ],
+    });
+    const withMonths = (arcs: ReturnType<typeof month>[]) =>
+      StarterPlanFileSchema.parse({ seasons: [{ name: "Base Performance", arcs }] });
+
+    const arcsOf = async (athleteId: string) =>
+      db
+        .select({ name: arc.name, months: arc.months, status: arc.status })
+        .from(arc)
+        .where(eq(arc.athleteId, athleteId))
+        .orderBy(arc.position);
+
+    it("imports the months and never makes a month current", async () => {
+      const leo = await seeded();
+      await importStarterPlan(
+        db,
+        leo.athleteId,
+        withMonths([month("Novembro", [11]), month("Adaptação")]),
+        "2026-11-02",
+      );
+      expect(await arcsOf(leo.athleteId)).toEqual([
+        { name: "Novembro", months: [11], status: "queued" },
+        { name: "Adaptação", months: null, status: "current" },
+      ]);
+    });
+
+    it("sets the months of an arc that already exists", async () => {
+      const leo = await seeded();
+      await importStarterPlan(
+        db,
+        leo.athleteId,
+        withMonths([month("Novembro e Dezembro")]),
+        "2026-11-02",
+      );
+      const [before] = await db
+        .select({ serverUpdatedAt: arc.serverUpdatedAt })
+        .from(arc)
+        .where(eq(arc.athleteId, leo.athleteId));
+      const again = withMonths([month("Novembro e Dezembro", [11, 12])]);
+      expect(await importStarterPlan(db, leo.athleteId, again, "2026-11-09")).toEqual({
+        arcsAdded: 0,
+        videosFilled: 0,
+      });
+      const [after] = await db
+        .select({ months: arc.months, serverUpdatedAt: arc.serverUpdatedAt })
+        .from(arc)
+        .where(eq(arc.athleteId, leo.athleteId));
+      expect(after?.months).toEqual([11, 12]);
+      expect(after?.serverUpdatedAt?.getTime()).toBeGreaterThan(
+        before?.serverUpdatedAt?.getTime() ?? 0,
+      );
+    });
+
+    it("refuses a month outside 1 to 12", () => {
+      expect(() => withMonths([month("Treze", [13])])).toThrow();
+    });
+  });
+
   it("refuses a template the notation cannot read", async () => {
     const leo = await seeded();
     const broken = StarterPlanFileSchema.parse({
