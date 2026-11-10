@@ -10,6 +10,8 @@ public struct ArcService: Sendable {
         public let schedule: ArcSchedule
         /// Completed sessions since the last count reset.
         public let completedSessions: Int
+        /// A monthly arc open to train though not current (#210).
+        public var isOpen: Bool = false
         public var id: UUID { arc.id }
     }
 
@@ -27,7 +29,12 @@ public struct ArcService: Sendable {
                 if let seasonId { request.filter(Column("season_id") == seasonId.sql) } else {
                     request.filter(Column("season_id") == nil)
                 }
-            return try request.order(Columns.position).fetchAll(db).map { arc in
+            let arcs = try request.order(Columns.position).fetchAll(db)
+            let active =
+                try seasonId.map {
+                    try Bool.fetchOne(db, sql: "SELECT active FROM season WHERE id = ?", arguments: [$0.sql])
+                } ?? false
+            return try arcs.map { arc in
                 let letters = try String.fetchAll(
                     db,
                     sql:
@@ -36,7 +43,9 @@ public struct ArcService: Sendable {
                 let completed = try Self.completedSessions(arc: arc, db)
                 return Summary(
                     arc: arc, schedule: ArcSchedule(letters: letters, weeks: arc.weeks, startDate: arc.startDate),
-                    completedSessions: completed)
+                    completedSessions: completed,
+                    isOpen: arc.status != .current
+                        && MonthlyArcs.isOpen(arc, in: arcs, seasonActive: active == true))
             }
         }
     }
@@ -140,12 +149,32 @@ public struct ArcService: Sendable {
         }
     }
 
-    /// After a finished session: when the arc has all its sessions it becomes completed and the next queued arc of
-    /// the season becomes current. Returns the arc that became current, if any.
+    /// Whether a workout of this arc can start: the current arc, a free arc, or an open monthly arc (#210).
+    public func canTrain(arcId: UUID) async throws -> Bool {
+        try await database.writer.read { db in
+            guard let arc = try Arc.filter(key: arcId).fetchOne(db) else { return false }
+            return try Self.canTrain(arc, db)
+        }
+    }
+
+    static func canTrain(_ arc: Arc, _ db: Database) throws -> Bool {
+        if arc.status == .current || arc.kind == .filler { return true }
+        guard arc.isMonthly, let seasonId = arc.seasonId else { return false }
+        let active = try Bool.fetchOne(db, sql: "SELECT active FROM season WHERE id = ?", arguments: [seasonId.sql])
+        let seasonArcs = try Arc.filter(Column("season_id") == seasonId.sql).filter(Columns.deletedAt == nil)
+            .fetchAll(db)
+        return MonthlyArcs.isOpen(arc, in: seasonArcs, seasonActive: active == true)
+    }
+
+    /// After a finished session: when the arc has all its sessions it becomes completed and the next arc of the
+    /// season becomes current (the next one in order, or the month of the calendar, #210). Returns the arc that
+    /// became current, if any.
     @discardableResult
     public func completeIfDone(arcId: UUID, now: Date = .now) async throws -> Arc? {
         try await database.writer.write { db in
-            guard var arc = try Arc.filter(key: arcId).fetchOne(db), arc.status == .current else { return nil }
+            guard var arc = try Arc.filter(key: arcId).fetchOne(db), try Self.canTrain(arc, db), arc.kind != .filler
+            else { return nil }
+            let wasCurrent = arc.status == .current
             let letters = try String.fetchAll(
                 db, sql: "SELECT letter FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL",
                 arguments: [arc.id.sql])
@@ -155,17 +184,8 @@ public struct ArcService: Sendable {
             arc.status = .completed
             arc.updatedAt = stamp
             try arc.update(db)
-            guard
-                let seasonId = arc.seasonId,
-                var next = try Arc.filter(Column("season_id") == seasonId.sql)
-                    .filter(Column("status") == ArcStatus.queued.rawValue).filter(Columns.deletedAt == nil)
-                    .filter(Column("kind") != ArcKind.filler.rawValue)
-                    .order(Columns.position).fetchOne(db)
-            else { return nil }
-            next.status = .current
-            next.updatedAt = stamp
-            try next.update(db)
-            return next
+            guard wasCurrent, let seasonId = arc.seasonId else { return nil }
+            return try SeasonService.promoteNextArc(seasonId: seasonId, now: now, db)
         }
     }
 

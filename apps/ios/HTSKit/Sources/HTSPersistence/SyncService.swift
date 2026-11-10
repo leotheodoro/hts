@@ -30,7 +30,7 @@ public struct SyncService: Sendable {
     static let decimalColumns: Set<String> = ["weight_kg", "meters", "distance_meters"]
     static let booleanColumns: Set<String> = ["completed", "per_side", "active"]
     /// SQLite stores these as JSON text; the API expects JSON.
-    static let jsonColumns: Set<String> = ["attributes", "targets", "plan_snapshot", "weights"]
+    static let jsonColumns: Set<String> = ["attributes", "targets", "plan_snapshot", "weights", "months"]
 
     private let database: AppDatabase
     private let transport: any SyncTransport

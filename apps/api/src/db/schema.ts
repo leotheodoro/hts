@@ -161,6 +161,8 @@ export const arc = pgTable(
     position: integer("position").notNull(),
     /** "Recomeçar contagem": sessions before this instant do not count for the arc. */
     countResetAt: timestamp("count_reset_at", { withTimezone: true }),
+    /** Calendar months (1 to 12) of a monthly arc (#210, docs/decisions/0035); null for every other arc. */
+    months: jsonb("months").$type<number[]>(),
     ...timestamps,
   },
   (t) => [

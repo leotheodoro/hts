@@ -139,6 +139,10 @@ public final class AppDatabase: Sendable {
                     CREATE INDEX imported_activity_athlete_started_at_idx ON imported_activity(athlete_id, started_at);
                     """)
         }
+        // Mirrors apps/api/drizzle/0011: the months of a monthly arc (#210).
+        migrator.registerMigration("v12_arc_months") { db in
+            try db.alter(table: "arc") { t in t.add(column: "months", .jsonText) }
+        }
         return migrator
     }
 
