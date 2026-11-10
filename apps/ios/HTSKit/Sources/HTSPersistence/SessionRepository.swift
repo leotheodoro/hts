@@ -150,6 +150,19 @@ public struct SessionRepository: Sendable {
         try await database.writer.write { db in try set.save(db) }
     }
 
+    /// Fixes the kg and reps of a set of a finished workout (#197); nothing else of the set changes. A deleted or
+    /// missing set is left alone.
+    public func correct(setId: UUID, weightKg: Decimal?, reps: Int?, now: Date = .now) async throws {
+        try await database.writer.write { db in
+            guard var set = try LoggedSet.filter(Columns.id == setId.sql && Columns.deletedAt == nil).fetchOne(db)
+            else { return }
+            set.weightKg = weightKg
+            set.reps = reps
+            set.updatedAt = now.roundedToMilliseconds
+            try set.update(db)
+        }
+    }
+
     public func save(_ round: LoggedRound) async throws {
         try await database.writer.write { db in try round.save(db) }
     }

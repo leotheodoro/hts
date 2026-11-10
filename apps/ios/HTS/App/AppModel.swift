@@ -74,8 +74,11 @@ final class AppModel {
     private(set) var syncState: SyncState = .idle
     /// When this device last finished a sync (kept in SQLite), shown above Sair.
     private(set) var lastSyncedAt: Date?
-    /// Bumped when data changes outside the screens (sync pulled rows, starter plan imported), so they reload.
+    /// Bumped when data changes outside the screens (sync pulled rows, starter plan imported) or one screen changes
+    /// what others show (a corrected set, #197), so they reload.
     private(set) var dataVersion = 0
+
+    func noteLocalChange() { dataVersion += 1 }
 
     /// The workout in progress, if any. It survives app restarts because it lives in the database.
     private(set) var activeSession: Session?
