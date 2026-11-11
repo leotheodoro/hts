@@ -314,6 +314,52 @@ describe("importStarterPlan", () => {
     });
   });
 
+  describe("endless arcs (#214)", () => {
+    const endless = (extra: Record<string, unknown> = {}) =>
+      StarterPlanFileSchema.parse({
+        seasons: [
+          {
+            name: "Power Building",
+            arcs: [
+              {
+                name: "Volume 1",
+                kanji: "鉄",
+                endless: true,
+                ...extra,
+                templates: [
+                  {
+                    name: "Back Squat",
+                    blocks: [
+                      {
+                        kind: "strength",
+                        attributes: ["strength"],
+                        exercises: [{ name: "Back Squat", sets: "5", target: "3-5-5-5-5" }],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+    it("imports a normal arc without weeks", async () => {
+      const leo = await seeded();
+      await importStarterPlan(db, leo.athleteId, endless(), "2026-11-11");
+      const [row] = await db
+        .select({ kind: arc.kind, weeks: arc.weeks, startDate: arc.startDate })
+        .from(arc)
+        .where(eq(arc.athleteId, leo.athleteId));
+      expect(row).toEqual({ kind: "normal", weeks: null, startDate: null });
+    });
+
+    it("refuses an endless arc with weeks or months", () => {
+      expect(() => endless({ weeks: 4 })).toThrow();
+      expect(() => endless({ months: [1] })).toThrow();
+    });
+  });
+
   describe("notes and refresh (#212)", () => {
     const arcWith = (exercises: { name: string; sets: string; target: string; notes?: string }[]) =>
       StarterPlanFileSchema.parse({
