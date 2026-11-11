@@ -51,6 +51,9 @@ struct ArcsScreen: View {
     @ViewBuilder private func content(_ model: ArcsModel) -> some View {
         if model.seasons.isEmpty && model.freeArcs.isEmpty {
             PlaceholderCard(label: "TEMPORADAS", text: "Nenhum arco ainda.")
+        } else if !model.seasons.isEmpty && model.activeSeason == nil {
+            // A season was deactivated (#214).
+            PlaceholderCard(label: "TEMPORADA", text: "Nenhuma temporada ativa. Ative uma em Temporadas disponíveis.")
         }
         // The other seasons live in Temporadas disponíveis (#204).
         ForEach(model.seasons.filter(\.season.active)) { entry in

@@ -58,22 +58,51 @@ final class ArcsModel {
         return entry.summaries.first { $0.arc.status == .queued && $0.arc.kind != .filler }?.arc.id
     }
 
+    private var keepsNote: String { String(localized: "XP, nível, treinos feitos e arcos já liberados continuam.") }
+
+    /// The current arc of the active season with sessions counted: its count restarts on a switch.
+    private var restartingArc: (name: String, count: String)? {
+        guard let active = seasons.first(where: { $0.season.active }),
+            let current = active.summaries.first(where: { $0.arc.status == .current && $0.arc.kind != .filler }),
+            current.completedSessions > 0
+        else { return nil }
+        let total = current.schedule.totalSessions.map { " de \($0)" } ?? ""
+        return (current.arc.name, "\(current.completedSessions)\(total)")
+    }
+
     /// What activating `season` changes, for the confirmation (#204).
     func activationNote(for season: Season) -> String {
-        let keeps = String(localized: "XP, nível, treinos feitos e arcos já liberados continuam.")
         guard let active = seasons.first(where: { $0.season.active }), active.season.id != season.id else {
-            return keeps
+            return keepsNote
         }
-        if let current = active.summaries.first(where: { $0.arc.status == .current && $0.arc.kind != .filler }),
-            current.completedSessions > 0
-        {
-            let total = current.schedule.totalSessions.map { " de \($0)" } ?? ""
+        if let arc = restartingArc {
             return String(
                 localized:
-                    "A temporada \(active.season.name) fica inativa e a contagem do arco \(current.arc.name) (\(current.completedSessions)\(total)) volta a zero. \(keeps)"
+                    "A temporada \(active.season.name) fica inativa e a contagem do arco \(arc.name) (\(arc.count)) volta a zero. \(keepsNote)"
             )
         }
-        return String(localized: "A temporada \(active.season.name) fica inativa. \(keeps)")
+        return String(localized: "A temporada \(active.season.name) fica inativa. \(keepsNote)")
+    }
+
+    /// What "Desativar temporada" changes, for the confirmation (#214).
+    func deactivationNote() -> String {
+        if let arc = restartingArc {
+            return String(
+                localized:
+                    "Nenhuma temporada fica ativa e a contagem do arco \(arc.name) (\(arc.count)) volta a zero. \(keepsNote)"
+            )
+        }
+        return String(localized: "Nenhuma temporada fica ativa. \(keepsNote)")
+    }
+
+    /// No season stays active; the current arc goes back to the queue with its count restarted (#214).
+    func deactivate(_ season: Season) async {
+        do {
+            try await SeasonService(database).deactivate(seasonId: season.id, athleteId: athleteId)
+            await load()
+        } catch {
+            self.error = String(describing: error)
+        }
     }
 
     /// Makes `season` the active one; the previous season pauses and its current arc restarts (#204).

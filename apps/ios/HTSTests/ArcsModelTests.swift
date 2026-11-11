@@ -103,4 +103,37 @@ import Testing
                 == "A temporada Jiu-Jitsu fica inativa e a contagem do arco Força Máxima (1 de 2) volta a zero. XP, nível, treinos feitos e arcos já liberados continuam."
         )
     }
+
+    /// "Desativar temporada" (#214): the confirmation says what restarts; afterwards no season is active.
+    @Test func deactivatingTheActiveSeason() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let season = try await SeasonService(database).season(named: "Power Building", athleteId: athlete.id)
+        try await ArcService(database).save(
+            ArcDraft(name: "Volume 1", kanji: "筋", startDate: .today, templates: [.init(origin: .new, name: "A")]),
+            athleteId: athlete.id, seasonId: season.id)
+        // Endless, as the seed imports it: no weeks.
+        try await database.writer.write { db in
+            try db.execute(sql: "UPDATE arc SET weeks = NULL, start_date = NULL WHERE name = 'Volume 1'")
+        }
+        let model = ArcsModel(database: database, athleteId: athlete.id)
+        await model.load()
+        #expect(
+            model.deactivationNote()
+                == "Nenhuma temporada fica ativa. XP, nível, treinos feitos e arcos já liberados continuam.")
+
+        let current = try #require(try await PlanRepository(database).currentArc(athleteId: athlete.id))
+        let plan = try #require(try await PlanRepository(database).plan(arcId: current.id))
+        let session = try await SessionRepository(database).start(plan.templates[0])
+        _ = try await SessionRepository(database).finish(sessionId: session.id)
+        await model.load()
+        #expect(
+            model.deactivationNote()
+                == "Nenhuma temporada fica ativa e a contagem do arco Volume 1 (1) volta a zero. XP, nível, treinos feitos e arcos já liberados continuam."
+        )
+
+        await model.deactivate(season)
+        #expect(model.activeSeason == nil)
+        #expect(model.seasons.first?.summaries.first?.arc.status == .queued)
+    }
 }

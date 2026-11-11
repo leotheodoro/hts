@@ -69,6 +69,22 @@ public struct SeasonService: Sendable {
         }
     }
 
+    /// "Desativar temporada" (#214, docs/decisions/0036): no season stays active. The current arc goes back to the
+    /// queue with its count restarted, as in a switch (docs/decisions/0034); activating the season again continues
+    /// from it.
+    public func deactivate(seasonId: UUID, athleteId: UUID, now: Date = .now) async throws {
+        try await database.writer.write { db in
+            let stamp = ISO8601Millis.format(now)
+            try db.execute(
+                sql: """
+                    UPDATE arc SET count_reset_at = ?, status = 'queued', updated_at = ?
+                    WHERE athlete_id = ? AND season_id = ? AND status = 'current' AND deleted_at IS NULL;
+                    UPDATE season SET active = 0, updated_at = ? WHERE id = ? AND active;
+                    """,
+                arguments: [stamp, stamp, athleteId.sql, seasonId.sql, stamp, seasonId.sql])
+        }
+    }
+
     /// In a season past its initial arcs, the current arc follows the calendar month (#210). Run when the app
     /// shows the plan; nothing changes outside the monthly phase or when the right arc is already current.
     public func alignMonthlyArc(athleteId: UUID, now: Date = .now) async throws {

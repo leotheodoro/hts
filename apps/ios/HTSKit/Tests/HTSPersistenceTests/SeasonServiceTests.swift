@@ -115,4 +115,22 @@ import Testing
             try await ArcService(database).summaries(athleteId: athlete.id, seasonId: jiuJitsu.id).first?
                 .completedSessions == 1)
     }
+
+    /// "Desativar temporada" (#214): no season stays active; the current arc goes back to the queue with its count
+    /// restarted, and comes back as current when the season is activated again.
+    @Test func deactivatingLeavesNoSeasonActive() async throws {
+        let (database, athlete) = try await setUp()
+        let seasons = SeasonService(database)
+        let jiuJitsu = try #require(try await seasons.activeSeason(athleteId: athlete.id))
+        let now = Date(timeIntervalSince1970: 1_794_400_000)
+        try await seasons.deactivate(seasonId: jiuJitsu.id, athleteId: athlete.id, now: now)
+        #expect(try await seasons.activeSeason(athleteId: athlete.id) == nil)
+        #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id) == nil)
+        let arcs = try await ArcService(database).summaries(athleteId: athlete.id, seasonId: jiuJitsu.id)
+        #expect(arcs[0].arc.status == .queued)
+        #expect(arcs[0].arc.countResetAt == now)
+
+        try await seasons.activate(seasonId: jiuJitsu.id, athleteId: athlete.id, now: now)
+        #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id)?.name == "Base volume 1")
+    }
 }
