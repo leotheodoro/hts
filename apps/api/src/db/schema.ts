@@ -119,7 +119,14 @@ export const blockKind = pgEnum("block_kind", [
   "mobility",
   "cardio",
 ]);
-export const exerciseUnit = pgEnum("exercise_unit", ["reps", "seconds", "meters", "minutes"]);
+export const exerciseUnit = pgEnum("exercise_unit", [
+  "reps",
+  "seconds",
+  "meters",
+  "minutes",
+  /** Calories on a bike or rower (#216), kept in logged_set.reps like minutes are kept in seconds. */
+  "calories",
+]);
 
 /**
  * Temporada: a named sequence of arcs (Jiu-Jitsu, Performance). Arcs unlock in order; only one season
@@ -190,6 +197,8 @@ export const workoutTemplate = pgTable(
     name: text("name").notNull(),
     focus: text("focus"),
     position: integer("position").notNull(),
+    /** Treino teste (#216): always open, outside the rotation, compared between runs. */
+    isTest: boolean("is_test").notNull().default(false),
     ...timestamps,
   },
   (t) => [index("workout_template_arc_id_idx").on(t.arcId)],

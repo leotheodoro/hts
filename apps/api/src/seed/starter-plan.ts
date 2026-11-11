@@ -47,6 +47,8 @@ const BlockSeed = z.object({
 const TemplateSeed = z.object({
   name: z.string().min(1),
   focus: z.string().optional(),
+  /** Treino teste (#216). */
+  test: z.boolean().optional(),
   blocks: z.array(BlockSeed),
 });
 
@@ -236,6 +238,7 @@ async function insertTemplates(
       name: templateSeed.name.trim(),
       focus: focus ? focus : null,
       position: templateIndex,
+      isTest: templateSeed.test ?? false,
       createdAt: now,
       updatedAt: now,
     });
@@ -345,6 +348,7 @@ function canonical(value: unknown): string {
 type Content = {
   name: string;
   focus: string | null;
+  isTest: boolean;
   blocks: {
     kind: string;
     attributes: string[];
@@ -364,6 +368,7 @@ function planContent(templates: TemplateSeedT[]): Content {
   return templates.map((t) => ({
     name: t.name.trim(),
     focus: t.focus?.trim() || null,
+    isTest: t.test ?? false,
     blocks: t.blocks.map((b) => ({
       kind: b.kind,
       attributes: b.attributes,
@@ -431,7 +436,7 @@ async function storedContent(
         })),
       });
     }
-    content.push({ name: t.name, focus: t.focus, blocks: contentBlocks });
+    content.push({ name: t.name, focus: t.focus, isTest: t.isTest, blocks: contentBlocks });
   }
   return { content, templateIds: templates.map((t) => t.id), blockIds, prescribedIds };
 }
