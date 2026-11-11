@@ -70,4 +70,44 @@ import Testing
         await model.load()
         #expect(model.start(hasActiveSession: false) == .available)
     }
+
+    /// A treino teste (#216) starts in a locked arc, and shows EVOLUÇÃO once it was done.
+    @Test func aTestStartsAnywhereAndShowsItsEvolution() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
+        let service = ArcService(database)
+        _ = try await service.save(
+            ArcDraft(
+                name: "Base 1", kanji: "試", weeks: 2, startDate: .today, templates: [.init(origin: .new, name: "A")]),
+            athleteId: athlete.id, seasonId: season.id)
+        let locked = try await service.save(
+            ArcDraft(
+                name: "Base 2", kanji: "試", weeks: 2, startDate: .today,
+                templates: [.init(origin: .new, name: "Teste")]),
+            athleteId: athlete.id, seasonId: season.id)
+        let plan = try #require(try await PlanRepository(database).plan(arcId: locked.id)?.templates.first)
+        var draft = try #require(try await TemplateService(database).draft(templateId: plan.template.id))
+        draft.blocks = [TemplateDraft.BlockDraft(exercises: [.init(name: "L-Sit", setsText: "1", targetText: "8")])]
+        try await TemplateService(database).save(draft)
+        try await database.writer.write { db in
+            try db.execute(sql: "UPDATE workout_template SET is_test = 1 WHERE name = 'Teste'")
+        }
+
+        let model = WorkoutModel(database: database, templateId: plan.template.id)
+        await model.load()
+        #expect(model.start(hasActiveSession: false) == .available)
+        #expect(model.evolution == nil)
+
+        let test = try #require(try await PlanRepository(database).template(id: plan.template.id)?.plan)
+        let sessions = SessionRepository(database)
+        let session = try await sessions.start(test)
+        var set = try #require(try await sessions.sets(sessionId: session.id).first)
+        set.reps = 8
+        set.completed = true
+        try await sessions.save(set)
+        _ = try await sessions.finish(sessionId: session.id)
+        await model.load()
+        #expect(model.evolution?.rows.map(\.latest) == ["8"])
+    }
 }

@@ -383,6 +383,7 @@ private struct ExerciseTable: View {
         case .seconds: "SEG"
         case .minutes: "MIN"
         case .meters: "M"
+        case .calories: "CAL"
         }
     }
 
@@ -448,7 +449,7 @@ private struct SetRow: View {
 
     private var amount: Decimal? {
         switch exercise.unit {
-        case .reps: set.reps.map { Decimal($0) }
+        case .reps, .calories: set.reps.map { Decimal($0) }
         case .seconds: set.seconds.map { Decimal($0) }
         case .minutes: set.seconds.map { Decimal($0) / 60 }
         case .meters: set.meters
@@ -459,7 +460,7 @@ private struct SetRow: View {
         var changed = set
         let int = value.map { NSDecimalNumber(decimal: $0).intValue }
         switch exercise.unit {
-        case .reps: changed.reps = int
+        case .reps, .calories: changed.reps = int
         case .seconds: changed.seconds = int
         case .minutes: changed.seconds = value.map { NSDecimalNumber(decimal: $0 * 60).intValue }
         case .meters: changed.meters = value

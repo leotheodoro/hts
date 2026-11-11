@@ -40,7 +40,7 @@ Preto e osso ocupam cerca de 90% de qualquer peça. O vermelho é munição.
 - `blood` (Pantone 186 C) só na ação principal, em alerta, em recorde, no SUBMIT, no destaque da marca na borda do arco atual (com o rótulo ATUAL em `red-text`, decisão do Leo no #90) e nos bullets dos blocos feitos no treino ativo (#108), até 10% da peça. Nunca como fundo dominante.
 - Arco bloqueado: kanji e nome em `bone` com `opacity-next`.
 - Texto vermelho é `red-text`, nunca `blood` em texto pequeno. `red-text` passa sobre `black` e `blood-deep`; sobre `charcoal` e `surface`, só em 19px negrito ou maior.
-- `olive` e `olive-ink` só em tags e patentes; `khaki` só nas divisas; `tag`, `tag-edge` e `tag-ink` só na dog tag.
+- `olive` e `olive-ink` só em tags e patentes; `olive-edge` só na borda do treino teste; `khaki` só nas divisas; `tag`, `tag-edge` e `tag-ink` só na dog tag.
 - Não existe tema claro. Em fundo claro, use preto sobre osso, com vermelho só como acento.
 - Os Pantone além do 186 C ainda serão definidos no leque físico.
 

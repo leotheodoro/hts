@@ -90,6 +90,47 @@
                 try await sessions.save(set)
             }
             _ = try await sessions.finish(sessionId: past.id, now: started.addingTimeInterval(3_900))
+            try await seedTest(database, athleteId: athleteId)
+        }
+
+        /// A treino teste (#216) in the locked arc Forja, done twice, so EVOLUÇÃO has two columns.
+        private static func seedTest(_ database: AppDatabase, athleteId: UUID) async throws {
+            let plans = PlanRepository(database)
+            let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athleteId)
+            guard
+                let forja = try await plans.arcs(athleteId: athleteId, seasonId: season.id)
+                    .first(where: { $0.name == "Forja" })
+            else { return }
+            let test = WorkoutTemplate(
+                id: UUIDv7.make(), athleteId: athleteId, arcId: forja.id, letter: "D", name: "Teste de Potência",
+                position: 3, isTest: true, createdAt: .now)
+            try await plans.save(test)
+            guard var draft = try await TemplateService(database).draft(templateId: test.id) else { return }
+            draft.blocks = [
+                .init(
+                    kind: .conditioning, attributes: [.power],
+                    exercises: [
+                        .init(name: "Salto em Distância", unit: .meters, setsText: "3", targetText: "máx"),
+                        .init(name: "Bike Max Cal 30 s", unit: .calories, setsText: "1", targetText: "máx"),
+                    ])
+            ]
+            try await TemplateService(database).save(draft)
+            guard let plan = try await plans.template(id: test.id)?.plan else { return }
+            let sessions = SessionRepository(database)
+            for (daysAgo, jump, calories) in [(30, Decimal(2.3), 18), (3, Decimal(2.45), 17)] {
+                let started = Date.now.addingTimeInterval(-Double(daysAgo) * 86_400)
+                let run = try await sessions.start(plan, now: started)
+                for var set in try await sessions.sets(sessionId: run.id) {
+                    if set.exerciseId == plan.blocks[0].exercises[0].exercise.id {
+                        set.meters = jump - Decimal(set.setNumber - 1) / 10
+                    } else {
+                        set.reps = calories
+                    }
+                    set.completed = true
+                    try await sessions.save(set)
+                }
+                _ = try await sessions.finish(sessionId: run.id, now: started.addingTimeInterval(900))
+            }
         }
 
         /// A run yesterday at 07:00, yoga three days ago and, when there is a finished workout, a strength session

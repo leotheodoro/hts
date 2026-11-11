@@ -92,7 +92,8 @@ import Testing
         let evolution = try #require(TestEvolution(runs: [latest, previous]))
         #expect(
             evolution.rows == [
-                .init(name: "Salto em Distância", previous: "2,3 m", latest: "2,45 m", delta: "+0,15 m", trend: .better),
+                .init(
+                    name: "Salto em Distância", previous: "2,3 m", latest: "2,45 m", delta: "+0,15 m", trend: .better),
                 .init(name: "Corrida", previous: "12 min", latest: "11,5 min", delta: "−0,5 min", trend: .worse),
             ])
     }

@@ -49,6 +49,7 @@ extension ExerciseUnit {
         case .seconds: "Seg"
         case .minutes: "Min"
         case .meters: "M"
+        case .calories: "Cal"
         }
     }
 }
