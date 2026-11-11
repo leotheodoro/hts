@@ -22,6 +22,7 @@ Referências: [canvas de design](https://claude.ai/artifact/KzHW9r1MKGRutmzu1niX
 | Temporada | Uma sequência de arcos com um objetivo (ex.: Jiu-Jitsu, Performance). Só uma fica ativa; cada arco libera o próximo ao terminar. Os arcos mensais (Janeiro e Fevereiro, Julho…) abrem todos juntos depois dos arcos iniciais; o do mês do calendário é o atual (ADR 0035). A Manutenção fica fora de qualquer temporada. |
 | Arco | Uma fase do programa, criada pelo usuário, com N treinos-modelo e uma duração em semanas. |
 | Treino-modelo | A receita de um treino dentro do arco, identificada por letra e nome (ex.: A · Linha de Frente). Antes se chamava "técnica". |
+| Treino teste | Um treino-modelo que mede uma valência física (ex.: L-Sit e prancha máximos). Fica sempre liberado, no topo do arco com borda oliva e selo TESTE, fora do rodízio e da contagem. Ao abrir, mostra a EVOLUÇÃO: a última vez ao lado da anterior (ADR 0037). |
 | Treino (sessão) | Uma execução registrada de um treino-modelo, numerada (Treino 5 de 6 no arco; numeração global também existe). Antes se chamava "episódio". |
 | Bloco | Grupo de exercícios dentro do treino, com tipo e atributo. |
 | Combo | Exercícios em sequência; o descanso vem depois do último. |

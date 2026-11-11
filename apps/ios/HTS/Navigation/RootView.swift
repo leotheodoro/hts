@@ -1,4 +1,5 @@
 import HTSDesign
+import HTSPersistence
 import SwiftUI
 import UIKit
 
@@ -69,6 +70,9 @@ struct RootView: View {
             }
         }
         .preferredColorScheme(.dark)
+        #if DEBUG
+            .task(id: "\(app.athlete?.id.uuidString ?? "")-\(app.dataVersion)") { await openDemoPages() }
+        #endif
         .fullScreenCover(isPresented: Bindable(app).showsActiveSession) {
             if let database = app.database, let session = app.activeSession {
                 ActiveSessionScreen(
@@ -80,6 +84,33 @@ struct RootView: View {
         }
     }
 }
+
+#if DEBUG
+    extension RootView {
+        /// `-HTSOpenArc Forja` (and `-HTSOpenWorkout "Teste de Potência"`) open an arc on Arcos, and a workout of it
+        /// (screenshots).
+        fileprivate func openDemoPages() async {
+            guard arcsPath.isEmpty, let name = UserDefaults.standard.string(forKey: "HTSOpenArc"),
+                let database = app.database, let athlete = app.athlete
+            else { return }
+            let service = ArcService(database)
+            let season = try? await SeasonService(database).activeSeason(athleteId: athlete.id)
+            let arcs =
+                ((try? await service.summaries(athleteId: athlete.id, seasonId: season?.id)) ?? [])
+                + ((try? await service.summaries(athleteId: athlete.id, seasonId: nil)) ?? [])
+            guard let arc = arcs.first(where: { $0.arc.name == name })?.arc else { return }
+            var path: [Route] = [.arc(arc.id)]
+            if let workout = UserDefaults.standard.string(forKey: "HTSOpenWorkout"),
+                let template = try? await PlanRepository(database).plan(arcId: arc.id)?.templates
+                    .first(where: { $0.template.name == workout })
+            {
+                path.append(.workout(templateId: template.template.id))
+            }
+            selection = .arcs
+            arcsPath = path
+        }
+    }
+#endif
 
 extension RootView {
     /// Tapping the selected tab: pages on the stack go away; on the first page, it scrolls to the top (#106).

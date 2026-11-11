@@ -8,6 +8,8 @@ struct ArcDetailScreen: View {
     let arcId: UUID
     @Environment(AppModel.self) private var app
     @State private var plan: ArcPlan?
+    /// The day each treino teste was last done (#216).
+    @State private var lastRuns: [UUID: LocalDate] = [:]
 
     var body: some View {
         DetailScaffold {
@@ -27,15 +29,29 @@ struct ArcDetailScreen: View {
                 }
                 VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                     Text("TREINOS").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
-                    ForEach(plan.templates, id: \.template.id) { template in
+                    // A treino teste is always first, with its own border (#216).
+                    ForEach(
+                        plan.templates.filter(\.template.isTest) + plan.templates.filter { !$0.template.isTest },
+                        id: \.template.id
+                    ) { template in
                         NavigationLink(value: Route.workout(templateId: template.template.id)) {
-                            NotchCard {
+                            NotchCard(border: template.template.isTest ? Color.hts.oliveEdge : Color.hts.line) {
                                 HStack(spacing: HTSSpacing.space3) {
                                     VStack(alignment: .leading, spacing: HTSSpacing.space1) {
-                                        Text(verbatim: "\(template.template.letter) · \(template.template.name)")
-                                            .htsTextStyle(.uiSection)
+                                        if template.template.isTest { TestTag() }
+                                        // A test is outside the rotation: no letter (#216).
+                                        Text(
+                                            verbatim: template.template.isTest
+                                                ? template.template.name
+                                                : "\(template.template.letter) · \(template.template.name)"
+                                        )
+                                        .htsTextStyle(.uiSection)
                                         if let focus = template.template.focus {
                                             Text(verbatim: focus).htsTextStyle(.caption)
+                                                .foregroundStyle(Color.hts.greyApp)
+                                        }
+                                        if template.template.isTest {
+                                            Text(lastRunText(template.template.id)).htsTextStyle(.caption)
                                                 .foregroundStyle(Color.hts.greyApp)
                                         }
                                     }
@@ -53,7 +69,19 @@ struct ArcDetailScreen: View {
         .task(id: "\(arcId)-\(app.dataVersion)") {
             guard let database = app.database else { return }
             plan = try? await PlanRepository(database).plan(arcId: arcId)
+            var runs: [UUID: LocalDate] = [:]
+            for template in plan?.templates ?? [] where template.template.isTest {
+                runs[template.template.id] =
+                    try? await SessionRepository(database).testRuns(templateId: template.template.id, limit: 1)
+                    .first?.date
+            }
+            lastRuns = runs
         }
+    }
+
+    private func lastRunText(_ templateId: UUID) -> LocalizedStringKey {
+        guard let date = lastRuns[templateId] else { return "Ainda não feito" }
+        return "Última vez \(EvolutionTable.day(date))"
     }
 
     private func statusLabel(_ arc: Arc) -> LocalizedStringKey {

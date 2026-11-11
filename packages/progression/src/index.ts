@@ -75,7 +75,7 @@ export function xpForSession(input: SessionXpInput, r: ProgressionRules = rules)
 
 export interface HistorySet {
   exerciseId: string;
-  unit: "reps" | "seconds" | "minutes" | "meters";
+  unit: "reps" | "seconds" | "minutes" | "meters" | "calories";
   completed: boolean;
   /** Decimal string ("62.5"), or null. */
   weightKg: string | null;

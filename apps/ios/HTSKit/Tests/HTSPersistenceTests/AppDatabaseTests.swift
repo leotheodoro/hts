@@ -193,3 +193,46 @@ import Testing
         #expect(counts == [0, 0, 0, 0])
     }
 }
+
+@Suite struct TestWorkoutsMigrationTests {
+    /// The exercise table is rebuilt for the calories unit (#216): the catalog and what points to it stay.
+    @Test func keepsTheCatalogAndAddsTheTestFlag() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v13_prescribed_exercise_notes")
+        let stamp = "2026-11-11T12:00:00.000Z"
+        try queue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO athlete (id, display_name, created_at, updated_at) VALUES ('a', 'Leo', ?, ?);
+                    INSERT INTO arc (id, athlete_id, name, kind, status, position, created_at, updated_at)
+                    VALUES ('r', 'a', 'Core Bruto', 'filler', 'queued', 0, ?, ?);
+                    INSERT INTO workout_template (id, athlete_id, arc_id, letter, name, position, created_at, updated_at)
+                    VALUES ('t', 'a', 'r', 'A', 'Teste', 0, ?, ?);
+                    INSERT INTO block (id, athlete_id, workout_template_id, kind, attributes, position, created_at,
+                        updated_at)
+                    VALUES ('b', 'a', 't', 'core', '["core"]', 0, ?, ?);
+                    INSERT INTO exercise (id, athlete_id, name, normalized_name, unit, per_side, created_at, updated_at,
+                        video_url)
+                    VALUES ('e', 'a', 'L-Sit', 'l-sit', 'seconds', 0, ?, ?, 'https://youtu.be/x');
+                    INSERT INTO prescribed_exercise (id, athlete_id, block_id, exercise_id, sets_min, sets_max, targets,
+                        position, created_at, updated_at)
+                    VALUES ('p', 'a', 'b', 'e', 1, 1, '[{"type":"max"}]', 0, ?, ?);
+                    """, arguments: StatementArguments(Array(repeating: stamp, count: 12)))
+        }
+        try AppDatabase.migrator.migrate(queue)
+        let result = try queue.read { db in
+            (
+                exercise: try Row.fetchOne(db, sql: "SELECT unit, video_url FROM exercise WHERE id = 'e'"),
+                isTest: try Bool.fetchOne(db, sql: "SELECT is_test FROM workout_template WHERE id = 't'"),
+                prescribed: try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM prescribed_exercise")
+            )
+        }
+        #expect(result.exercise?["unit"] == "seconds")
+        #expect(result.exercise?["video_url"] == "https://youtu.be/x")
+        #expect(result.isTest == false)
+        #expect(result.prescribed == 1)
+        try queue.write { db in
+            try db.execute(sql: "UPDATE exercise SET unit = 'calories' WHERE id = 'e'")
+        }
+    }
+}

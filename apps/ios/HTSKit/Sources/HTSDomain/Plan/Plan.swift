@@ -91,13 +91,16 @@ public struct WorkoutTemplate: Identifiable, Hashable, Sendable, Codable {
     public var name: String
     public var focus: String?
     public var position: Int
+    /// Treino teste (#216): always open, outside the rotation and the count, compared between runs.
+    public var isTest: Bool
     public var createdAt: Date
     public var updatedAt: Date
     public var deletedAt: Date?
 
     public init(
         id: UUID, athleteId: UUID, arcId: UUID, sourceTemplateId: UUID? = nil, letter: String, name: String,
-        focus: String? = nil, position: Int, createdAt: Date, updatedAt: Date? = nil, deletedAt: Date? = nil
+        focus: String? = nil, position: Int, isTest: Bool = false, createdAt: Date, updatedAt: Date? = nil,
+        deletedAt: Date? = nil
     ) {
         self.id = id
         self.athleteId = athleteId
@@ -107,6 +110,7 @@ public struct WorkoutTemplate: Identifiable, Hashable, Sendable, Codable {
         self.name = name
         self.focus = focus
         self.position = position
+        self.isTest = isTest
         self.createdAt = createdAt.roundedToMilliseconds
         self.updatedAt = (updatedAt ?? createdAt).roundedToMilliseconds
         self.deletedAt = deletedAt?.roundedToMilliseconds

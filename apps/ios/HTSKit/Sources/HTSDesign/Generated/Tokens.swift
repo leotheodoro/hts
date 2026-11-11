@@ -43,6 +43,8 @@ public struct HTSColors: Sendable {
     public let olive = Color(.sRGB, red: 0.227, green: 0.227, blue: 0.165) // #3A3A2A
     /// Texto de tag sobre `olive` (7.6:1).
     public let oliveInk = Color(.sRGB, red: 0.851, green: 0.824, blue: 0.722) // #D9D2B8
+    /// Oliva clara. Só na borda do card de treino teste (#216).
+    public let oliveEdge = Color(.sRGB, red: 0.49, green: 0.549, blue: 0.271) // #7D8C45
     /// Cáqui. Divisas e contorno das patentes E a B (7.1:1 sobre `rank-fill`).
     public let khaki = Color(.sRGB, red: 0.71, green: 0.659, blue: 0.529) // #B5A887
     /// Fundo do escudo das patentes.

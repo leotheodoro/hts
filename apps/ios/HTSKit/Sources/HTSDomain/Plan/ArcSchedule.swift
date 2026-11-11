@@ -11,8 +11,11 @@ public struct ArcSchedule: Hashable, Sendable {
         self.startDate = startDate
     }
 
+    /// Tests are outside the rotation and the count (#216).
     public init(_ plan: ArcPlan) {
-        self.init(letters: plan.templates.map(\.template.letter), weeks: plan.arc.weeks, startDate: plan.arc.startDate)
+        self.init(
+            letters: plan.templates.filter { !$0.template.isTest }.map(\.template.letter), weeks: plan.arc.weeks,
+            startDate: plan.arc.startDate)
     }
 
     /// Sessions per week, which is also the weekly goal for the streak.

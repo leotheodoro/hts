@@ -466,6 +466,77 @@ describe("importStarterPlan", () => {
     });
   });
 
+  describe("test workouts (#216)", () => {
+    const legs = (test: boolean) =>
+      StarterPlanFileSchema.parse({
+        arcs: [
+          {
+            name: "Power Base Legs",
+            kanji: "脚",
+            templates: [
+              {
+                name: "Teste de Potência",
+                test,
+                blocks: [
+                  {
+                    kind: "conditioning",
+                    attributes: ["power"],
+                    exercises: [
+                      { name: "Salto em Distância", unit: "meters", sets: "3", target: "máx" },
+                      { name: "Bike Max Cal 30 s", unit: "calories", sets: "1", target: "máx" },
+                    ],
+                  },
+                ],
+              },
+              {
+                name: "Treino 1",
+                blocks: [
+                  {
+                    kind: "strength",
+                    attributes: ["strength"],
+                    exercises: [{ name: "Back Squat", sets: "3", target: "5" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+    const templates = (athleteId: string) =>
+      db
+        .select({ name: workoutTemplate.name, isTest: workoutTemplate.isTest })
+        .from(workoutTemplate)
+        .where(and(eq(workoutTemplate.athleteId, athleteId), isNull(workoutTemplate.deletedAt)))
+        .orderBy(workoutTemplate.position);
+
+    it("imports the test flag and the calories unit", async () => {
+      const leo = await seeded();
+      await importStarterPlan(db, leo.athleteId, legs(true), "2026-11-11");
+      expect(await templates(leo.athleteId)).toEqual([
+        { name: "Teste de Potência", isTest: true },
+        { name: "Treino 1", isTest: false },
+      ]);
+      const [bike] = await db
+        .select({ unit: exercise.unit })
+        .from(exercise)
+        .where(and(eq(exercise.athleteId, leo.athleteId), eq(exercise.name, "Bike Max Cal 30 s")));
+      expect(bike).toEqual({ unit: "calories" });
+    });
+
+    it("refreshes an arc never trained when only the flag changed", async () => {
+      const leo = await seeded();
+      await importStarterPlan(db, leo.athleteId, legs(false), "2026-11-11");
+      expect(await importStarterPlan(db, leo.athleteId, legs(true), "2026-11-11")).toMatchObject({
+        arcsRefreshed: 1,
+      });
+      expect((await templates(leo.athleteId))[0]).toEqual({
+        name: "Teste de Potência",
+        isTest: true,
+      });
+    });
+  });
+
   it("refuses a template the notation cannot read", async () => {
     const leo = await seeded();
     const broken = StarterPlanFileSchema.parse({

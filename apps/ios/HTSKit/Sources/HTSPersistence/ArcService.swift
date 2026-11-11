@@ -38,7 +38,10 @@ public struct ArcService: Sendable {
                 let letters = try String.fetchAll(
                     db,
                     sql:
-                        "SELECT letter FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL ORDER BY position",
+                        """
+                        SELECT letter FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL AND NOT is_test
+                        ORDER BY position
+                        """,
                     arguments: [arc.id.sql])
                 let completed = try Self.completedSessions(arc: arc, db)
                 return Summary(
@@ -157,6 +160,16 @@ public struct ArcService: Sendable {
         }
     }
 
+    /// Whether this workout can start: a treino teste always can (#216); the others follow their arc.
+    public func canTrain(templateId: UUID) async throws -> Bool {
+        try await database.writer.read { db in
+            guard let template = try WorkoutTemplate.filter(key: templateId).fetchOne(db),
+                let arc = try Arc.filter(key: template.arcId).fetchOne(db)
+            else { return false }
+            return try template.isTest || Self.canTrain(arc, db)
+        }
+    }
+
     static func canTrain(_ arc: Arc, _ db: Database) throws -> Bool {
         if arc.status == .current || arc.kind == .filler { return true }
         guard arc.isMonthly, let seasonId = arc.seasonId else { return false }
@@ -176,7 +189,8 @@ public struct ArcService: Sendable {
             else { return nil }
             let wasCurrent = arc.status == .current
             let letters = try String.fetchAll(
-                db, sql: "SELECT letter FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL",
+                db,
+                sql: "SELECT letter FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL AND NOT is_test",
                 arguments: [arc.id.sql])
             let schedule = ArcSchedule(letters: letters, weeks: arc.weeks, startDate: arc.startDate)
             guard schedule.isComplete(completedSessions: try Self.completedSessions(arc: arc, db)) else { return nil }
@@ -221,6 +235,7 @@ public struct ArcService: Sendable {
             sql: """
                 SELECT COUNT(*) FROM session
                 WHERE arc_id = ? AND status = 'completed' AND deleted_at IS NULL AND (? IS NULL OR started_at >= ?)
+                AND \(SessionRepository.notATest)
                 """, arguments: [arc.id.sql, reset, reset]) ?? 0
     }
 
