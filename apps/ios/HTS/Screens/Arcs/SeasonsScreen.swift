@@ -82,7 +82,7 @@ struct SeasonScreen: View {
                     }
                     .buttonStyle(.plain)
                 }
-                if !entry.season.active { activation(model, entry.season) }
+                if entry.season.active { deactivation(model, entry.season) } else { activation(model, entry.season) }
                 if let error = model.error {
                     Text(verbatim: error).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
                 }
@@ -93,6 +93,30 @@ struct SeasonScreen: View {
             let model = self.model ?? ArcsModel(database: database, athleteId: athlete.id)
             await model.load()
             self.model = model
+        }
+    }
+
+    /// "Desativar temporada" (#214): no season stays active, with the same kind of confirmation as a switch.
+    @ViewBuilder private func deactivation(_ model: ArcsModel, _ season: Season) -> some View {
+        if confirming {
+            VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                Text("Desativar \(season.name)?").htsTextStyle(.bodyStrong).foregroundStyle(Color.hts.redText)
+                Text(verbatim: model.deactivationNote()).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                HTSButton("Desativar temporada") {
+                    Task {
+                        await model.deactivate(season)
+                        confirming = false
+                        app.noteLocalChange()
+                        if model.error == nil { dismiss() }
+                    }
+                }
+                HTSButton("Manter \(season.name)", kind: .ghost) { confirming = false }
+            }
+            .padding(HTSSpacing.space5)
+            .background(Color.hts.bloodDeep, in: NotchShape())
+            .overlay(NotchShape().strokeBorder(Color.hts.blood, lineWidth: HTSStroke.hair))
+        } else {
+            HTSButton("Desativar temporada", kind: .ghost) { confirming = true }
         }
     }
 

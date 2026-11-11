@@ -50,16 +50,22 @@ const TemplateSeed = z.object({
   blocks: z.array(BlockSeed),
 });
 
-const ArcSeed = z.object({
-  name: z.string().min(1),
-  /** Every arc has a kanji (#79). */
-  kanji: z.string().trim().min(1),
-  kind: z.enum(arcKind.enumValues).optional(),
-  weeks: z.number().int().positive().optional(),
-  /** Calendar months of a monthly arc (#210, docs/decisions/0035): [11, 12] for "Novembro e Dezembro". */
-  months: z.array(z.number().int().min(1).max(12)).min(1).optional(),
-  templates: z.array(TemplateSeed),
-});
+const ArcSeed = z
+  .object({
+    name: z.string().min(1),
+    /** Every arc has a kanji (#79). */
+    kanji: z.string().trim().min(1),
+    kind: z.enum(arcKind.enumValues).optional(),
+    weeks: z.number().int().positive().optional(),
+    /** Calendar months of a monthly arc (#210, docs/decisions/0035): [11, 12] for "Novembro e Dezembro". */
+    months: z.array(z.number().int().min(1).max(12)).min(1).optional(),
+    /** An arc with no end (#214, docs/decisions/0036): no weeks; current until the season changes. */
+    endless: z.boolean().optional(),
+    templates: z.array(TemplateSeed),
+  })
+  .refine((a) => !a.endless || (a.weeks === undefined && a.months === undefined), {
+    message: "An endless arc has no weeks and no months",
+  });
 
 export const StarterPlanFileSchema = z.object({
   seasons: z.array(z.object({ name: z.string().min(1), arcs: z.array(ArcSeed) })).default([]),
@@ -188,7 +194,7 @@ async function addArc(
   // Filler arcs are always available and never take the current slot (docs/decisions/0028). Months wait
   // for the initial arcs; the app makes the month of the calendar current (#210).
   const becomesCurrent = !current && kind !== "filler" && !seed.months && Boolean(inActiveSeason);
-  const hasDuration = kind !== "filler";
+  const hasDuration = kind !== "filler" && !seed.endless;
   const arcId = uuidv7();
   await tx.insert(arc).values({
     id: arcId,
