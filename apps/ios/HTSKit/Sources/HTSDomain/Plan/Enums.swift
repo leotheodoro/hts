@@ -43,4 +43,6 @@ public enum ExerciseUnit: String, Codable, Sendable, CaseIterable {
     case seconds
     case meters
     case minutes
+    /// Calories on a bike or rower (#216), kept in `LoggedSet.reps` as minutes are kept in `seconds`.
+    case calories
 }

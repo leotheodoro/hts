@@ -12,7 +12,7 @@ import type { SetTarget } from "../db/targets.js";
 // | `12/12`   | any   | fixed 12                         | yes      |
 // | `máx`     | any   | max                              | no       |
 //
-// Unit suffixes (`s`, `seg`, `min`, `m`) are accepted and ignored: the unit belongs to the exercise.
+// Unit suffixes (`s`, `seg`, `min`, `m`, `cal`) are accepted and ignored: the unit belongs to the exercise.
 
 export type Sets = { min: number; max: number };
 export type ParsedTarget = { targets: SetTarget[]; perSide: boolean };
@@ -43,7 +43,7 @@ export function parseSets(text: string): Sets | null {
 /** Null when the text is not a target, or when a per-set list does not match `setsMax`. */
 export function parseTarget(text: string, setsMax: number): ParsedTarget | null {
   let body = text.toLowerCase().trim();
-  for (const suffix of ["seg", "min", "s", "m"]) {
+  for (const suffix of ["seg", "min", "cal", "s", "m"]) {
     if (body.endsWith(suffix)) {
       body = body.slice(0, -suffix.length).trim();
       break;

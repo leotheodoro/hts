@@ -11,7 +11,7 @@ import Foundation
 /// | `12/12`    | any  | `[.fixed(12)]`                            | yes      |
 /// | `máx`      | any  | `[.max]`                                  | no       |
 ///
-/// Unit suffixes (`s`, `seg`, `min`, `m`) are accepted and ignored: the unit belongs to the exercise.
+/// Unit suffixes (`s`, `seg`, `min`, `m`, `cal`) are accepted and ignored: the unit belongs to the exercise.
 public enum TargetNotation {
     public struct Sets: Hashable, Sendable {
         public let min: Int
@@ -42,7 +42,7 @@ public enum TargetNotation {
     /// Nil when the text is not a target, or when a per-set list does not match `setsMax`.
     public static func parse(_ text: String, setsMax: Int) -> Parsed? {
         var body = text.lowercased().trimmingCharacters(in: .whitespaces)
-        for suffix in ["seg", "min", "s", "m"] where body.hasSuffix(suffix) {
+        for suffix in ["seg", "min", "cal", "s", "m"] where body.hasSuffix(suffix) {
             body = String(body.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
             break
         }
@@ -91,6 +91,7 @@ public enum TargetNotation {
         case .seconds: return body + " s"
         case .minutes: return body + " min"
         case .meters: return body + " m"
+        case .calories: return body + " cal"
         }
     }
 

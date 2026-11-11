@@ -317,6 +317,24 @@
         "target": "pesado"
       },
       "expected": null
+    },
+    {
+      "name": "a calories suffix is ignored (#216)",
+      "input": {
+        "sets": "1",
+        "target": "20 cal"
+      },
+      "expected": {
+        "setsMin": 1,
+        "setsMax": 1,
+        "targets": [
+          {
+            "type": "fixed",
+            "value": 20
+          }
+        ],
+        "perSide": false
+      }
     }
   ]
 }

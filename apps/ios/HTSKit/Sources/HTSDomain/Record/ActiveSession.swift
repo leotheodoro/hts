@@ -32,7 +32,7 @@ public enum SetRules {
         if set.weightKg == nil { set.weightKg = previous?.weightKg }
         let amount = defaultAmount(for: target)
         switch unit {
-        case .reps where set.reps == nil:
+        case .reps where set.reps == nil, .calories where set.reps == nil:
             set.reps = amount.map { NSDecimalNumber(decimal: $0).intValue } ?? previous?.reps
         case .seconds where set.seconds == nil:
             set.seconds = amount.map { NSDecimalNumber(decimal: $0).intValue } ?? previous?.seconds
@@ -65,6 +65,7 @@ extension LoggedSet {
         case .seconds: amount = seconds.map { "\($0) s" }
         case .minutes: amount = seconds.map { Self.format(Decimal($0) / 60) + " min" }
         case .meters: amount = meters.map { Self.format($0) + " m" }
+        case .calories: amount = reps.map { "\($0) cal" }
         }
         switch (kg, amount) {
         case let (kg?, amount?): return "\(kg) × \(amount)"

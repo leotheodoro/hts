@@ -28,7 +28,7 @@ public struct SyncService: Sendable {
     static let pullOnlyTables: Set<String> = ["imported_activity"]
     /// Numeric columns that arrive as decimal strings and are kept as the shortest exact decimal.
     static let decimalColumns: Set<String> = ["weight_kg", "meters", "distance_meters"]
-    static let booleanColumns: Set<String> = ["completed", "per_side", "active"]
+    static let booleanColumns: Set<String> = ["completed", "per_side", "active", "is_test"]
     /// SQLite stores these as JSON text; the API expects JSON.
     static let jsonColumns: Set<String> = ["attributes", "targets", "plan_snapshot", "weights", "months"]
 

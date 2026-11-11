@@ -116,8 +116,29 @@ public struct SessionRepository: Sendable {
             var request = Session.filter(Column("arc_id") == arcId.sql)
                 .filter(Column("status") == SessionStatus.completed.rawValue)
                 .filter(Columns.deletedAt == nil)
+                .filter(sql: Self.notATest)
             if let resetAt { request = request.filter(Column("started_at") >= resetAt) }
             return try request.order(Column("started_at").desc).fetchOne(db)?.planSnapshot.letter
+        }
+    }
+
+    /// SQL condition on `session`: its workout is not a treino teste, which stays out of the arc count (#216).
+    static let notATest =
+        "workout_template_id NOT IN (SELECT id FROM workout_template WHERE is_test)"
+
+    /// The finished runs of a treino teste, newest first, with their live sets (#216).
+    public func testRuns(templateId: UUID, limit: Int = 2) async throws -> [TestRun] {
+        try await database.writer.read { db in
+            let sessions = try Session.filter(Column("workout_template_id") == templateId.sql)
+                .filter(Column("status") == SessionStatus.completed.rawValue)
+                .filter(Columns.deletedAt == nil)
+                .order(Column("started_at").desc).limit(limit).fetchAll(db)
+            return try sessions.map { session in
+                let sets = try LoggedSet.filter(Column("session_id") == session.id.sql)
+                    .filter(Columns.deletedAt == nil).order(Column("set_number")).fetchAll(db)
+                return TestRun(
+                    date: session.localDate, exercises: session.planSnapshot.blocks.flatMap(\.exercises), sets: sets)
+            }
         }
     }
 
@@ -261,7 +282,7 @@ public struct SessionRepository: Sendable {
                     sql: """
                         SELECT COUNT(*) FROM session
                         WHERE arc_id = ? AND deleted_at IS NULL AND started_at <= ?
-                        AND (? IS NULL OR started_at >= ?)
+                        AND (? IS NULL OR started_at >= ?) AND \(Self.notATest)
                         """, arguments: [session.arcId.sql, started, resetAt, resetAt]) ?? 0
             return Number(global: global, inArc: inArc)
         }

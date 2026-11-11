@@ -147,7 +147,38 @@ public final class AppDatabase: Sendable {
         migrator.registerMigration("v13_prescribed_exercise_notes") { db in
             try db.alter(table: "prescribed_exercise") { t in t.add(column: "notes", .text) }
         }
+        // Mirrors apps/api/drizzle/0013: treino teste and the calories unit (#216). SQLite cannot change a CHECK, so
+        // `exercise` is rebuilt with the current units.
+        migrator.registerMigration("v14_test_workouts", migrate: testWorkouts)
         return migrator
+    }
+
+    private static func testWorkouts(_ db: Database) throws {
+        try db.alter(table: "workout_template") { t in
+            t.add(column: "is_test", .boolean).notNull().defaults(to: false)
+        }
+        try db.create(table: "exercise_new") { t in
+            owned(t)
+            t.column("name", .text).notNull()
+            t.column("normalized_name", .text).notNull()
+            t.column("default_attribute", .text).check(sql: "default_attribute IN (\(oneOf(Attribute.self)))")
+            t.column("unit", .text).notNull().defaults(to: ExerciseUnit.reps.rawValue)
+                .check(sql: "unit IN (\(oneOf(ExerciseUnit.self)))")
+            t.column("per_side", .boolean).notNull().defaults(to: false)
+            timestamps(t)
+            t.column("video_url", .text)
+        }
+        try db.execute(
+            sql: """
+                INSERT INTO exercise_new (id, athlete_id, name, normalized_name, default_attribute, unit, per_side,
+                    created_at, updated_at, deleted_at, video_url)
+                SELECT id, athlete_id, name, normalized_name, default_attribute, unit, per_side,
+                    created_at, updated_at, deleted_at, video_url FROM exercise;
+                DROP TABLE exercise;
+                ALTER TABLE exercise_new RENAME TO exercise;
+                CREATE UNIQUE INDEX exercise_athlete_normalized_name_idx
+                ON exercise(athlete_id, normalized_name) WHERE deleted_at IS NULL;
+                """)
     }
 
     /// Mirrors apps/api/drizzle/0005_rename_saga_to_season.sql (docs/decisions/0029). SQLite cannot make a column
