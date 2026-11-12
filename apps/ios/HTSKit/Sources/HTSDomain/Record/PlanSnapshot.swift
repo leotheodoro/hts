@@ -23,6 +23,8 @@ public struct PlanSnapshot: Hashable, Sendable, Codable {
         public var restSeconds: Int?
         /// Observações (#212); nil in snapshots from before them.
         public var notes: String?
+        /// A timed test where the lowest value wins (#218); nil in snapshots from before it.
+        public var lowerIsBetter: Bool? = nil
     }
 
     public var workoutTemplateId: UUID
@@ -46,7 +48,8 @@ public struct PlanSnapshot: Hashable, Sendable, Codable {
                         name: planned.exercise.name, unit: planned.exercise.unit, perSide: planned.exercise.perSide,
                         setsMin: planned.prescription.setsMin, setsMax: planned.prescription.setsMax,
                         targets: planned.prescription.targets, restSeconds: planned.prescription.restSeconds,
-                        notes: planned.prescription.notes)
+                        notes: planned.prescription.notes,
+                        lowerIsBetter: planned.exercise.lowerIsBetter ? true : nil)
                 })
         }
     }
@@ -83,6 +86,7 @@ extension PlanSnapshot.Block {
 extension PlanSnapshot.Exercise {
     private enum CodingKeys: String, CodingKey {
         case prescribedExerciseId, exerciseId, name, unit, perSide, setsMin, setsMax, targets, restSeconds, notes
+        case lowerIsBetter
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -97,5 +101,7 @@ extension PlanSnapshot.Exercise {
         try c.encode(targets, forKey: .targets)
         try c.encode(restSeconds, forKey: .restSeconds)
         try c.encode(notes, forKey: .notes)
+        // Only when set: the Zod schema has it optional, not nullable.
+        try c.encodeIfPresent(lowerIsBetter, forKey: .lowerIsBetter)
     }
 }

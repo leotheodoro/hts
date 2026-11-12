@@ -156,6 +156,8 @@ public struct Exercise: Identifiable, Hashable, Sendable, Codable {
     public var defaultAttribute: Attribute?
     public var unit: ExerciseUnit
     public var perSide: Bool
+    /// A timed test where the lowest value wins: "5 km no menor tempo" (#218).
+    public var lowerIsBetter: Bool
     /// How to do it: the coach's YouTube link (#110).
     public var videoUrl: String?
     public var createdAt: Date
@@ -164,7 +166,8 @@ public struct Exercise: Identifiable, Hashable, Sendable, Codable {
 
     public init(
         id: UUID, athleteId: UUID, name: String, defaultAttribute: Attribute? = nil, unit: ExerciseUnit = .reps,
-        perSide: Bool = false, videoUrl: String? = nil, createdAt: Date, updatedAt: Date? = nil, deletedAt: Date? = nil
+        perSide: Bool = false, lowerIsBetter: Bool = false, videoUrl: String? = nil, createdAt: Date,
+        updatedAt: Date? = nil, deletedAt: Date? = nil
     ) {
         self.id = id
         self.athleteId = athleteId
@@ -173,6 +176,7 @@ public struct Exercise: Identifiable, Hashable, Sendable, Codable {
         self.defaultAttribute = defaultAttribute
         self.unit = unit
         self.perSide = perSide
+        self.lowerIsBetter = lowerIsBetter
         self.videoUrl = videoUrl
         self.createdAt = createdAt.roundedToMilliseconds
         self.updatedAt = (updatedAt ?? createdAt).roundedToMilliseconds

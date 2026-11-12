@@ -118,4 +118,17 @@ import Testing
         let evolution = try #require(TestEvolution(runs: runs))
         #expect(evolution.rows.first?.delta == "+2")
     }
+
+    /// The flag of a timed test (#218) reaches the snapshot of the session.
+    @Test func lowerIsBetterReachesTheSnapshot() async throws {
+        let f = try await setUp()
+        try await f.database.writer.write { db in
+            try db.execute(sql: "UPDATE exercise SET lower_is_better = 1 WHERE name = 'Supino'")
+        }
+        let test = try #require(f.templates["Adaptação"]?["Teste"]?.template.id)
+        let plan = try #require(try await PlanRepository(f.database).template(id: test)?.plan)
+        #expect(plan.blocks[0].exercises[0].exercise.lowerIsBetter)
+        let session = try await SessionRepository(f.database).start(plan)
+        #expect(session.planSnapshot.blocks[0].exercises[0].lowerIsBetter == true)
+    }
 }

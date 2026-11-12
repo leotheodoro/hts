@@ -97,4 +97,20 @@ import Testing
                 .init(name: "Corrida", previous: "12 min", latest: "11,5 min", delta: "−0,5 min", trend: .worse),
             ])
     }
+
+    /// "5 km no menor tempo" (#218): the fastest run of the session counts, and a lower time is better.
+    @Test func lowerIsBetterOnTimedTests() throws {
+        let run = UUID()
+        var timed = exercise(run, "Corrida 5 km", .seconds)
+        timed.lowerIsBetter = true
+        let previous = TestRun(
+            date: LocalDate("2026-09-14")!, exercises: [timed],
+            sets: [set(run, seconds: 1_560), set(run, seconds: 1_620)])
+        let latest = TestRun(date: LocalDate("2026-10-12")!, exercises: [timed], sets: [set(run, seconds: 1_530)])
+        let evolution = try #require(TestEvolution(runs: [latest, previous]))
+        #expect(
+            evolution.rows == [
+                .init(name: "Corrida 5 km", previous: "26:00", latest: "25:30", delta: "−30 s", trend: .better)
+            ])
+    }
 }

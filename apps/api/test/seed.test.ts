@@ -541,7 +541,13 @@ describe("importStarterPlan", () => {
                       kind: "conditioning",
                       attributes: ["conditioning"],
                       exercises: [
-                        { name: "Corrida 5 km", unit: "seconds", sets: "1", target: "máx", lowerIsBetter },
+                        {
+                          name: "Corrida 5 km",
+                          unit: "seconds",
+                          sets: "1",
+                          target: "máx",
+                          lowerIsBetter,
+                        },
                       ],
                     },
                   ],
