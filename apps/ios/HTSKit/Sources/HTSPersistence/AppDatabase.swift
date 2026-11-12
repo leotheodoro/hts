@@ -150,6 +150,12 @@ public final class AppDatabase: Sendable {
         // Mirrors apps/api/drizzle/0013: treino teste and the calories unit (#216). SQLite cannot change a CHECK, so
         // `exercise` is rebuilt with the current units.
         migrator.registerMigration("v14_test_workouts", migrate: testWorkouts)
+        // Mirrors apps/api/drizzle/0014: timed tests where the lowest value wins (#218).
+        migrator.registerMigration("v15_exercise_lower_is_better") { db in
+            try db.alter(table: "exercise") { t in
+                t.add(column: "lower_is_better", .boolean).notNull().defaults(to: false)
+            }
+        }
         return migrator
     }
 

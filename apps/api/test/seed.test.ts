@@ -524,6 +524,46 @@ describe("importStarterPlan", () => {
       expect(bike).toEqual({ unit: "calories" });
     });
 
+    it("imports lower is better on timed tests (#218)", async () => {
+      const leo = await seeded();
+      const timed = (lowerIsBetter?: boolean) =>
+        StarterPlanFileSchema.parse({
+          arcs: [
+            {
+              name: "Testes Físicos",
+              kanji: "測",
+              templates: [
+                {
+                  name: "Capacidade Aeróbica",
+                  test: true,
+                  blocks: [
+                    {
+                      kind: "conditioning",
+                      attributes: ["conditioning"],
+                      exercises: [
+                        {
+                          name: "Corrida 5 km",
+                          unit: "seconds",
+                          sets: "1",
+                          target: "máx",
+                          lowerIsBetter,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        });
+      await importStarterPlan(db, leo.athleteId, timed(true), "2026-11-12");
+      const [run] = await db
+        .select({ lowerIsBetter: exercise.lowerIsBetter })
+        .from(exercise)
+        .where(and(eq(exercise.athleteId, leo.athleteId), eq(exercise.name, "Corrida 5 km")));
+      expect(run).toEqual({ lowerIsBetter: true });
+    });
+
     it("refreshes an arc never trained when only the flag changed", async () => {
       const leo = await seeded();
       await importStarterPlan(db, leo.athleteId, legs(false), "2026-11-11");

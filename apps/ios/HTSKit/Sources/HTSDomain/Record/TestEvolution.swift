@@ -14,7 +14,8 @@ public struct TestRun: Hashable, Sendable {
 }
 
 /// EVOLUÇÃO of a treino teste (#216): the last run side by side with the one before. Each exercise shows its best
-/// completed set: the load when there is one, otherwise the amount in the exercise's unit. More is better.
+/// completed set: the load when there is one, otherwise the amount in the exercise's unit. More is better, except on
+/// timed tests where the lowest value wins (#218).
 public struct TestEvolution: Hashable, Sendable {
     public enum Trend: Hashable, Sendable { case better, worse, same }
 
@@ -51,9 +52,12 @@ public struct TestEvolution: Hashable, Sendable {
             var delta: String?
             var trend: Trend?
             if let now, let before, now.isLoad == before.isLoad {
-                let difference = now.value - before.value
+                // A lower time is the better one on timed tests (#218); the delta keeps its real sign.
+                let gain = now.value - before.value
+                let difference = exercise.lowerIsBetter == true && !now.isLoad ? -gain : gain
                 trend = difference > 0 ? .better : difference < 0 ? .worse : .same
-                delta = Measure(value: abs(difference), unit: now.unit, isLoad: now.isLoad).deltaText(sign: trend!)
+                delta = Measure(value: abs(gain), unit: now.unit, isLoad: now.isLoad).deltaText(
+                    sign: gain > 0 ? "+" : gain < 0 ? "−" : nil)
             }
             return Row(
                 name: exercise.name, previous: before?.text, latest: now?.text, delta: delta, trend: trend)
@@ -79,7 +83,8 @@ private struct Measure {
             case .meters: set.meters
             }
         }
-        return amounts.max().map { Measure(value: $0, unit: exercise.unit, isLoad: false) }
+        let best = exercise.lowerIsBetter == true ? amounts.min() : amounts.max()
+        return best.map { Measure(value: $0, unit: exercise.unit, isLoad: false) }
     }
 
     /// "102,5 kg", "26 s", "2:10", "11,5 min", "2,45 m", "18 cal", "12".
@@ -94,12 +99,10 @@ private struct Measure {
     }
 
     /// The difference never turns into minutes: "+8 s", "−0,5 min".
-    func deltaText(sign trend: TestEvolution.Trend) -> String {
-        switch trend {
-        case .same: "="
-        case .better: "+" + (isLoad ? LoggedSet.format(value) + " kg" : amount)
-        case .worse: "−" + (isLoad ? LoggedSet.format(value) + " kg" : amount)
-        }
+    /// `sign` is "+" or "−"; nil when equal ("=").
+    func deltaText(sign: String?) -> String {
+        guard let sign else { return "=" }
+        return sign + (isLoad ? LoggedSet.format(value) + " kg" : amount)
     }
 
     private var amount: String {

@@ -1,0 +1,1 @@
+ALTER TABLE "exercise" ADD COLUMN "lower_is_better" boolean DEFAULT false NOT NULL;

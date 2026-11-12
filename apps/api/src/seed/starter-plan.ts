@@ -35,6 +35,8 @@ const ExerciseSeed = z.object({
   video: z.string().optional(),
   /** Observações (#212): what the other fields cannot say ("Progressão de carga semanal."). */
   notes: z.string().trim().min(1).optional(),
+  /** A timed test where the lowest value wins (#218). */
+  lowerIsBetter: z.boolean().optional(),
 });
 
 const BlockSeed = z.object({
@@ -271,6 +273,7 @@ async function insertTemplates(
           parsed.perSide,
           blockSeed.attributes[0] ?? null,
           now,
+          exerciseSeed.lowerIsBetter ?? false,
         );
         await tx.insert(prescribedExercise).values({
           id: uuidv7(),
@@ -450,6 +453,7 @@ async function findOrCreateExercise(
   perSide: boolean,
   defaultAttribute: (typeof attribute.enumValues)[number] | null,
   now: Date,
+  lowerIsBetter = false,
 ): Promise<string> {
   const normalizedName = normalizeExerciseName(name);
   const [existing] = await tx
@@ -463,12 +467,17 @@ async function findOrCreateExercise(
       ),
     );
   if (existing) {
-    if (existing.unit !== unit || (perSide && !existing.perSide)) {
+    if (
+      existing.unit !== unit ||
+      (perSide && !existing.perSide) ||
+      existing.lowerIsBetter !== lowerIsBetter
+    ) {
       await tx
         .update(exercise)
         .set({
           unit,
           perSide: existing.perSide || perSide,
+          lowerIsBetter,
           updatedAt: now,
           serverUpdatedAt: sql`date_trunc('milliseconds', now())`,
         })
@@ -485,6 +494,7 @@ async function findOrCreateExercise(
     defaultAttribute,
     unit,
     perSide,
+    lowerIsBetter,
     createdAt: now,
     updatedAt: now,
   });

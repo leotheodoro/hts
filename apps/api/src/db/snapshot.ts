@@ -22,6 +22,7 @@ export const PlanSnapshotSchema = z.object({
           name: z.string(),
           unit: z.string(),
           perSide: z.boolean(),
+          lowerIsBetter: z.boolean().optional(),
           setsMin: z.number().int(),
           setsMax: z.number().int(),
           targets: z.array(SetTargetSchema),

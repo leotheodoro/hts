@@ -99,6 +99,13 @@
       "when": 1794413621419,
       "tag": "0013_add_test_workouts",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794446199479,
+      "tag": "0014_add_exercise_lower_is_better",
+      "breakpoints": true
     }
   ]
 }

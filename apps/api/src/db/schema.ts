@@ -233,6 +233,8 @@ export const exercise = pgTable(
     defaultAttribute: attribute("default_attribute"),
     unit: exerciseUnit("unit").notNull().default("reps"),
     perSide: boolean("per_side").notNull().default(false),
+    /** A timed test where the lowest value wins: "5 km no menor tempo" (#218). */
+    lowerIsBetter: boolean("lower_is_better").notNull().default(false),
     /** How to do it: the coach's YouTube link (#110). */
     videoUrl: text("video_url"),
     ...timestamps,
