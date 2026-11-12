@@ -216,6 +216,10 @@
           "notNull": true
         },
         {
+          "name": "lower_is_better",
+          "notNull": true
+        },
+        {
           "name": "video_url",
           "notNull": false
         },
