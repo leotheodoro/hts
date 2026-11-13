@@ -66,6 +66,7 @@ A regra central: **total de treinos do arco = nº de treinos-modelo × nº de se
 Criação e edição:
 
 - O usuário cria arcos: kanji (opcional), nome, data de início, lista de treinos e semanas. A data de término é início + semanas × 7 − 1.
+- Um arco da fila não tem data de início: ela é definida quando ele vira atual, na próxima segunda-feira depois do fim do arco anterior (acabou numa segunda, começa na segunda seguinte). Por isso um arco recém-liberado nunca nasce ATRASADO (#220).
 - Dentro do arco, ele cria treinos novos ou reaproveita treinos existentes. As letras A, B, C... seguem a ordem e podem ser reordenadas.
 - Criar treino: letra, nome, foco e blocos. Cada bloco tem tipo, atributo e exercícios com séries × alvo e descanso opcional.
 - A meta semanal é igual ao número de treinos do arco.

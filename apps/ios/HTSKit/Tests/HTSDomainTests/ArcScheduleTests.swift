@@ -24,6 +24,14 @@ import Testing
         #expect(leap.endDate == LocalDate("2028-03-02"))
     }
 
+    /// A queued arc starts on the Monday after the previous one ends (#220).
+    @Test func nextMondayIsStrictlyAfter() {
+        #expect(LocalDate("2026-11-13")!.nextMonday == LocalDate("2026-11-16"))  // Friday
+        #expect(LocalDate("2026-11-15")!.nextMonday == LocalDate("2026-11-16"))  // Sunday
+        #expect(LocalDate("2026-11-16")!.nextMonday == LocalDate("2026-11-23"))  // Monday
+        #expect(LocalDate("2026-12-29")!.nextMonday == LocalDate("2027-01-04"))
+    }
+
     @Test func fillerArcsHaveNoDuration() {
         let filler = ArcSchedule(letters: ["A", "B"], weeks: nil, startDate: nil)
         #expect(filler.totalSessions == nil)

@@ -49,6 +49,14 @@ public struct SeasonService: Sendable {
     /// season continues from its first arc not completed.
     public func activate(seasonId: UUID, athleteId: UUID, now: Date = .now) async throws {
         try await database.writer.write { db in
+            // Already active with a current arc: nothing to do, and the arc keeps its start date (#220).
+            let alreadyCurrent = try Bool.fetchOne(
+                db,
+                sql: """
+                    SELECT EXISTS (SELECT 1 FROM season s JOIN arc a ON a.season_id = s.id
+                    WHERE s.id = ? AND s.active AND a.status = 'current' AND a.deleted_at IS NULL)
+                    """, arguments: [seasonId.sql])
+            if alreadyCurrent == true { return }
             let stamp = ISO8601Millis.format(now)
             try db.execute(
                 sql: """
@@ -82,6 +90,33 @@ public struct SeasonService: Sendable {
                     UPDATE season SET active = 0, updated_at = ? WHERE id = ? AND active;
                     """,
                 arguments: [stamp, stamp, athleteId.sql, seasonId.sql, stamp, seasonId.sql])
+        }
+    }
+
+    /// An arc made current before #220 kept the start date of the plan import, so it showed as ATRASADO right
+    /// away. The current arc of the active season starts on the Monday after the last workout of its completed
+    /// arcs. Run when the app shows the plan; nothing changes once the start date is after that workout.
+    public func alignStartDate(athleteId: UUID, now: Date = .now) async throws {
+        try await database.writer.write { db in
+            guard
+                var arc = try Arc.filter(Columns.athleteId == athleteId.sql).filter(Column("status") == "current")
+                    .filter(Column("kind") != ArcKind.filler.rawValue).filter(Column("weeks") != nil)
+                    .filter(Columns.deletedAt == nil).fetchOne(db),
+                let seasonId = arc.seasonId,
+                let last = try String.fetchOne(
+                    db,
+                    sql: """
+                        SELECT MAX(s.started_at) FROM session s JOIN arc a ON a.id = s.arc_id
+                        WHERE a.season_id = ? AND a.status = 'completed' AND a.deleted_at IS NULL
+                        AND s.status = 'completed' AND s.deleted_at IS NULL
+                        """, arguments: [seasonId.sql]
+                ).flatMap(ISO8601Millis.parse)
+            else { return }
+            let start = LocalDate(last, in: .current).nextMonday
+            if let current = arc.startDate, current >= start { return }
+            arc.startDate = start
+            arc.updatedAt = now.roundedToMilliseconds
+            try arc.update(db)
         }
     }
 
@@ -126,6 +161,8 @@ public struct SeasonService: Sendable {
         }
         var arc = arc
         arc.status = .current
+        // The weeks of the arc start on the Monday after the previous one ends (#220).
+        if arc.weeks != nil { arc.startDate = LocalDate(now, in: .current).nextMonday }
         arc.updatedAt = stamp
         try arc.update(db)
         return arc

@@ -49,6 +49,9 @@ public struct LocalDate: Hashable, Comparable, Sendable, Codable, CustomStringCo
 
     public var weekEnd: LocalDate { weekStart.adding(days: 6) }
 
+    /// The first Monday after this date; a Monday gives the one a week later.
+    public var nextMonday: LocalDate { weekStart.adding(days: 7) }
+
     /// Whole days from `self` to `other`.
     public func days(to other: LocalDate) -> Int {
         let from = Self.calendar.date(from: DateComponents(year: year, month: month, day: day))!

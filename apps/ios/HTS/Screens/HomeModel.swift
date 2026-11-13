@@ -38,6 +38,7 @@ final class HomeModel {
     func load(today: LocalDate = .today, now: Date = .now) async {
         // A new month moves the current arc of a season past its initial arcs (#210).
         try? await SeasonService(database).alignMonthlyArc(athleteId: athleteId, now: now)
+        try? await SeasonService(database).alignStartDate(athleteId: athleteId, now: now)
         history = try? await ProgressService(database).history(athleteId: athleteId).history
         streak = try? await ProgressService(database).streak(athleteId: athleteId, today: today)
         battle = try? await BattleRepository(database).current(athleteId: athleteId, today: today)

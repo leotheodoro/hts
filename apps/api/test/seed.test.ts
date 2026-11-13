@@ -177,6 +177,8 @@ describe("importStarterPlan", () => {
       seasonId: jiuJitsu?.id,
     });
     expect(byName["Base Volume 2"]).toMatchObject({ status: "queued", position: 1 });
+    // A queued arc gets its start date when it becomes current (#220).
+    expect(byName["Base Volume 2"]).toMatchObject({ status: "queued", startDate: null });
     expect(byName.Mobilidade).toMatchObject({
       status: "queued",
       kind: "filler",

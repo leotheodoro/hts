@@ -35,6 +35,7 @@ final class ArcsModel {
         do {
             // A new month moves the current arc of a season past its initial arcs (#210).
             try await SeasonService(database).alignMonthlyArc(athleteId: athleteId, now: now)
+            try await SeasonService(database).alignStartDate(athleteId: athleteId, now: now)
             var loaded: [SeasonArcs] = []
             for season in try await SeasonService(database).seasons(athleteId: athleteId) {
                 loaded.append(
