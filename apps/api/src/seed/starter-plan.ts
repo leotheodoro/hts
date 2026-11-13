@@ -208,7 +208,8 @@ async function addArc(
     kanji: seed.kanji.trim(),
     kind,
     weeks: hasDuration ? (seed.weeks ?? 1) : null,
-    startDate: hasDuration ? today : null,
+    // A queued arc gets its start date when it becomes current, on the next Monday (#220).
+    startDate: hasDuration && becomesCurrent ? today : null,
     status: becomesCurrent ? "current" : "queued",
     position: (last ?? -1) + 1,
     months: seed.months ?? null,
