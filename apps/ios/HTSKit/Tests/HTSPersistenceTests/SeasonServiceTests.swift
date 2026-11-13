@@ -62,6 +62,65 @@ import Testing
         #expect(plan.templates.count == 1)
     }
 
+    /// Noon of a calendar day in the device time zone, where the app reads the dates of an arc.
+    static func noon(_ text: String) -> Date {
+        let day = LocalDate(text)!
+        return Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day, hour: 12))!
+    }
+
+    /// Finishes the two workouts of Base volume 1 on Thursday and Friday 12-13/11.
+    func finishFirstArc(_ database: AppDatabase, _ athlete: Athlete) async throws -> Arc? {
+        let first = try #require(try await PlanRepository(database).currentArc(athleteId: athlete.id))
+        let plan = try #require(try await PlanRepository(database).plan(arcId: first.id))
+        let sessions = SessionRepository(database)
+        for day in ["2026-11-12", "2026-11-13"] {
+            let session = try await sessions.start(plan.templates[0], now: Self.noon(day))
+            _ = try await sessions.finish(sessionId: session.id, now: Self.noon(day).addingTimeInterval(3600))
+        }
+        return try await ArcService(database).completeIfDone(
+            arcId: first.id, now: Self.noon("2026-11-13").addingTimeInterval(3600))
+    }
+
+    /// The next arc starts on the Monday after the previous one ends, so it is not ATRASADO (#220).
+    @Test func nextArcStartsOnTheFollowingMonday() async throws {
+        let (database, athlete) = try await setUp()
+        let next = try #require(try await finishFirstArc(database, athlete))
+        #expect(next.name == "Base volume 2")
+        #expect(next.startDate == LocalDate("2026-11-16"))
+        let summary = try #require(
+            try await ArcService(database).summaries(athleteId: athlete.id, seasonId: next.seasonId!)
+                .first { $0.arc.id == next.id })
+        #expect(!summary.schedule.isOverdue(today: LocalDate("2026-11-13")!, completedSessions: 0))
+        #expect(summary.schedule.endDate == LocalDate("2026-11-29"))
+    }
+
+    /// An arc made current before #220 kept the import date: the app moves it to the Monday after the last workout
+    /// of the completed arcs, once.
+    @Test func alignStartDateRepairsAnArcThatStartedAtImport() async throws {
+        let (database, athlete) = try await setUp()
+        var next = try #require(try await finishFirstArc(database, athlete))
+        next.startDate = LocalDate("2026-10-29")
+        try await database.writer.write { [next] db in try next.update(db) }
+
+        let seasons = SeasonService(database)
+        let now = Self.noon("2026-11-13").addingTimeInterval(7200)
+        try await seasons.alignStartDate(athleteId: athlete.id, now: now)
+        let repaired = try #require(try await PlanRepository(database).currentArc(athleteId: athlete.id))
+        #expect(repaired.startDate == LocalDate("2026-11-16"))
+        #expect(repaired.updatedAt == now.roundedToMilliseconds)
+
+        try await seasons.alignStartDate(athleteId: athlete.id, now: now.addingTimeInterval(86_400))
+        #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id)?.updatedAt == repaired.updatedAt)
+    }
+
+    /// The first arc of a season has no completed arc before it: its start date stays.
+    @Test func alignStartDateKeepsTheFirstArc() async throws {
+        let (database, athlete) = try await setUp()
+        try await SeasonService(database).alignStartDate(athleteId: athlete.id)
+        #expect(
+            try await PlanRepository(database).currentArc(athleteId: athlete.id)?.startDate == LocalDate("2026-10-29"))
+    }
+
     /// Activating another season restarts the paused arc (#204): its count goes back to zero, while the workouts,
     /// the completed arcs and the order stay.
     @Test func activatingAnotherSeasonRestartsThePausedArc() async throws {
@@ -111,9 +170,9 @@ import Testing
         let session = try await sessions.start(plan.templates[0])
         _ = try await sessions.finish(sessionId: session.id)
         try await seasons.activate(seasonId: jiuJitsu.id, athleteId: athlete.id)
-        #expect(
-            try await ArcService(database).summaries(athleteId: athlete.id, seasonId: jiuJitsu.id).first?
-                .completedSessions == 1)
+        let summary = try await ArcService(database).summaries(athleteId: athlete.id, seasonId: jiuJitsu.id).first
+        #expect(summary?.completedSessions == 1)
+        #expect(summary?.arc.startDate == current.startDate)
     }
 
     /// "Desativar temporada" (#214): no season stays active; the current arc goes back to the queue with its count
