@@ -70,6 +70,43 @@
       ]
     },
     {
+      "name": "arc_pause",
+      "columns": [
+        {
+          "name": "id",
+          "notNull": true
+        },
+        {
+          "name": "athlete_id",
+          "notNull": true
+        },
+        {
+          "name": "arc_id",
+          "notNull": true
+        },
+        {
+          "name": "start_date",
+          "notNull": true
+        },
+        {
+          "name": "end_date",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "notNull": true
+        },
+        {
+          "name": "updated_at",
+          "notNull": true
+        },
+        {
+          "name": "deleted_at",
+          "notNull": false
+        }
+      ]
+    },
+    {
       "name": "athlete",
       "columns": [
         {

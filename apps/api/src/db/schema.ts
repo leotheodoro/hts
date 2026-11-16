@@ -182,6 +182,26 @@ export const arc = pgTable(
 );
 
 /**
+ * A pause of an arc (docs/decisions/0038): it covers start_date up to the day before end_date; an open pause
+ * (end_date null) covers up to today. No unique open pause: two devices may pause the same arc offline.
+ */
+export const arcPause = pgTable(
+  "arc_pause",
+  {
+    ...owned(),
+    arcId: uuid("arc_id")
+      .notNull()
+      .references(() => arc.id),
+    /** Local calendar date the arc was paused. */
+    startDate: date("start_date").notNull(),
+    /** Local calendar date the arc was resumed; null while paused. */
+    endDate: date("end_date"),
+    ...timestamps,
+  },
+  (t) => [index("arc_pause_arc_id_idx").on(t.arcId)],
+);
+
+/**
  * The recipe of a workout inside an arc (A · Linha de Frente). Reusing it in another arc copies it
  * (docs/decisions/0015); `source_template_id` keeps the origin.
  */

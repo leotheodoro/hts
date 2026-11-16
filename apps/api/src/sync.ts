@@ -3,6 +3,7 @@ import { getTableConfig, type PgColumn, type PgTable } from "drizzle-orm/pg-core
 import type { Db } from "./db/client.js";
 import {
   arc,
+  arcPause,
   athlete,
   battle,
   block,
@@ -26,6 +27,7 @@ const TABLES = [
   importedActivity,
   season,
   arc,
+  arcPause,
   workoutTemplate,
   block,
   exercise,

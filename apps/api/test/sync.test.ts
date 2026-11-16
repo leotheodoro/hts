@@ -4,6 +4,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import {
   arc,
+  arcPause,
   athlete,
   block,
   exercise,
@@ -36,6 +37,7 @@ afterAll(async () => {
   await removeAccounts(db, athletes);
   if (athletes.length > 0) {
     for (const table of [
+      arcPause,
       importedActivity,
       loggedSet,
       session,
@@ -225,6 +227,34 @@ describe("sync", () => {
     expect(pulled.changes.arc?.find((row) => row.id === ids.arc)?.start_date).toBe("2026-11-02");
     expect(Object.keys(set ?? {})).not.toContain("server_updated_at");
     expect(pulled.cursor).not.toBeNull();
+  });
+
+  it("syncs arc pauses, open ones included, even two open on the same arc", async () => {
+    const leo = await signedIn();
+    const { ids, changes, t } = deviceRows(leo.athleteId);
+    await pushChanges(leo.token, changes);
+    const pause = (startDate: string) => ({
+      id: uuidv7(),
+      athlete_id: leo.athleteId,
+      arc_id: ids.arc,
+      start_date: startDate,
+      end_date: null,
+      created_at: iso(t),
+      updated_at: iso(t),
+      deleted_at: null,
+    });
+    // Two devices paused the same arc offline: both pushes are kept (docs/decisions/0038).
+    const first = pause("2026-11-16");
+    const second = pause("2026-11-17");
+    expect((await pushChanges(leo.token, { arc_pause: [first] })).status).toBe(200);
+    expect((await pushChanges(leo.token, { arc_pause: [second] })).status).toBe(200);
+
+    const pulled = await pullSince(leo.token, leo.athleteId);
+    const pauses = pulled.changes.arc_pause ?? [];
+    expect(pauses.map((row) => [row.id, row.start_date, row.end_date])).toEqual([
+      [first.id, "2026-11-16", null],
+      [second.id, "2026-11-17", null],
+    ]);
   });
 
   it("keeps the newer row: last write wins by updated_at", async () => {
