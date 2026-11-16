@@ -136,6 +136,24 @@ actor FakeSyncServer: SyncTransport {
         #expect(try await AthleteRepository(a).athlete(id: athlete.id)?.displayName == "Leo B")
     }
 
+    /// An open pause travels to the other device as open (docs/decisions/0038).
+    @Test func arcPausesSyncBothWays() async throws {
+        let server = FakeSyncServer()
+        let (a, athlete) = try await deviceA()
+        let arc = try #require(try await PlanRepository(a).currentArc(athleteId: athlete.id))
+        let pause = ArcPause(
+            id: UUIDv7.make(), athleteId: athlete.id, arcId: arc.id, startDate: LocalDate("2026-11-16")!,
+            endDate: nil, createdAt: .now)
+        try await a.writer.write { db in try pause.insert(db) }
+        try await SyncService(a, transport: server).sync(athleteId: athlete.id)
+
+        let b = try AppDatabase.inMemory()
+        try await SyncService(b, transport: server).sync(athleteId: athlete.id)
+        let pulled = try await b.writer.read { db in try ArcPause.fetchAll(db) }
+        #expect(pulled.map(\.interval) == [PauseInterval(startDate: LocalDate("2026-11-16")!, endDate: nil)])
+        #expect(pulled.first?.arcId == arc.id)
+    }
+
     @Test func anOlderRemoteRowDoesNotOverwriteANewerLocalOne() async throws {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Novo")

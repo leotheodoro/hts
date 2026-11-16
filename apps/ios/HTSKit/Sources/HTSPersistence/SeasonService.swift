@@ -57,6 +57,7 @@ public struct SeasonService: Sendable {
                     WHERE s.id = ? AND s.active AND a.status = 'current' AND a.deleted_at IS NULL)
                     """, arguments: [seasonId.sql])
             if alreadyCurrent == true { return }
+            try Self.closeOpenPauses(athleteId: athleteId, now: now, db)
             let stamp = ISO8601Millis.format(now)
             try db.execute(
                 sql: """
@@ -82,6 +83,7 @@ public struct SeasonService: Sendable {
     /// from it.
     public func deactivate(seasonId: UUID, athleteId: UUID, now: Date = .now) async throws {
         try await database.writer.write { db in
+            try Self.closeOpenPauses(athleteId: athleteId, seasonId: seasonId, now: now, db)
             let stamp = ISO8601Millis.format(now)
             try db.execute(
                 sql: """
@@ -152,6 +154,7 @@ public struct SeasonService: Sendable {
 
     @discardableResult
     private static func makeCurrent(_ arc: Arc, among arcs: [Arc], now: Date, _ db: Database) throws -> Arc {
+        try closeOpenPauses(athleteId: arc.athleteId, now: now, db)
         let stamp = now.roundedToMilliseconds
         // One current arc per athlete: the one it replaces goes back to waiting first.
         for var other in arcs where other.status == .current && other.id != arc.id {
@@ -166,6 +169,22 @@ public struct SeasonService: Sendable {
         arc.updatedAt = stamp
         try arc.update(db)
         return arc
+    }
+
+    /// The current arc is leaving its slot: its open pauses end today, so no pause stays open on a queued arc
+    /// (docs/decisions/0038). With `seasonId`, only the current arc of that season.
+    static func closeOpenPauses(athleteId: UUID, seasonId: UUID? = nil, now: Date, _ db: Database) throws {
+        try db.execute(
+            sql: """
+                UPDATE arc_pause SET end_date = ?, updated_at = ?
+                WHERE end_date IS NULL AND deleted_at IS NULL AND arc_id IN (
+                    SELECT id FROM arc WHERE athlete_id = ? AND status = 'current' AND deleted_at IS NULL
+                    AND (? IS NULL OR season_id = ?))
+                """,
+            arguments: [
+                LocalDate(now, in: .current).description, ISO8601Millis.format(now), athleteId.sql, seasonId?.sql,
+                seasonId?.sql,
+            ])
     }
 
     private static func liveArcs(seasonId: UUID, _ db: Database) throws -> [Arc] {

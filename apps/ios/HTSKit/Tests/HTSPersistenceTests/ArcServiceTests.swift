@@ -41,7 +41,7 @@ import Testing
         #expect(summaries.map(\.arc.name) == ["Recrutamento", "Forja"])
         #expect(summaries[0].schedule.letters == ["A", "B", "C"])
         #expect(summaries[0].schedule.totalSessions == 6)
-        #expect(summaries[0].schedule.endDate == LocalDate("2026-11-15"))
+        #expect(summaries[0].schedule.endDate(today: LocalDate("2026-11-02")!) == LocalDate("2026-11-15"))
         #expect(summaries[0].completedSessions == 0)
     }
 

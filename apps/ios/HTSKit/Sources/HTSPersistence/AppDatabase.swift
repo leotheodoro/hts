@@ -156,6 +156,17 @@ public final class AppDatabase: Sendable {
                 t.add(column: "lower_is_better", .boolean).notNull().defaults(to: false)
             }
         }
+        // Mirrors apps/api/drizzle/0015: pauses of an arc (#222, docs/decisions/0038).
+        migrator.registerMigration("v16_arc_pause") { db in
+            try db.create(table: "arc_pause") { t in
+                owned(t)
+                t.column("arc_id", .text).notNull().references("arc")
+                t.column("start_date", .text).notNull()
+                t.column("end_date", .text)
+                timestamps(t)
+            }
+            try db.execute(sql: "CREATE INDEX arc_pause_arc_id_idx ON arc_pause(arc_id)")
+        }
         return migrator
     }
 

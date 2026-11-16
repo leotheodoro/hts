@@ -122,6 +122,7 @@ struct HistoryOutput: Decodable, Sendable {
 struct StreakInput: Decodable, Sendable {
     let today: LocalDate
     let sessions: [StreakSession]
+    let pauses: [PauseInterval]?
 }
 
 struct StreakOutput: Decodable, Sendable {
@@ -133,20 +134,23 @@ struct StreakOutput: Decodable, Sendable {
 @Suite struct StreakFixtureTests {
     @Test(arguments: Fixture<StreakInput, StreakOutput>.load("streak"))
     func streak(_ c: Fixture<StreakInput, StreakOutput>.Case) {
-        let streak = Progression().streak(c.input.sessions, today: c.input.today)
+        let streak = Progression().streak(c.input.sessions, today: c.input.today, pauses: c.input.pauses ?? [])
         #expect(streak.current == c.expected.current)
         #expect(streak.best == c.expected.best)
         #expect(streak.thisWeek == c.expected.thisWeek)
     }
 }
 
-struct TitlesInput: Decodable, Sendable { let sessions: [TitleSession] }
+struct TitlesInput: Decodable, Sendable {
+    let sessions: [TitleSession]
+    let pauses: [PauseInterval]?
+}
 struct TitlesOutput: Decodable, Sendable { let titles: [UnlockedTitle] }
 
 @Suite struct TitlesFixtureTests {
     @Test(arguments: Fixture<TitlesInput, TitlesOutput>.load("titles"))
     func titles(_ c: Fixture<TitlesInput, TitlesOutput>.Case) {
-        #expect(Progression().titles(c.input.sessions) == c.expected.titles)
+        #expect(Progression().titles(c.input.sessions, pauses: c.input.pauses ?? []) == c.expected.titles)
     }
 }
 

@@ -173,6 +173,77 @@
           { "id": "ready-for-battle", "unlockedOn": "2026-11-04" }
         ]
       }
+    },
+    {
+      "name": "a paused week does not break Sequência Acesa",
+      "input": {
+        "sessions": [
+          {
+            "localDate": "2026-11-02",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-04",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-09",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-11",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-16",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-18",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-11-30",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          },
+          {
+            "localDate": "2026-12-02",
+            "weeklyGoal": 2,
+            "records": 0,
+            "pullUpSets": 0,
+            "completedArc": null
+          }
+        ],
+        "pauses": [{ "startDate": "2026-11-23", "endDate": "2026-11-30" }]
+      },
+      "expected": {
+        "titles": [
+          { "id": "first-session", "unlockedOn": "2026-11-02" },
+          { "id": "perfect-week", "unlockedOn": "2026-11-04" },
+          { "id": "streak-lit", "unlockedOn": "2026-12-02" }
+        ]
+      }
     }
   ]
 }

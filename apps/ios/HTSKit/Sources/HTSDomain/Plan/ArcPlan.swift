@@ -2,10 +2,13 @@
 public struct ArcPlan: Hashable, Sendable {
     public var arc: Arc
     public var templates: [TemplatePlan]
+    /// Live pauses of the arc (docs/decisions/0038).
+    public var pauses: [PauseInterval]
 
-    public init(arc: Arc, templates: [TemplatePlan]) {
+    public init(arc: Arc, templates: [TemplatePlan], pauses: [PauseInterval] = []) {
         self.arc = arc
         self.templates = templates
+        self.pauses = pauses
     }
 }
 

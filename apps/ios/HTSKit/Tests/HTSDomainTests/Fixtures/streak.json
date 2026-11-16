@@ -73,6 +73,99 @@
         ]
       },
       "expected": { "current": 0, "best": 0, "thisWeek": { "done": 1, "goal": 2 } }
+    },
+    {
+      "name": "paused week without sessions keeps the streak",
+      "input": {
+        "today": "2026-11-30",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-04", "weeklyGoal": 2 },
+          { "localDate": "2026-11-09", "weeklyGoal": 2 },
+          { "localDate": "2026-11-11", "weeklyGoal": 2 },
+          { "localDate": "2026-11-23", "weeklyGoal": 2 },
+          { "localDate": "2026-11-25", "weeklyGoal": 2 }
+        ],
+        "pauses": [{ "startDate": "2026-11-16", "endDate": "2026-11-23" }]
+      },
+      "expected": { "current": 3, "best": 3, "thisWeek": { "done": 0, "goal": 2 } }
+    },
+    {
+      "name": "paused week with the goal met still counts",
+      "input": {
+        "today": "2026-11-30",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-04", "weeklyGoal": 2 },
+          { "localDate": "2026-11-09", "weeklyGoal": 2 },
+          { "localDate": "2026-11-11", "weeklyGoal": 2 },
+          { "localDate": "2026-11-17", "weeklyGoal": 2 },
+          { "localDate": "2026-11-18", "weeklyGoal": 2 },
+          { "localDate": "2026-11-23", "weeklyGoal": 2 },
+          { "localDate": "2026-11-25", "weeklyGoal": 2 }
+        ],
+        "pauses": [{ "startDate": "2026-11-16", "endDate": "2026-11-23" }]
+      },
+      "expected": { "current": 4, "best": 4, "thisWeek": { "done": 0, "goal": 2 } }
+    },
+    {
+      "name": "an open pause protects the weeks up to today",
+      "input": {
+        "today": "2026-11-24",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-04", "weeklyGoal": 2 },
+          { "localDate": "2026-11-09", "weeklyGoal": 2 },
+          { "localDate": "2026-11-11", "weeklyGoal": 2 }
+        ],
+        "pauses": [{ "startDate": "2026-11-16", "endDate": null }]
+      },
+      "expected": { "current": 2, "best": 2, "thisWeek": { "done": 0, "goal": 2 } }
+    },
+    {
+      "name": "a pause across two weeks protects both",
+      "input": {
+        "today": "2026-11-30",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-04", "weeklyGoal": 2 },
+          { "localDate": "2026-11-23", "weeklyGoal": 2 },
+          { "localDate": "2026-11-24", "weeklyGoal": 2 }
+        ],
+        "pauses": [{ "startDate": "2026-11-12", "endDate": "2026-11-18" }]
+      },
+      "expected": { "current": 2, "best": 2, "thisWeek": { "done": 0, "goal": 2 } }
+    },
+    {
+      "name": "pause and resume on the same day protect nothing",
+      "input": {
+        "today": "2026-11-23",
+        "sessions": [
+          { "localDate": "2026-11-09", "weeklyGoal": 2 },
+          { "localDate": "2026-11-11", "weeklyGoal": 2 }
+        ],
+        "pauses": [{ "startDate": "2026-11-16", "endDate": "2026-11-16" }]
+      },
+      "expected": { "current": 0, "best": 1, "thisWeek": { "done": 0, "goal": 2 } }
+    },
+    {
+      "name": "overlapping pauses count once",
+      "input": {
+        "today": "2026-11-30",
+        "sessions": [
+          { "localDate": "2026-11-02", "weeklyGoal": 2 },
+          { "localDate": "2026-11-04", "weeklyGoal": 2 },
+          { "localDate": "2026-11-09", "weeklyGoal": 2 },
+          { "localDate": "2026-11-11", "weeklyGoal": 2 },
+          { "localDate": "2026-11-23", "weeklyGoal": 2 },
+          { "localDate": "2026-11-25", "weeklyGoal": 2 }
+        ],
+        "pauses": [
+          { "startDate": "2026-11-16", "endDate": "2026-11-23" },
+          { "startDate": "2026-11-18", "endDate": "2026-11-20" }
+        ]
+      },
+      "expected": { "current": 3, "best": 3, "thisWeek": { "done": 0, "goal": 2 } }
     }
   ]
 }

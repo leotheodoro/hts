@@ -45,6 +45,29 @@ import Testing
         #expect(model.weekDone == 1)
     }
 
+    /// A paused arc (#222): the Home shows it paused, with no next workout, until it is resumed.
+    @Test func aPausedArcHasNoNextWorkout() async throws {
+        let database = try AppDatabase.inMemory()
+        let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")
+        let season = try await SeasonService(database).season(named: "Jiu-Jitsu", athleteId: athlete.id)
+        let arc = try await ArcService(database).save(
+            ArcDraft(
+                name: "Base Volume 2", kanji: "基", weeks: 2, startDate: LocalDate("2026-11-16")!,
+                templates: [.init(origin: .new, name: "Força")]),
+            athleteId: athlete.id, seasonId: season.id)
+        try await ArcService(database).pause(arcId: arc.id)
+
+        let model = HomeModel(database: database, athleteId: athlete.id)
+        await model.load(today: LocalDate("2026-11-16")!)
+        #expect(model.pausedArc?.id == arc.id)
+        #expect(model.next == nil)
+
+        try await ArcService(database).resume(arcId: arc.id)
+        await model.load(today: LocalDate("2026-11-16")!)
+        #expect(model.pausedArc == nil)
+        #expect(model.next?.plan.template.letter == "A")
+    }
+
     @Test func fillerArcsAreNeverTheNextWorkout() async throws {
         let database = try AppDatabase.inMemory()
         let athlete = try await AthleteRepository(database).ensureLocalAthlete(displayName: "Leo")

@@ -45,7 +45,10 @@ public struct ArcService: Sendable {
                     arguments: [arc.id.sql])
                 let completed = try Self.completedSessions(arc: arc, db)
                 return Summary(
-                    arc: arc, schedule: ArcSchedule(letters: letters, weeks: arc.weeks, startDate: arc.startDate),
+                    arc: arc,
+                    schedule: ArcSchedule(
+                        letters: letters, weeks: arc.weeks, startDate: arc.startDate,
+                        pauses: try PlanRepository.pauses(arcId: arc.id, db)),
                     completedSessions: completed,
                     isOpen: arc.status != .current
                         && MonthlyArcs.isOpen(arc, in: arcs, seasonActive: active == true))
@@ -152,6 +155,48 @@ public struct ArcService: Sendable {
         }
     }
 
+    /// "Pausar arco" (#222, docs/decisions/0038): the current arc of the active season stops until resumed. Its
+    /// workouts are blocked, its paused days move its end and its paused weeks keep the streak.
+    public func pause(arcId: UUID, now: Date = .now) async throws {
+        try await database.writer.write { db in
+            guard let arc = try Arc.filter(key: arcId).filter(Columns.deletedAt == nil).fetchOne(db),
+                arc.status == .current, arc.kind != .filler, arc.weeks != nil, let seasonId = arc.seasonId,
+                try Bool.fetchOne(db, sql: "SELECT active FROM season WHERE id = ?", arguments: [seasonId.sql])
+                    == true,
+                try !Self.isPaused(arcId: arcId, db)
+            else { throw PersistenceError.cannotPause(arcId) }
+            let open = try Session.filter(Column("arc_id") == arcId.sql)
+                .filter(Column("status") == SessionStatus.inProgress.rawValue).filter(Columns.deletedAt == nil)
+                .fetchCount(db)
+            guard open == 0 else { throw PersistenceError.sessionInProgress(arcId) }
+            try ArcPause(
+                id: UUIDv7.make(at: now), athleteId: arc.athleteId, arcId: arcId,
+                startDate: LocalDate(now, in: .current), endDate: nil, createdAt: now
+            ).insert(db)
+        }
+    }
+
+    /// "Retomar arco": closes every open pause of the arc today (two devices may have paused it offline).
+    public func resume(arcId: UUID, now: Date = .now) async throws {
+        try await database.writer.write { db in
+            try db.execute(
+                sql: """
+                    UPDATE arc_pause SET end_date = ?, updated_at = ?
+                    WHERE arc_id = ? AND end_date IS NULL AND deleted_at IS NULL
+                    """,
+                arguments: [LocalDate(now, in: .current).description, ISO8601Millis.format(now), arcId.sql])
+        }
+    }
+
+    public func isPaused(arcId: UUID) async throws -> Bool {
+        try await database.writer.read { db in try Self.isPaused(arcId: arcId, db) }
+    }
+
+    static func isPaused(arcId: UUID, _ db: Database) throws -> Bool {
+        try ArcPause.filter(Column("arc_id") == arcId.sql).filter(Column("end_date") == nil)
+            .filter(Columns.deletedAt == nil).fetchCount(db) > 0
+    }
+
     /// Whether a workout of this arc can start: the current arc, a free arc, or an open monthly arc (#210).
     public func canTrain(arcId: UUID) async throws -> Bool {
         try await database.writer.read { db in
@@ -171,7 +216,10 @@ public struct ArcService: Sendable {
     }
 
     static func canTrain(_ arc: Arc, _ db: Database) throws -> Bool {
-        if arc.status == .current || arc.kind == .filler { return true }
+        if arc.kind == .filler { return true }
+        // A paused arc waits until it is resumed (docs/decisions/0038).
+        if try isPaused(arcId: arc.id, db) { return false }
+        if arc.status == .current { return true }
         guard arc.isMonthly, let seasonId = arc.seasonId else { return false }
         let active = try Bool.fetchOne(db, sql: "SELECT active FROM season WHERE id = ?", arguments: [seasonId.sql])
         let seasonArcs = try Arc.filter(Column("season_id") == seasonId.sql).filter(Columns.deletedAt == nil)

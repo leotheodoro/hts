@@ -120,8 +120,10 @@ public struct ProgressService: Sendable {
                 session.planSnapshot.blocks.flatMap(\.exercises).map { ($0.exerciseId.sql, $0.name) },
                 uniquingKeysWith: { first, _ in first })
             let facts = try Self.titleSessions(sessions, history: after, db)
-            let titlesBefore = Set(progression.titles(Array(facts[..<index])).map(\.id))
-            let newTitles = progression.titles(Array(facts[...index])).map(\.id).filter { !titlesBefore.contains($0) }
+            let pauses = try Self.pauses(athleteId: session.athleteId, db)
+            let titlesBefore = Set(progression.titles(Array(facts[..<index]), pauses: pauses).map(\.id))
+            let newTitles = progression.titles(Array(facts[...index]), pauses: pauses).map(\.id)
+                .filter { !titlesBefore.contains($0) }
             let attributeSets = try sessions[...index].map { try Self.attributeSets($0, db) }
             return Completion(
                 session: session, progress: progress, before: before, after: after,
@@ -173,8 +175,24 @@ public struct ProgressService: Sendable {
         try await database.writer.read { db in
             let sessions = try Self.completedSessions(athleteId: athleteId, db)
             let history = progression.history(try sessions.map { try Self.historySession($0, db) })
-            return progression.titles(try Self.titleSessions(sessions, history: history, db))
+            return progression.titles(
+                try Self.titleSessions(sessions, history: history, db),
+                pauses: try Self.pauses(athleteId: athleteId, db))
         }
+    }
+
+    /// Live pauses of the athlete's live arcs: a paused week keeps the streak (docs/decisions/0038). An open pause
+    /// counts only while its arc is current; left open on any other arc it cannot be resumed and would protect every
+    /// week from then on.
+    static func pauses(athleteId: UUID, _ db: Database) throws -> [PauseInterval] {
+        let pauses = try ArcPause.fetchAll(
+            db,
+            sql: """
+                SELECT p.* FROM arc_pause p JOIN arc a ON a.id = p.arc_id
+                WHERE p.athlete_id = ? AND p.deleted_at IS NULL AND a.deleted_at IS NULL
+                AND (p.end_date IS NOT NULL OR a.status = 'current')
+                """, arguments: [athleteId.sql])
+        return pauses.map(\.interval)
     }
 
     /// What each completed session contributes to the titles (docs/decisions/0021).
@@ -237,7 +255,7 @@ public struct ProgressService: Sendable {
                 let filler = (row["kind"] as String) == ArcKind.filler.rawValue
                 return StreakSession(localDate: date, weeklyGoal: filler ? nil : row["goal"])
             }
-            return progression.streak(sessions, today: today)
+            return progression.streak(sessions, today: today, pauses: try Self.pauses(athleteId: athleteId, db))
         }
     }
 

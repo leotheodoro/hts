@@ -18,6 +18,8 @@ final class HomeModel {
 
     private(set) var history: ProgressHistory?
     private(set) var next: NextWorkout?
+    /// The current arc while it is paused (#222): no next workout until it is resumed.
+    private(set) var pausedArc: Arc?
     private(set) var streak: Streak?
     private(set) var battle: Battle?
     var weekDone: Int { streak?.thisWeek.done ?? 0 }
@@ -47,11 +49,17 @@ final class HomeModel {
             let plan = try? await plans.plan(arcId: arc.id)
         else {
             next = nil
+            pausedArc = nil
             weekGoal = streak?.thisWeek.goal ?? 0
             return
         }
         let schedule = ArcSchedule(plan)
         weekGoal = schedule.weeklyGoal
+        pausedArc = schedule.isPaused ? arc : nil
+        guard !schedule.isPaused else {
+            next = nil
+            return
+        }
         let last = try? await SessionRepository(database).lastLetter(arcId: arc.id)
         let completed =
             (try? await ArcService(database).summaries(athleteId: athleteId, seasonId: arc.seasonId))?

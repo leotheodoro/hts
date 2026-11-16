@@ -40,11 +40,21 @@ public struct UnlockedTitle: Hashable, Sendable, Decodable {
 
 extension Progression {
     /// Must match `titles` in packages/progression; both run packages/fixtures/titles.json.
-    public func titles(_ sessions: [TitleSession]) -> [UnlockedTitle] {
+    public func titles(_ sessions: [TitleSession], pauses: [PauseInterval] = []) -> [UnlockedTitle] {
         var unlocked: [UnlockedTitle] = []
         func unlock(_ id: TitleID, _ date: LocalDate) {
             guard !unlocked.contains(where: { $0.id == id }) else { return }
             unlocked.append(UnlockedTitle(id: id, unlockedOn: date))
+        }
+        let paused = sessions.last.map { PauseInterval.pausedWeeks(pauses, today: $0.localDate) } ?? []
+        /// Every week from `from` up to `to` (exclusive) was paused, so the run carries over them.
+        func allPaused(from: LocalDate, to: LocalDate) -> Bool {
+            var week = from
+            while week < to {
+                if !paused.contains(week) { return false }
+                week = week.adding(days: 7)
+            }
+            return true
         }
         var records = 0
         var pullUps = 0
@@ -64,8 +74,8 @@ extension Progression {
                 let start = session.localDate.weekStart
                 if start != week {
                     if let week {
-                        let run = met ? runBefore + 1 : 0
-                        runBefore = start == week.adding(days: 7) ? run : 0
+                        let run = met ? runBefore + 1 : (paused.contains(week) ? runBefore : 0)
+                        runBefore = allPaused(from: week.adding(days: 7), to: start) ? run : 0
                     }
                     week = start
                     done = 0
