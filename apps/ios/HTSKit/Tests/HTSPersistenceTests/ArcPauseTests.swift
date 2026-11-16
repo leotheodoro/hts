@@ -169,6 +169,24 @@ import Testing
         #expect(completion.newTitles.contains(.streakLit))
     }
 
+    /// An open pause left on an arc that is no longer current (or deleted) cannot be resumed: it must not protect
+    /// every week from then on.
+    @Test func anOpenPauseOnAnArcThatIsNotCurrentProtectsNothing() async throws {
+        let f = try await setUp()
+        try await train(f, on: "2026-11-03")
+        let queued = try #require(
+            try await ArcService(f.database).summaries(athleteId: f.athlete.id, seasonId: f.jiuJitsu.id).last?.arc)
+        try await f.database.writer.write { [f] db in
+            try ArcPause(
+                id: UUIDv7.make(), athleteId: f.athlete.id, arcId: queued.id, startDate: LocalDate("2026-11-09")!,
+                endDate: nil, createdAt: .now
+            ).insert(db)
+        }
+        let streak = try await ProgressService(f.database).streak(
+            athleteId: f.athlete.id, today: LocalDate("2026-11-24")!)
+        #expect(streak.current == 0)
+    }
+
     /// Two weeks met, the third paused without a workout: the streak stays at 2 in the fourth.
     @Test func pausedWeekKeepsTheStreak() async throws {
         let f = try await setUp()

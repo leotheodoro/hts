@@ -181,10 +181,18 @@ public struct ProgressService: Sendable {
         }
     }
 
-    /// Every live pause of the athlete's arcs: a paused week keeps the streak (docs/decisions/0038).
+    /// Live pauses of the athlete's live arcs: a paused week keeps the streak (docs/decisions/0038). An open pause
+    /// counts only while its arc is current; left open on any other arc it cannot be resumed and would protect every
+    /// week from then on.
     static func pauses(athleteId: UUID, _ db: Database) throws -> [PauseInterval] {
-        try ArcPause.filter(Columns.athleteId == athleteId.sql).filter(Columns.deletedAt == nil).fetchAll(db)
-            .map(\.interval)
+        let pauses = try ArcPause.fetchAll(
+            db,
+            sql: """
+                SELECT p.* FROM arc_pause p JOIN arc a ON a.id = p.arc_id
+                WHERE p.athlete_id = ? AND p.deleted_at IS NULL AND a.deleted_at IS NULL
+                AND (p.end_date IS NOT NULL OR a.status = 'current')
+                """, arguments: [athleteId.sql])
+        return pauses.map(\.interval)
     }
 
     /// What each completed session contributes to the titles (docs/decisions/0021).
