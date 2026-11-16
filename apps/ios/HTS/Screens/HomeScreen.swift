@@ -99,6 +99,22 @@ struct HomeScreen: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Abre o treino")
+        } else if let arc = model.pausedArc {
+            NotchCard {
+                VStack(alignment: .leading, spacing: HTSSpacing.space3) {
+                    Text("ARCO PAUSADO").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                    Text(verbatim: arc.name).htsTextStyle(.uiSection)
+                    Text("Os treinos do arco voltam quando você retomar. A Manutenção continua liberada.")
+                        .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+                    HTSButton("Retomar arco") {
+                        Task {
+                            guard let database = app.database else { return }
+                            try? await ArcService(database).resume(arcId: arc.id)
+                            app.noteLocalChange()
+                        }
+                    }
+                }
+            }
         } else {
             PlaceholderCard(label: "PRÓXIMO TREINO", text: "Nenhum arco atual.")
         }

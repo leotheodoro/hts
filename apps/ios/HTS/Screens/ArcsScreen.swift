@@ -117,6 +117,9 @@ struct ArcRow: View {
     /// The first open arc of an inactive season (#204): PRÓXIMO, not dimmed.
     var upNext = false
 
+    /// Paused until the athlete resumes it (#222): PAUSADO, never ATRASADO.
+    private var paused: Bool { summary.arc.status == .current && summary.schedule.isPaused }
+
     private var overdue: Bool {
         summary.arc.status == .current
             && summary.schedule.isOverdue(today: .today, completedSessions: summary.completedSessions)
@@ -139,7 +142,8 @@ struct ArcRow: View {
                 }
                 VStack(alignment: .leading, spacing: HTSSpacing.space2) {
                     Text(statusLabel).htsTextStyle(.label)
-                        .foregroundStyle(overdue || eve || isCurrent ? Color.hts.redText : Color.hts.grey)
+                        .foregroundStyle(
+                            !paused && (overdue || eve || isCurrent) ? Color.hts.redText : Color.hts.grey)
                     Text(verbatim: summary.arc.name).htsTextStyle(.uiSection).foregroundStyle(nameColor)
                     Text(subtitle).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                     if let total = summary.schedule.totalSessions {
@@ -158,6 +162,7 @@ struct ArcRow: View {
     private var statusLabel: LocalizedStringKey {
         if summary.arc.kind == .filler { return "SEMPRE DISPONÍVEL" }
         if eve { return "A VÉSPERA · SEMANA DA BATALHA" }
+        if paused { return "PAUSADO" }
         if overdue { return "ATRASADO" }
         if upNext { return "PRÓXIMO" }
         if summary.isOpen { return "DISPONÍVEL" }

@@ -10,6 +10,7 @@ struct ArcDetailScreen: View {
     @State private var plan: ArcPlan?
     /// The day each treino teste was last done (#216).
     @State private var lastRuns: [UUID: LocalDate] = [:]
+    @State private var pauseError: LocalizedStringKey?
 
     var body: some View {
         DetailScaffold {
@@ -20,12 +21,16 @@ struct ArcDetailScreen: View {
                             .accessibilityHidden(true)
                     }
                     VStack(alignment: .leading, spacing: HTSSpacing.space2) {
-                        Text(statusLabel(plan.arc)).htsTextStyle(.label).foregroundStyle(Color.hts.grey)
+                        Text(statusLabel(plan)).htsTextStyle(.label).foregroundStyle(Color.hts.grey)
                         Text(verbatim: plan.arc.name).htsTextStyle(.uiTitle)
                         if let program = plan.arc.program {
                             Text(verbatim: program).htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
                         }
                     }
+                }
+                // Only the current arc with a duration pauses (#222, docs/decisions/0038).
+                if plan.arc.status == .current, plan.arc.kind != .filler, plan.arc.weeks != nil {
+                    pauseControl(plan)
                 }
                 VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                     Text("TREINOS").htsTextStyle(.label).foregroundStyle(Color.hts.grey)
@@ -84,8 +89,43 @@ struct ArcDetailScreen: View {
         return "Última vez \(EvolutionTable.day(date))"
     }
 
-    private func statusLabel(_ arc: Arc) -> LocalizedStringKey {
+    @ViewBuilder private func pauseControl(_ plan: ArcPlan) -> some View {
+        let paused = ArcSchedule(plan).isPaused
+        VStack(alignment: .leading, spacing: HTSSpacing.space2) {
+            if paused {
+                HTSButton("Retomar arco") { Task { await setPaused(false, arcId: plan.arc.id) } }
+            } else {
+                HTSButton("Pausar arco", kind: .ghost) { Task { await setPaused(true, arcId: plan.arc.id) } }
+                Text("Pausado, o arco não conta na sequência nem no prazo. A Manutenção continua liberada.")
+                    .htsTextStyle(.caption).foregroundStyle(Color.hts.greyApp)
+            }
+            if let pauseError {
+                Text(pauseError).htsTextStyle(.caption).foregroundStyle(Color.hts.redText)
+            }
+        }
+    }
+
+    private func setPaused(_ paused: Bool, arcId: UUID) async {
+        guard let database = app.database else { return }
+        do {
+            if paused {
+                try await ArcService(database).pause(arcId: arcId)
+            } else {
+                try await ArcService(database).resume(arcId: arcId)
+            }
+            pauseError = nil
+            app.noteLocalChange()
+        } catch PersistenceError.sessionInProgress {
+            pauseError = "Termine ou descarte o treino em andamento antes de pausar."
+        } catch {
+            pauseError = "Não foi possível pausar o arco."
+        }
+    }
+
+    private func statusLabel(_ plan: ArcPlan) -> LocalizedStringKey {
+        let arc = plan.arc
         if arc.kind == .filler { return "SEMPRE DISPONÍVEL" }
+        if arc.status == .current && ArcSchedule(plan).isPaused { return "PAUSADO" }
         switch arc.status {
         case .current: return "ATUAL"
         case .queued: return "BLOQUEADO"
