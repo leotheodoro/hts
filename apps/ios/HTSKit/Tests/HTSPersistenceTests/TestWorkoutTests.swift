@@ -64,6 +64,25 @@ import Testing
         return session
     }
 
+    /// Noon of a calendar day in the device time zone.
+    static func noon(_ text: String) -> Date {
+        let day = LocalDate(text)!
+        return Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day, hour: 12))!
+    }
+
+    /// The weekly goal leaves the test out (#223): A and B close a week of Adaptação.
+    @Test func theWeeklyGoalLeavesTheTestOut() async throws {
+        let f = try await setUp()
+        _ = try await train(f, "Adaptação", "A", at: Self.noon("2026-11-16"))
+        _ = try await train(f, "Adaptação", "B", at: Self.noon("2026-11-17"))
+        let streak = try await ProgressService(f.database).streak(
+            athleteId: f.athlete.id, today: LocalDate("2026-11-18")!)
+        #expect(streak.thisWeek.goal == 2)
+        #expect(streak.current == 1)
+        let titles = try await ProgressService(f.database).titles(athleteId: f.athlete.id)
+        #expect(titles.map(\.id).contains(.perfectWeek))
+    }
+
     @Test func theFlagIsReadBack() async throws {
         let f = try await setUp()
         #expect(f.templates["Adaptação"]?["Teste"]?.template.isTest == true)
