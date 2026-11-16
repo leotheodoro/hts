@@ -120,8 +120,10 @@ public struct ProgressService: Sendable {
                 session.planSnapshot.blocks.flatMap(\.exercises).map { ($0.exerciseId.sql, $0.name) },
                 uniquingKeysWith: { first, _ in first })
             let facts = try Self.titleSessions(sessions, history: after, db)
-            let titlesBefore = Set(progression.titles(Array(facts[..<index])).map(\.id))
-            let newTitles = progression.titles(Array(facts[...index])).map(\.id).filter { !titlesBefore.contains($0) }
+            let pauses = try Self.pauses(athleteId: session.athleteId, db)
+            let titlesBefore = Set(progression.titles(Array(facts[..<index]), pauses: pauses).map(\.id))
+            let newTitles = progression.titles(Array(facts[...index]), pauses: pauses).map(\.id)
+                .filter { !titlesBefore.contains($0) }
             let attributeSets = try sessions[...index].map { try Self.attributeSets($0, db) }
             return Completion(
                 session: session, progress: progress, before: before, after: after,

@@ -157,6 +157,18 @@ import Testing
         #expect(stored.map(\.endDate) == [LocalDate("2027-01-01")])
     }
 
+    /// Three weeks met, one paused, then the fifth: the workout summary shows Sequência Acesa.
+    @Test func theWorkoutAfterAPauseUnlocksSequenciaAcesa() async throws {
+        let f = try await setUp()
+        for day in ["2026-11-02", "2026-11-09", "2026-11-16"] { try await train(f, on: day) }
+        try await ArcService(f.database).pause(arcId: f.current.id, now: Self.noon("2026-11-23"))
+        try await ArcService(f.database).resume(arcId: f.current.id, now: Self.noon("2026-11-30"))
+        try await train(f, on: "2026-11-30")
+        let last = try #require(try await SessionRepository(f.database).sessions(athleteId: f.athlete.id).first)
+        let completion = try #require(try await ProgressService(f.database).completion(sessionId: last.id))
+        #expect(completion.newTitles.contains(.streakLit))
+    }
+
     /// Two weeks met, the third paused without a workout: the streak stays at 2 in the fourth.
     @Test func pausedWeekKeepsTheStreak() async throws {
         let f = try await setUp()
