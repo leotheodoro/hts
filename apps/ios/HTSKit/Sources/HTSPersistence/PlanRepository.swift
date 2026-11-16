@@ -145,4 +145,8 @@ private func live<R: HTSRecord>(_: R.Type) -> QueryInterfaceRequest<R> {
 
 public enum PersistenceError: Error, Equatable {
     case notFound(String, UUID)
+    /// Only the current arc of the active season, with a duration and not paused yet, can pause (#222).
+    case cannotPause(UUID)
+    /// A workout of the arc is still open: finish or discard it before pausing.
+    case sessionInProgress(UUID)
 }
