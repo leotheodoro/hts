@@ -214,7 +214,9 @@ public struct ProgressService: Sendable {
         var goals: [UUID: Int] = [:]
         for id in arcs.keys {
             goals[id] = try Int.fetchOne(
-                db, sql: "SELECT COUNT(*) FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL",
+                db,
+                // Tests are outside the rotation and the weekly goal (#216, #223).
+                sql: "SELECT COUNT(*) FROM workout_template WHERE arc_id = ? AND deleted_at IS NULL AND NOT is_test",
                 arguments: [id.sql])
         }
         return try sessions.enumerated().map { index, session in
@@ -243,7 +245,8 @@ public struct ProgressService: Sendable {
                 db,
                 sql: """
                     SELECT s.local_date, a.kind,
-                        (SELECT COUNT(*) FROM workout_template t WHERE t.arc_id = a.id AND t.deleted_at IS NULL) AS goal
+                        (SELECT COUNT(*) FROM workout_template t
+                            WHERE t.arc_id = a.id AND t.deleted_at IS NULL AND NOT t.is_test) AS goal
                     FROM session s JOIN arc a ON a.id = s.arc_id
                     WHERE s.athlete_id = ? AND s.status = 'completed' AND s.deleted_at IS NULL
                     """, arguments: [athleteId.sql])
