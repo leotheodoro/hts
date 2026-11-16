@@ -47,8 +47,16 @@ public struct PlanRepository: Sendable {
                 return nil
             }
             let templates = try live(WorkoutTemplate.self).filter(Column("arc_id") == arcId.sql).fetchAll(db)
-            return ArcPlan(arc: arc, templates: try templates.map { try Self.templatePlan($0, db) })
+            return ArcPlan(
+                arc: arc, templates: try templates.map { try Self.templatePlan($0, db) },
+                pauses: try Self.pauses(arcId: arcId, db))
         }
+    }
+
+    /// Live pauses of an arc, oldest first (docs/decisions/0038).
+    static func pauses(arcId: UUID, _ db: Database) throws -> [PauseInterval] {
+        try ArcPause.filter(Column("arc_id") == arcId.sql).filter(Columns.deletedAt == nil)
+            .order(Column("start_date")).fetchAll(db).map(\.interval)
     }
 
     /// One live template with its blocks and prescriptions, and the arc it belongs to (the workout page).

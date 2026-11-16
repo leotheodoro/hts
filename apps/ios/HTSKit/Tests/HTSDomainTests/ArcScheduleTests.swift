@@ -14,14 +14,46 @@ import Testing
     }
 
     @Test func endDateIsStartPlusWeeksTimesSevenMinusOne() {
-        #expect(ArcSchedule(letters: ["A"], weeks: 2, startDate: start).endDate == LocalDate("2026-11-15"))
+        #expect(
+            ArcSchedule(letters: ["A"], weeks: 2, startDate: start).endDate(today: start) == LocalDate("2026-11-15"))
     }
 
     @Test func endDateCrossesMonthAndYear() {
         let december = ArcSchedule(letters: ["A", "B"], weeks: 8, startDate: LocalDate("2026-12-14")!)
-        #expect(december.endDate == LocalDate("2027-02-07"))
+        #expect(december.endDate(today: start) == LocalDate("2027-02-07"))
         let leap = ArcSchedule(letters: ["A"], weeks: 1, startDate: LocalDate("2028-02-25")!)
-        #expect(leap.endDate == LocalDate("2028-03-02"))
+        #expect(leap.endDate(today: start) == LocalDate("2028-03-02"))
+    }
+
+    /// Paused days move the end of the arc (docs/decisions/0038).
+    @Test func pausedDaysMoveTheEnd() {
+        let pause = PauseInterval(startDate: LocalDate("2026-11-16")!, endDate: LocalDate("2026-11-23")!)
+        let schedule = ArcSchedule(letters: ["A"], weeks: 2, startDate: LocalDate("2026-11-16")!, pauses: [pause])
+        #expect(schedule.endDate(today: LocalDate("2026-11-30")!) == LocalDate("2026-12-06"))
+        #expect(!schedule.isPaused)
+    }
+
+    @Test func openPauseMovesTheEndUntilToday() {
+        let pause = PauseInterval(startDate: LocalDate("2026-11-16")!, endDate: nil)
+        let schedule = ArcSchedule(letters: ["A"], weeks: 2, startDate: LocalDate("2026-11-16")!, pauses: [pause])
+        #expect(schedule.isPaused)
+        #expect(schedule.endDate(today: LocalDate("2026-11-18")!) == LocalDate("2026-12-02"))
+        #expect(!schedule.isOverdue(today: LocalDate("2026-12-10")!, completedSessions: 0))
+    }
+
+    @Test func daysPausedBeforeTheStartDoNotMoveTheEnd() {
+        let pause = PauseInterval(startDate: LocalDate("2026-11-13")!, endDate: LocalDate("2026-11-17")!)
+        let schedule = ArcSchedule(letters: ["A"], weeks: 2, startDate: LocalDate("2026-11-16")!, pauses: [pause])
+        #expect(schedule.endDate(today: LocalDate("2026-11-30")!) == LocalDate("2026-11-30"))
+    }
+
+    @Test func overlappingPausesCountOnce() {
+        let pauses = [
+            PauseInterval(startDate: LocalDate("2026-11-16")!, endDate: LocalDate("2026-11-23")!),
+            PauseInterval(startDate: LocalDate("2026-11-18")!, endDate: LocalDate("2026-11-20")!),
+        ]
+        let schedule = ArcSchedule(letters: ["A"], weeks: 2, startDate: LocalDate("2026-11-16")!, pauses: pauses)
+        #expect(schedule.endDate(today: LocalDate("2026-11-30")!) == LocalDate("2026-12-06"))
     }
 
     /// A queued arc starts on the Monday after the previous one ends (#220).
@@ -35,7 +67,7 @@ import Testing
     @Test func fillerArcsHaveNoDuration() {
         let filler = ArcSchedule(letters: ["A", "B"], weeks: nil, startDate: nil)
         #expect(filler.totalSessions == nil)
-        #expect(filler.endDate == nil)
+        #expect(filler.endDate(today: start) == nil)
         #expect(!filler.isOverdue(today: start, completedSessions: 0))
         #expect(!filler.isComplete(completedSessions: 100))
     }

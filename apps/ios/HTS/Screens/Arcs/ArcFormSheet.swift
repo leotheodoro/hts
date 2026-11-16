@@ -185,7 +185,7 @@ struct ArcFormSheet: View {
         NotchCard {
             VStack(alignment: .leading, spacing: HTSSpacing.space3) {
                 FieldLabel(text: "RESUMO")
-                if let total = schedule.totalSessions, let end = schedule.endDate {
+                if let total = schedule.totalSessions, let end = schedule.endDate(today: .today) {
                     summaryRow("Total", "\(total) treinos")
                     summaryRow("Ritmo", "\(schedule.weeklyGoal) por semana")
                     summaryRow("Término", "\(end.short)")

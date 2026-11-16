@@ -91,7 +91,7 @@ import Testing
             try await ArcService(database).summaries(athleteId: athlete.id, seasonId: next.seasonId!)
                 .first { $0.arc.id == next.id })
         #expect(!summary.schedule.isOverdue(today: LocalDate("2026-11-13")!, completedSessions: 0))
-        #expect(summary.schedule.endDate == LocalDate("2026-11-29"))
+        #expect(summary.schedule.endDate(today: LocalDate("2026-11-13")!) == LocalDate("2026-11-29"))
     }
 
     /// An arc made current before #220 kept the import date: the app moves it to the Monday after the last workout
@@ -111,6 +111,27 @@ import Testing
 
         try await seasons.alignStartDate(athleteId: athlete.id, now: now.addingTimeInterval(86_400))
         #expect(try await PlanRepository(database).currentArc(athleteId: athlete.id)?.updatedAt == repaired.updatedAt)
+    }
+
+    /// The plan and the summary carry the live pauses of the arc (docs/decisions/0038).
+    @Test func planAndSummaryCarryThePauses() async throws {
+        let (database, athlete) = try await setUp()
+        let current = try #require(try await PlanRepository(database).currentArc(athleteId: athlete.id))
+        let open = ArcPause(
+            id: UUIDv7.make(), athleteId: athlete.id, arcId: current.id, startDate: LocalDate("2026-11-16")!,
+            endDate: nil, createdAt: .now)
+        let deleted = ArcPause(
+            id: UUIDv7.make(), athleteId: athlete.id, arcId: current.id, startDate: LocalDate("2026-11-01")!,
+            endDate: LocalDate("2026-11-05")!, createdAt: .now, deletedAt: .now)
+        try await database.writer.write { db in
+            try open.insert(db)
+            try deleted.insert(db)
+        }
+        let plan = try #require(try await PlanRepository(database).plan(arcId: current.id))
+        #expect(plan.pauses == [open.interval])
+        let summary = try #require(
+            try await ArcService(database).summaries(athleteId: athlete.id, seasonId: current.seasonId!).first)
+        #expect(summary.schedule.isPaused)
     }
 
     /// The first arc of a season has no completed arc before it: its start date stays.

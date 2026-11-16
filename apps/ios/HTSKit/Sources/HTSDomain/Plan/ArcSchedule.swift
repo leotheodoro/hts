@@ -4,18 +4,21 @@ public struct ArcSchedule: Hashable, Sendable {
     public let letters: [String]
     public let weeks: Int?
     public let startDate: LocalDate?
+    /// Pauses of the arc (docs/decisions/0038).
+    public let pauses: [PauseInterval]
 
-    public init(letters: [String], weeks: Int?, startDate: LocalDate?) {
+    public init(letters: [String], weeks: Int?, startDate: LocalDate?, pauses: [PauseInterval] = []) {
         self.letters = letters
         self.weeks = weeks
         self.startDate = startDate
+        self.pauses = pauses
     }
 
     /// Tests are outside the rotation and the count (#216).
     public init(_ plan: ArcPlan) {
         self.init(
             letters: plan.templates.filter { !$0.template.isTest }.map(\.template.letter), weeks: plan.arc.weeks,
-            startDate: plan.arc.startDate)
+            startDate: plan.arc.startDate, pauses: plan.pauses)
     }
 
     /// Sessions per week, which is also the weekly goal for the streak.
@@ -23,10 +26,15 @@ public struct ArcSchedule: Hashable, Sendable {
 
     public var totalSessions: Int? { weeks.map { $0 * letters.count } }
 
-    /// Last day of the arc: start + weeks × 7 − 1.
-    public var endDate: LocalDate? {
+    /// An open pause: the arc is paused until the athlete resumes it.
+    public var isPaused: Bool { pauses.contains { $0.endDate == nil } }
+
+    /// Last day of the arc: start + weeks × 7 − 1, plus the days paused from the start on (an open pause counts up
+    /// to `today`).
+    public func endDate(today: LocalDate) -> LocalDate? {
         guard let startDate, let weeks, weeks > 0 else { return nil }
-        return startDate.adding(days: weeks * 7 - 1)
+        let paused = PauseInterval.coveredDays(pauses, from: startDate, through: today).count
+        return startDate.adding(days: weeks * 7 - 1 + paused)
     }
 
     /// One row per week with the letters in rotation (A, B, C, A, B, C…).
@@ -38,7 +46,7 @@ public struct ArcSchedule: Hashable, Sendable {
     /// Past the end date with sessions still missing. The arc stays current; the app only flags it
     /// (docs/decisions/0018).
     public func isOverdue(today: LocalDate, completedSessions: Int) -> Bool {
-        guard let endDate, let totalSessions else { return false }
+        guard !isPaused, let endDate = endDate(today: today), let totalSessions else { return false }
         return today > endDate && completedSessions < totalSessions
     }
 

@@ -45,7 +45,10 @@ public struct ArcService: Sendable {
                     arguments: [arc.id.sql])
                 let completed = try Self.completedSessions(arc: arc, db)
                 return Summary(
-                    arc: arc, schedule: ArcSchedule(letters: letters, weeks: arc.weeks, startDate: arc.startDate),
+                    arc: arc,
+                    schedule: ArcSchedule(
+                        letters: letters, weeks: arc.weeks, startDate: arc.startDate,
+                        pauses: try PlanRepository.pauses(arcId: arc.id, db)),
                     completedSessions: completed,
                     isOpen: arc.status != .current
                         && MonthlyArcs.isOpen(arc, in: arcs, seasonActive: active == true))
