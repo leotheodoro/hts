@@ -15,6 +15,7 @@ import {
   rankForLevel,
   type SessionXpInput,
   type Streak,
+  type PauseInterval,
   type StreakSession,
   streak,
   type TitleSession,
@@ -66,16 +67,22 @@ describe("progressHistory", () => {
 });
 
 describe("streak", () => {
-  const fixture = load<{ today: string; sessions: StreakSession[] }, Streak>("streak.json");
+  const fixture = load<
+    { today: string; sessions: StreakSession[]; pauses?: PauseInterval[] },
+    Streak
+  >("streak.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
-    expect(streak(input.sessions, input.today)).toEqual(expected);
+    expect(streak(input.sessions, input.today, input.pauses ?? [])).toEqual(expected);
   });
 });
 
 describe("titles", () => {
-  const fixture = load<{ sessions: TitleSession[] }, { titles: UnlockedTitle[] }>("titles.json");
+  const fixture = load<
+    { sessions: TitleSession[]; pauses?: PauseInterval[] },
+    { titles: UnlockedTitle[] }
+  >("titles.json");
   it.each(fixture.cases)("$name", ({ input, expected }) => {
-    expect(titles(input.sessions)).toEqual(expected.titles);
+    expect(titles(input.sessions, input.pauses ?? [])).toEqual(expected.titles);
   });
 });
 

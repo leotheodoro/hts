@@ -200,12 +200,35 @@ const dayNumber = (date: string) => Date.parse(`${date}T00:00:00Z`) / DAY_MS;
 /** Monday of the week, as a day number (1970-01-05 was a Monday). */
 const weekStart = (day: number) => day - ((((day - 4) % 7) + 7) % 7);
 
+/** A pause of an arc (docs/decisions/0038): it covers startDate up to the day before endDate; open (null) up to today. */
+export interface PauseInterval {
+  startDate: string;
+  endDate: string | null;
+}
+
+/** Mondays (day numbers) of the weeks with at least one day covered by a pause, up to `lastDay`. */
+function pausedWeeks(pauses: PauseInterval[], lastDay: number): Set<number> {
+  const weeks = new Set<number>();
+  for (const pause of pauses) {
+    const end = pause.endDate === null ? lastDay + 1 : dayNumber(pause.endDate);
+    const start = dayNumber(pause.startDate);
+    if (end <= start) continue;
+    for (let week = weekStart(start); week < end; week += 7) weeks.add(week);
+  }
+  return weeks;
+}
+
 /**
  * Weekly streak (docs/decisions/0020): weeks run Monday to Sunday; the goal is the weekly goal of the
  * week's arc. Filler sessions only give XP and are left out (docs/decisions/0030); a week with no
  * sessions uses the last known goal.
  */
-export function streak(sessions: StreakSession[], today: string): Streak {
+export function streak(
+  sessions: StreakSession[],
+  today: string,
+  pauses: PauseInterval[] = [],
+): Streak {
+  const paused = pausedWeeks(pauses, dayNumber(today));
   const weeks = new Map<number, { done: number; goal: number | null }>();
   for (const s of sessions) {
     if (s.weeklyGoal === null) continue;
@@ -233,7 +256,8 @@ export function streak(sessions: StreakSession[], today: string): Streak {
       thisWeek = { done, goal };
       if (met) run += 1;
     } else {
-      run = met ? run + 1 : 0;
+      // A paused week left without the goal neither breaks nor adds (docs/decisions/0038).
+      run = met ? run + 1 : paused.has(week) ? run : 0;
     }
     best = Math.max(best, run);
   }
@@ -273,7 +297,14 @@ export interface UnlockedTitle {
  * titles unlocked by the same session keep the order of the checks below. Filler sessions count for
  * records and pull-ups but not for the week (docs/decisions/0030).
  */
-export function titles(sessions: TitleSession[]): UnlockedTitle[] {
+export function titles(sessions: TitleSession[], pauses: PauseInterval[] = []): UnlockedTitle[] {
+  const last = sessions.at(-1);
+  const paused = pausedWeeks(pauses, last ? dayNumber(last.localDate) : 0);
+  /** Every week from `from` to `to` (exclusive) was paused, so the run carries over them. */
+  const allPaused = (from: number, to: number) => {
+    for (let w = from; w < to; w += 7) if (!paused.has(w)) return false;
+    return true;
+  };
   const unlocked: UnlockedTitle[] = [];
   const has = new Set<TitleId>();
   const unlock = (id: TitleId, date: string) => {
@@ -298,8 +329,8 @@ export function titles(sessions: TitleSession[]): UnlockedTitle[] {
       const w = weekStart(dayNumber(s.localDate));
       if (w !== week) {
         if (week !== null) {
-          const run = met ? runBefore + 1 : 0;
-          runBefore = w === week + 7 ? run : 0;
+          const run = met ? runBefore + 1 : paused.has(week) ? runBefore : 0;
+          runBefore = allPaused(week + 7, w) ? run : 0;
         }
         week = w;
         done = 0;

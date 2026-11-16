@@ -25,7 +25,8 @@ public struct Streak: Hashable, Sendable {
 extension Progression {
     /// Weekly streak (docs/decisions/0020). Must match `streak` in packages/progression; both run
     /// packages/fixtures/streak.json.
-    public func streak(_ sessions: [StreakSession], today: LocalDate) -> Streak {
+    public func streak(_ sessions: [StreakSession], today: LocalDate, pauses: [PauseInterval] = []) -> Streak {
+        let paused = PauseInterval.pausedWeeks(pauses, today: today)
         var weeks: [LocalDate: (done: Int, goal: Int?)] = [:]
         // Filler sessions only give XP: they never count for the week (docs/decisions/0030).
         for session in sessions {
@@ -54,7 +55,8 @@ extension Progression {
                 thisWeek = Streak.Week(done: done, goal: goal)
                 if met { run += 1 }
             } else {
-                run = met ? run + 1 : 0
+                // A paused week left without the goal neither breaks nor adds (docs/decisions/0038).
+                run = met ? run + 1 : (paused.contains(week) ? run : 0)
             }
             best = max(best, run)
             week = week.adding(days: 7)
