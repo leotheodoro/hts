@@ -71,6 +71,7 @@ Criação e edição:
 - Criar treino: letra, nome, foco e blocos. Cada bloco tem tipo, atributo e exercícios com séries × alvo e descanso opcional.
 - A meta semanal é igual ao número de treinos do arco.
 - "Recomeçar contagem" zera o progresso do arco para refazer o ciclo, mantendo o histórico.
+- "Pausar arco" pausa o arco atual da temporada ativa até "Retomar arco" (ADR 0038). Pausado, os treinos dele ficam bloqueados (a Manutenção continua liberada), o fim do arco anda os dias pausados e ele aparece como PAUSADO, nunca ATRASADO. Trocar de arco atual retoma a pausa no mesmo dia.
 - Os treinos vêm de planilhas reais de um preparador (exemplos no handoff original). Por enquanto a entrada é manual pelo formulário; importar planilha é uma ideia em aberto.
 
 Ordem e sugestão:
@@ -123,7 +124,7 @@ Toda a progressão vem só de treinar de verdade. Séries concluídas geram XP, 
 - **Nível:** a curva fica mais lenta com o tempo, ou seja, cada nível pede um pouco mais de XP. A fórmula exata está em aberto. No mockup, o nível 7 vai até 2 000 XP.
 - **Patentes:** E Recruta (nível 1 a 4), D Soldado (5 a 9), C Cabo (10 a 14), B Sargento (15 a 21), A Tenente (22 a 29), S Comandante (30+). Subir de patente tem tela própria, diferente de subir de nível.
 - **Atributos:** cada bloco ou exercício tem um atributo, e as séries concluídas alimentam esse atributo. São 5 eixos (FOR, EXP, GÁS, NÚC, MOB), mostrados como barras ou radar. A escala (0 a 100? relativa?) está em aberto.
-- **Sequência:** a meta é o número de treinos do arco atual por semana (segunda a domingo). Conta semanas seguidas com a meta batida. Não existe sequência diária. Treino de Manutenção conta.
+- **Sequência:** a meta é o número de treinos do arco atual por semana (segunda a domingo). Conta semanas seguidas com a meta batida. Não existe sequência diária. Treino de Manutenção conta. Uma semana em que o arco ficou pausado em algum dia não zera a sequência; se a meta for batida, soma (ADR 0038).
 - **Limite Quebrado:** maior kg já registrado num exercício do catálogo. Fica salvo como recorde com data e sessão.
 - **Títulos (catálogo fixo):** Primeiro Treino (1º treino) · Recrutamento Concluído (fechar o arco I) · Semana Perfeita (meta da semana batida) · Sequência Acesa (4 semanas seguidas) · Limite Quebrado x10 (10 recordes) · Cem Barras (100 séries de barra fixa) · Pronto para a Batalha (os 2 treinos da Véspera).
 

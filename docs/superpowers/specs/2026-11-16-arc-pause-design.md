@@ -1,6 +1,6 @@
 # Pausar o arco atual
 
-Data: 2026-11-16 · Status: para aprovação do Leo
+Data: 2026-11-16 · Status: aceita
 
 ## Por quê
 
