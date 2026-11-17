@@ -25,6 +25,8 @@ struct ProfileScreen: View {
     @State private var taken: UIImage?
     @State private var uploading = false
     @State private var photoError: LocalizedStringKey?
+    /// Sair asks first, so a stray tap does not end the session (#226).
+    @State private var confirmSignOut = false
 
     var body: some View {
         ScreenScaffold(title: "Perfil") {
@@ -171,7 +173,12 @@ struct ProfileScreen: View {
             }
             .htsTextStyle(.caption)
             .foregroundStyle(Color.hts.greyApp)
-            HTSButton("Sair", kind: .ghost) { Task { await app.signOut() } }
+            HTSButton("Sair", kind: .ghost) { confirmSignOut = true }
+                .confirmationDialog("Sair da conta?", isPresented: $confirmSignOut, titleVisibility: .visible) {
+                    Button("Sair", role: .destructive) { Task { await app.signOut() } }
+                } message: {
+                    Text("Os treinos salvos neste aparelho continuam aqui.")
+                }
         }
         .frame(maxWidth: .infinity)
     }
